@@ -2,7 +2,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
-#SBATCH -p q_cn
+#SBATCH -p q_fat
 
 module load singularity
 subj=$1
@@ -16,6 +16,7 @@ mkdir -p $temp_dir
 fslic=/ibmgpfs/cuizaixu_lab/xulongzhou/tool/freesurfer
 templateflow=/ibmgpfs/cuizaixu_lab/xulongzhou/tool/templateflow
 wd=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/data/EFNY/wd/xcpd/${subj}
+mkdir -p $wd
 output=${xcpd_Path}
 
 export SINGULARITYENV_TEMPLATEFLOW_HOME=$templateflow
