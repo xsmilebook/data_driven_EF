@@ -10,12 +10,12 @@ subj=$1
 fmriprep_Path=/ibmgpfs/cuizaixu_lab/liyang/BrainProject25/Tsinghua_data/results/fmriprep_rest
 
 xcpd_Path=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/data/EFNY/MRI_data/xcpd_rest
-temp_dir=/ibmgpfs/cuizaixu_lab/xuhaoshu/trash/${subj}
+temp_dir=/ibmgpfs/cuizaixu_lab/xuhaoshu/trash/sub-${subj}
 mkdir -p $temp_dir
 
 fslic=/ibmgpfs/cuizaixu_lab/xulongzhou/tool/freesurfer
 templateflow=/ibmgpfs/cuizaixu_lab/xulongzhou/tool/templateflow
-wd=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/data/EFNY/wd/xcpd/${subj}
+wd=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/data/EFNY/wd/xcpd/sub-${subj}
 mkdir -p $wd
 output=${xcpd_Path}
 
