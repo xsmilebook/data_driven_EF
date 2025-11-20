@@ -10,7 +10,7 @@ subj=$1
 fmriprep_Path=/ibmgpfs/cuizaixu_lab/liyang/BrainProject25/Tsinghua_data/results/fmriprep_rest
 
 xcpd_Path=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/data/EFNY/MRI_data/xcpd_rest
-temp_dir=/ibmgpfs/cuizaixu_lab/xuhaoshu/trash/${label}
+temp_dir=/ibmgpfs/cuizaixu_lab/xuhaoshu/trash/${subj}
 mkdir -p $temp_dir
 
 fslic=/ibmgpfs/cuizaixu_lab/xulongzhou/tool/freesurfer
