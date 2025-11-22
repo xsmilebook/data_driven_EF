@@ -9,7 +9,7 @@ def list_subject_dirs(root: Path) -> list[str]:
     names = []
     for p in root.iterdir():
         if p.is_dir() and p.name.startswith("sub-"):
-            names.append(p.name[4:])
+            names.append(p.name)
     names.sort()
     return names
 
