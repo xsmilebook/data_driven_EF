@@ -3,19 +3,19 @@ import pandas as pd
 import numpy as np
 from statistics import NormalDist
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
 DATA_DIR = os.path.join(ROOT, 'data', 'EFNY', 'behavior_data', 'cibr_app_data')
-TABLE_DIR = os.path.join(ROOT, 'data', 'EFNY', 'table')
+TABLE_DIR = os.path.join(ROOT, 'data', 'EFNY', 'table', 'metrics')
 TASK_CSV = os.path.join(TABLE_DIR, 'EFNY_task.csv')
 OUT_CSV = os.path.join(TABLE_DIR, 'EFNY_metrics.csv')
 
-KNOWN_METRICS = ['d_prime', 'SSRT', 'ACC', 'Reaction_Time', 'Constrast_ACC', 'Constrast_RT', 'Switch_Cost']
+KNOWN_METRICS = ['d_prime', 'SSRT', 'ACC', 'Reaction_Time', 'Contrast_ACC', 'Contrast_RT', 'Switch_Cost']
 SKIP_TASKS = {'GNG', 'ZYST', 'FZSS'}
 
 RT_MIN = 0.2
 RT_MAX = 20.0
 
-# 规范列名（所有 sheet 必须使用这些列名）
+# colume names
 REQUIRED_COLUMNS = ['task', 'trial_index', 'subject_id', 'subject_name', 'item', 'answer', 'key', 'rt']
 
 def read_task_config(path):
@@ -202,8 +202,8 @@ METRIC_FUNCS = {
     'Reaction_Time': metric_rt,
     'd_prime': metric_dprime,
     'SSRT': metric_ssrt,
-    'Constrast_ACC': metric_contrast_acc,
-    'Constrast_RT': metric_contrast_rt,
+    'Contrast_ACC': metric_contrast_acc,
+    'Contrast_RT': metric_contrast_rt,
     'Switch_Cost': metric_switch_cost,
 }
 
@@ -241,7 +241,7 @@ def process_file(path, task_rows):
         
         for m in metrics:
             func = METRIC_FUNCS.get(m)
-            val = np.nan if len(missing) > 0 and m in ['ACC','Reaction_Time','d_prime','SSRT','Constrast_ACC','Constrast_RT','Switch_Cost'] else (func(df) if func is not None else np.nan)
+            val = np.nan if len(missing) > 0 and m in ['ACC','Reaction_Time','d_prime','SSRT','Contrast_ACC','Contrast_RT','Switch_Cost'] else (func(df) if func is not None else np.nan)
             res[f'{task}_{m}'] = val
     return res
 
@@ -256,7 +256,7 @@ def main():
     for fp in files:
         rows.append(process_file(fp, tasks))
     out = pd.DataFrame(rows)
-    out.to_csv(OUT_CSV, index=False)
+    out.to_csv(OUT_CSV, index=False, encoding='utf-8-sig')
 
 if __name__ == '__main__':
     main()
