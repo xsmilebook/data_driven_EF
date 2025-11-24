@@ -123,10 +123,10 @@ def plot_heatmap(mat: pd.DataFrame, out_path: Path, title: str, boundaries: list
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    base = Path(__file__).resolve().parents[1]
-    default_csv = base / "data" / "EFNY" / "table" / "EFNY_metrics.csv"
-    default_task = base / "data" / "EFNY" / "table" / "EFNY_task.csv"
-    default_png = base / "data" / "EFNY" / "table" / "EFNY_metrics_similarity_heatmap.png"
+    base = Path("D:/code/data_driven_EF/")
+    default_csv = base / "data" / "EFNY" / "table" / "metrics" / "EFNY_metrics.csv"
+    default_task = base / "data" / "EFNY" / "table" / "metrics" / "EFNY_task.csv"
+    default_png = base / "data" / "EFNY" / "figures" / "EFNY_metrics_similarity_heatmap.png"
     parser.add_argument("--csv", default=str(default_csv))
     parser.add_argument("--task-csv", default=str(default_task))
     parser.add_argument("--out-png", default=str(default_png))
