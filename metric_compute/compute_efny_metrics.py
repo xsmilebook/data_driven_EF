@@ -218,6 +218,7 @@ def process_file(path, task_rows):
         sheets = set(xl.sheet_names)
     except Exception:
         return res
+    
     for item in task_rows:
         task = item['Task']
         if task in SKIP_TASKS:
@@ -225,10 +226,13 @@ def process_file(path, task_rows):
         metrics = item['metrics']
         if len(metrics) == 0:
             continue
+            
+        # 检查工作表是否存在
         if task not in sheets:
             for m in metrics:
                 res[f'{task}_{m}'] = np.nan
             continue
+            
         try:
             df = xl.parse(task, dtype='object')
         except Exception:
@@ -241,16 +245,18 @@ def process_file(path, task_rows):
         
         for m in metrics:
             func = METRIC_FUNCS.get(m)
-            val = np.nan if len(missing) > 0 and m in ['ACC','Reaction_Time','d_prime','SSRT','Contrast_ACC','Contrast_RT','Switch_Cost'] else (func(df) if func is not None else np.nan)
+            val = np.nan if len(missing) > 0 and m in KNOWN_METRICS else (func(df) if func is not None else np.nan)
             res[f'{task}_{m}'] = val
     return res
 
 def main():
     tasks = read_task_config(TASK_CSV)
     files = []
-    for fn in os.listdir(DATA_DIR):
-        if fn.lower().endswith('.xlsx'):
-            files.append(os.path.join(DATA_DIR, fn))
+    # 递归搜索所有子目录中的.xlsx文件
+    for root, dirs, filenames in os.walk(DATA_DIR):
+        for fn in filenames:
+            if fn.lower().endswith('.xlsx'):
+                files.append(os.path.join(root, fn))
     files.sort()
     rows = []
     for fp in files:
