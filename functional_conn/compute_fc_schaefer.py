@@ -72,6 +72,9 @@ def main() -> None:
     parser.add_argument("--valid-list", default=str(Path(__file__).resolve().parents[2] / "data" / "EFNY" / "table" / "sublist" / "rest_valid_sublist.txt"))
     args = parser.parse_args()
     
+    # Strip whitespace/newline from subject argument to handle potential input issues
+    args.subject = args.subject.strip()
+    
     # 1. Check if subject is in the valid list
     valid_list_path = Path(args.valid_list)
     if not is_valid_subject(args.subject, valid_list_path):

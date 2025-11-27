@@ -2,8 +2,8 @@
 #SBATCH --job-name=compute_fc
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
-#SBATCH --partition=q_fat
+#SBATCH --cpus-per-task=2
+#SBATCH --partition=q_cn
 #SBATCH --array=1-5%5            # TODO: Update array range based on line count of sublist
 #SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/log/functional_conn/%A_%a.out
 #SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/log/functional_conn/%A_%a.err
@@ -22,7 +22,7 @@ mkdir -p "$ROOT_DIR/log/functional_conn"
 
 # Get subject from the list based on the array task ID
 # sed -n 'Np' prints the Nth line
-SUBJECT=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$SUBLIST")
+SUBJECT=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$SUBLIST" | tr -d '\r')
 
 if [ -z "$SUBJECT" ]; then
     echo "Error: No subject found for task ID $SLURM_ARRAY_TASK_ID"
