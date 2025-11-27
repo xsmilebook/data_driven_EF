@@ -1,0 +1,44 @@
+#!/bin/bash
+#SBATCH --job-name=compute_fc
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --partition=q_fat
+#SBATCH --array=1-5%5            # TODO: Update array range based on line count of sublist
+#SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/log/functional_conn/%A_%a.out
+#SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/log/functional_conn/%A_%a.err
+
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+conda activate ML
+
+# Define paths
+ROOT_DIR="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF"
+SUBLIST="$ROOT_DIR/data/EFNY/table/sublist/mri_sublist.txt"
+SCRIPT="$ROOT_DIR/src/functional_conn/compute_fc_schaefer.py"
+
+# Ensure log directory exists (this might fail if running on node, but good to have)
+mkdir -p "$ROOT_DIR/log/functional_conn"
+
+# Get subject from the list based on the array task ID
+# sed -n 'Np' prints the Nth line
+SUBJECT=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$SUBLIST")
+
+if [ -z "$SUBJECT" ]; then
+    echo "Error: No subject found for task ID $SLURM_ARRAY_TASK_ID"
+    exit 1
+fi
+
+echo "Processing Subject: $SUBJECT"
+echo "Date: $(date)"
+
+# Loop through desired resolutions
+for ROIS in 100 200 400; do
+    echo "Running Schaefer${ROIS}..."
+    python "$SCRIPT" \
+        --subject "$SUBJECT" \
+        --n-rois $ROIS \
+        --xcpd-dir "$ROOT_DIR/data/EFNY/MRI_data/xcpd_rest" \
+        --out-dir "$ROOT_DIR/data/EFNY/functional_conn"
+done
+
+echo "Finished Subject: $SUBJECT"

@@ -19,10 +19,10 @@ def load_concat_img(run_files: list[Path]):
     from nilearn import image
     return image.concat_imgs([str(p) for p in run_files])
 
-def compute_fc(concat_img) -> np.ndarray:
+def compute_fc(concat_img, n_rois: int) -> np.ndarray:
     from nilearn import datasets
     from nilearn.maskers import NiftiLabelsMasker
-    atlas = datasets.fetch_atlas_schaefer_2018(n_rois=100, yeo_networks=7, resolution_mm=2)
+    atlas = datasets.fetch_atlas_schaefer_2018(n_rois=n_rois, yeo_networks=7, resolution_mm=2)
     masker = NiftiLabelsMasker(labels_img=atlas.maps, standardize=True)
     ts = masker.fit_transform(concat_img)
     corr = np.corrcoef(ts, rowvar=False)
@@ -36,8 +36,10 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--xcpd-dir", default=str(Path(__file__).resolve().parents[2] / "data" / "EFNY" / "MRI_data" / "xcpd_rest"))
     parser.add_argument("--subject", required=True)
-    parser.add_argument("--out", default="Schaefer100_FC.csv")
+    parser.add_argument("--n-rois", type=int, default=100, help="Number of Schaefer ROIs (e.g. 100, 200, 400)")
+    parser.add_argument("--out-dir", default=str(Path(__file__).resolve().parents[2] / "data" / "EFNY" / "functional_conn"))
     args = parser.parse_args()
+    
     base = Path(args.xcpd_dir)
     sub = base / args.subject / "func"
     if not sub.exists():
@@ -49,13 +51,16 @@ def main() -> None:
         return
     try:
         img = load_concat_img(runs)
-        mat = compute_fc(img)
+        mat = compute_fc(img, args.n_rois)
     except Exception as e:
         print(str(e), file=sys.stderr)
         return
-    out_path = Path(args.out)
-    if not out_path.is_absolute():
-        out_path = sub / out_path.name
+    
+    out_base = Path(args.out_dir)
+    out_folder = out_base / f"Schaefer{args.n_rois}"
+    out_filename = f"{args.subject}_Schaefer{args.n_rois}_FC.csv"
+    out_path = out_folder / out_filename
+    
     save_matrix(mat, out_path)
     print(f"saved: {out_path}")
 
