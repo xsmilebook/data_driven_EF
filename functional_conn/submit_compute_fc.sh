@@ -11,6 +11,15 @@
 source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
 conda activate ML
 
+export http_proxy=10.11.100.5:3128 
+export HTTP_PROXY=10.11.100.5:3128
+export https_proxy=10.11.100.5:3128
+export HTTPS_PROXY=10.11.100.5:3128
+export ftp_proxy=10.11.100.5:3128
+export FTP_PROXY=10.11.100.5:3128
+export all_proxy=10.11.100.5:3128
+export ALL_PROXY=10.11.100.5:3128
+
 # Define paths
 ROOT_DIR="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF"
 SUBLIST="$ROOT_DIR/data/EFNY/table/sublist/rest_valid_sublist.txt"

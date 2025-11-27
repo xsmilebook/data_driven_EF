@@ -9,7 +9,7 @@ import numpy as np
 def find_runs(func_dir: Path, run_ids: list[int]) -> list[Path]:
     files = []
     for i in run_ids:
-        pattern = f"*task-rest_run-{i}_space-MNI152NLin6Asym_res-2_desc-denoised_bold.nii.gz"
+        pattern = f"*task-rest_run-{i}_space-MNI152NLin6Asym_desc-denoisedSmoothed_bold.nii.gz"
         m = list(func_dir.glob(pattern))
         if len(m) > 0:
             files.append(m[0])
