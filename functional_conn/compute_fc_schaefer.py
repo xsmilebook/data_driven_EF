@@ -21,15 +21,13 @@ def get_valid_runs(subject: str, qc_path: Path) -> list[int]:
     if not qc_path.exists():
         print(f"Warning: QC file not found at {qc_path}", file=sys.stderr)
         return []
-        
-    with open(qc_path, 'r', encoding='utf-8', newline='') as f:
+    with open(qc_path, 'r', encoding='utf-8-sig', newline='') as f:
         reader = csv.DictReader(f)
         for row in reader:
-            if row['subid'] == subject:
+            if row.get('subid', '').strip() == subject.strip():
                 for i in range(1, 5):
                     col_name = f'rest{i}_valid'
-                    # Check if column exists and value is '1'
-                    if col_name in row and row[col_name] == '1':
+                    if col_name in row and str(row[col_name]).strip() == '1':
                         valid_runs.append(i)
                 return valid_runs
     return []
@@ -38,10 +36,11 @@ def is_valid_subject(subject: str, list_path: Path) -> bool:
     if not list_path.exists():
         print(f"Warning: Subject list file not found at {list_path}", file=sys.stderr)
         return False
-        
-    with open(list_path, 'r', encoding='utf-8') as f:
+    with open(list_path, 'r', encoding='utf-8-sig') as f:
+        target = subject.strip()
         for line in f:
-            if line.strip() == subject:
+            name = line.strip()
+            if name and name == target:
                 return True
     return False
 
@@ -71,11 +70,9 @@ def main() -> None:
     parser.add_argument("--qc-file", default=str(Path(__file__).resolve().parents[2] / "data" / "EFNY" / "table" / "qc" / "rest_fd_summary.csv"))
     parser.add_argument("--valid-list", default=str(Path(__file__).resolve().parents[2] / "data" / "EFNY" / "table" / "sublist" / "rest_valid_sublist.txt"))
     args = parser.parse_args()
-    
-    # Strip whitespace/newline from subject argument to handle potential input issues
     args.subject = args.subject.strip()
     
-    # 1. Check if subject is in the valid list
+    
     valid_list_path = Path(args.valid_list)
     if not is_valid_subject(args.subject, valid_list_path):
         print(f"Skipping {args.subject}: Not in valid subject list.", file=sys.stderr)
