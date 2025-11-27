@@ -22,7 +22,7 @@ mkdir -p "$ROOT_DIR/log/functional_conn"
 
 # Get subject from the list based on the array task ID
 # sed -n 'Np' prints the Nth line
-SUBJECT=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$SUBLIST")
+SUBJECT=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$SUBLIST" | tr -d '\r')
 
 if [ -z "$SUBJECT" ]; then
     echo "Error: No subject found for task ID $SLURM_ARRAY_TASK_ID"
