@@ -4,7 +4,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
 #SBATCH --partition=q_cn
-#SBATCH --array=1-5%5            # TODO: Update array range based on line count of sublist
+#SBATCH --array=1-508%508            # TODO: Update array range based on line count of sublist
 #SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/log/functional_conn/%A_%a.out
 #SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/log/functional_conn/%A_%a.err
 
