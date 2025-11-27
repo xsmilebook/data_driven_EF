@@ -22,8 +22,8 @@ def main():
             demo_csv = dataset_dir / "table" / "CCNP_demo.csv"
             if demo_csv.exists():
                 try:
-                    # Use utf-8-sig to handle potential BOM
-                    with demo_csv.open("r", encoding="utf-8-sig") as f:
+                    # Use utf-8
+                    with demo_csv.open("r", encoding="utf-8") as f:
                         dreader = csv.DictReader(f)
                         # Standard DictReader should work if headers are clean.
                         # Based on cat output: subID,age,sex
