@@ -72,13 +72,7 @@ def main() -> None:
     args = parser.parse_args()
     args.subject = args.subject.strip()
     
-    
-    valid_list_path = Path(args.valid_list)
-    if not is_valid_subject(args.subject, valid_list_path):
-        print(f"Skipping {args.subject}: Not in valid subject list.", file=sys.stderr)
-        return
-
-    # 2. Get valid runs from QC file
+    # Get valid runs from QC file
     qc_path = Path(args.qc_file)
     valid_run_ids = get_valid_runs(args.subject, qc_path)
     if not valid_run_ids:
