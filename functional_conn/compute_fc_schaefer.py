@@ -21,7 +21,7 @@ def get_valid_runs(subject: str, qc_path: Path) -> list[int]:
     if not qc_path.exists():
         print(f"Warning: QC file not found at {qc_path}", file=sys.stderr)
         return []
-    with open(qc_path, 'r', encoding='utf-8-sig', newline='') as f:
+    with open(qc_path, 'r', encoding='utf-8', newline='') as f:
         reader = csv.DictReader(f)
         for row in reader:
             if row.get('subid', '').strip() == subject.strip():
@@ -36,7 +36,7 @@ def is_valid_subject(subject: str, list_path: Path) -> bool:
     if not list_path.exists():
         print(f"Warning: Subject list file not found at {list_path}", file=sys.stderr)
         return False
-    with open(list_path, 'r', encoding='utf-8-sig') as f:
+    with open(list_path, 'r', encoding='utf-8') as f:
         target = subject.strip()
         for line in f:
             name = line.strip()
