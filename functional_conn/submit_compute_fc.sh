@@ -13,8 +13,9 @@ conda activate ML
 
 # Define paths
 ROOT_DIR="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF"
-SUBLIST="$ROOT_DIR/data/EFNY/table/sublist/mri_sublist.txt"
+SUBLIST="$ROOT_DIR/data/EFNY/table/sublist/rest_valid_sublist.txt"
 SCRIPT="$ROOT_DIR/src/functional_conn/compute_fc_schaefer.py"
+QC_FILE="$ROOT_DIR/data/EFNY/table/qc/rest_fd_summary.csv"
 
 # Ensure log directory exists (this might fail if running on node, but good to have)
 mkdir -p "$ROOT_DIR/log/functional_conn"
@@ -38,7 +39,9 @@ for ROIS in 100 200 400; do
         --subject "$SUBJECT" \
         --n-rois $ROIS \
         --xcpd-dir "$ROOT_DIR/data/EFNY/MRI_data/xcpd_rest" \
-        --out-dir "$ROOT_DIR/data/EFNY/functional_conn"
+        --out-dir "$ROOT_DIR/data/EFNY/functional_conn/rest" \
+        --qc-file "$QC_FILE" \
+        --valid-list "$SUBLIST"
 done
 
 echo "Finished Subject: $SUBJECT"

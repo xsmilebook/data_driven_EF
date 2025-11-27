@@ -2,15 +2,15 @@ import csv
 import sys
 from pathlib import Path
 
-DATA_ROOT = Path(r"d:\code\WM_prediction\data")
-DATASETS = ["ABCD", "CCNP", "EFNY", "HCPD", "PNC"]
+DATA_ROOT = Path(r"d:\code\data_driven_EF\data")
+DATASETS = ["EFNY"]
 
 def main():
     for name in DATASETS:
         dataset_dir = DATA_ROOT / name
-        csv_path = dataset_dir / "table" / "rest_fd_summary.csv"
+        csv_path = dataset_dir / "table" / "qc" / "rest_fd_summary.csv"
         # Output sublist.txt in the dataset root directory (e.g. data/ABCD/sublist.txt)
-        out_txt = dataset_dir / "table" / "sublist.txt"
+        out_txt = dataset_dir / "table" / "sublist" / "rest_valid_sublist.txt"
         
         if not csv_path.exists():
             print(f"Skipping {name}: {csv_path} not found")
