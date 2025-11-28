@@ -8,7 +8,10 @@ def load_matrix(path: Path) -> np.ndarray:
 
 def fisher_z(mat: np.ndarray) -> np.ndarray:
     m = np.clip(mat, -0.999999, 0.999999)
-    return np.arctanh(m)
+    z_mat = np.arctanh(m)
+    # Set diagonal elements to 0
+    np.fill_diagonal(z_mat, 0)
+    return z_mat
 
 def save_matrix(mat: np.ndarray, out_path: Path) -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
