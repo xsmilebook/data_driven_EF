@@ -2,9 +2,9 @@
 #SBATCH --job-name=fisher_z_fc
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=2
-#SBATCH --partition=q_cn
-#SBATCH --array=1-5%5
+#SBATCH --cpus-per-task=1
+#SBATCH --partition=q_fat
+#SBATCH --array=1-508%508
 #SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/log/functional_conn_z/%A_%a.out
 #SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/log/functional_conn_z/%A_%a.err
 
