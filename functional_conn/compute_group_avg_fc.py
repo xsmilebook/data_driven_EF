@@ -39,7 +39,7 @@ def main():
     sublist_path = Path(args.sublist)
     in_dir = Path(args.in_dir)
     out_dir = Path(args.out_dir)
-    fig_dir = Path(args.fig_dir)
+    fig_dir = Path(default_fig_dir)
     
     if not sublist_path.exists():
         print(f"Error: Subject list not found at {sublist_path}", file=sys.stderr)
