@@ -16,7 +16,7 @@ def save_matrix(mat: np.ndarray, out_path: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--in-dir", default=str(Path(__file__).resolve().parents[2] / "data" / "EFNY" / "functional_conn" / "rest"))
+    parser.add_argument("--in-dir", default=str(Path(__file__).resolve().parents[2] / "data" / "EFNY" / "functional_conn"))
     parser.add_argument("--out-dir", default=str(Path(__file__).resolve().parents[2] / "data" / "EFNY" / "functional_conn_z" / "rest"))
     parser.add_argument("--subject", required=True)
     parser.add_argument("--n-rois", type=int, default=100)
