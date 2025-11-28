@@ -39,6 +39,7 @@ def main():
     sublist_path = Path(args.sublist)
     in_dir = Path(args.in_dir)
     out_dir = Path(args.out_dir)
+    fig_dir = Path(args.fig_dir)
     
     if not sublist_path.exists():
         print(f"Error: Subject list not found at {sublist_path}", file=sys.stderr)
@@ -117,7 +118,7 @@ def main():
     if args.visualize:
         # Save figure to output directory instead of default figures dir
         fig_name = f"{args.out_name}_Schaefer{args.n_rois}_{matrix_type}.png"
-        fig_path = out_dir / fig_name
+        fig_path = fig_dir / fig_name
         
         title = f"Group Average {matrix_type.upper()} Matrix (N={len(matrices)})"
         print(f"Generating visualization at {fig_path}...")
