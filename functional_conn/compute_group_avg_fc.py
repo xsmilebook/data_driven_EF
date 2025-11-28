@@ -22,7 +22,7 @@ def main():
     parser = argparse.ArgumentParser(description="Compute Group Average FC Matrix")
     
     root_dir = Path(__file__).resolve().parents[2]
-    default_in_dir = root_dir / "data" / "EFNY" / "functional_conn"
+    default_in_dir = root_dir / "data" / "EFNY" / "functional_conn_z" / "rest"
     default_sublist = root_dir / "data" / "EFNY" / "table" / "sublist" / "rest_valid_sublist.txt"
     default_fig_dir = root_dir / "data" / "EFNY" / "figures" / "functional_conn"
     default_out_dir = root_dir / "data" / "EFNY" / "avg_functional_conn_matrix"
@@ -47,11 +47,11 @@ def main():
         
     # Determine folder and suffix - automatically detect Fisher Z files
     # Priority order:
-    # 1. Check for Fisher Z transformed matrices in Schaefer{n_rois}_z folder
+    # 1. Check for Fisher Z transformed matrices in Schaefer{n_rois} folder
     # 2. Check for regular FC matrices in Schaefer{n_rois} folder
     # 3. Check legacy paths with 'rest' subdir
     
-    folder = in_dir / f"Schaefer{args.n_rois}_z"  # Fisher Z folder first
+    folder = in_dir / f"Schaefer{args.n_rois}"  # Fisher Z folder first
     suffix = f"_Schaefer{args.n_rois}_FC_z.csv"
     matrix_type = "fisher_z"
     
