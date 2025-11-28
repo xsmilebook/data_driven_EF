@@ -62,15 +62,43 @@ def filter_by_task_validity(df: pd.DataFrame, dims: dict, valids: dict) -> tuple
     return out, labels, groups
 
 def order_by_groups(df: pd.DataFrame, labels: list[str], groups: list[str], order: list[str]) -> tuple[pd.DataFrame, list[str], list[str], list[int]]:
+    # Define the metric type order
+    metric_order = ["d_prime", "SSRT", "ACC", "Reaction_Time", "Constrast_ACC", "Constrast_RT", "Switch_Cost"]
+    
     items = list(zip(labels, groups))
     ordered = []
+    
+    # For each group in the specified order
     for g in order:
-        for lab, grp in items:
-            if grp == g:
-                ordered.append(lab)
+        # Get all items in this group
+        group_items = [(lab, grp) for lab, grp in items if grp == g]
+        
+        # Sort items within this group by metric type
+        def get_metric_order(item):
+            lab, _ = item
+            # Extract metric name (everything after first underscore)
+            if "_" in lab:
+                metric_name = lab.split("_", 1)[1]
+                # Try to find the metric in our predefined order
+                for i, metric_type in enumerate(metric_order):
+                    if metric_name == metric_type:
+                        return i
+                # If not found, put it at the end
+                return len(metric_order)
+            return len(metric_order)
+        
+        # Sort group items by metric order
+        group_items.sort(key=get_metric_order)
+        
+        # Add sorted items to the ordered list
+        for lab, grp in group_items:
+            ordered.append(lab)
+    
+    # Add any remaining items that weren't in the specified order
     for lab, grp in items:
         if grp not in order:
             ordered.append(lab)
+    
     df2 = df[ordered]
     grp2 = []
     for lab in ordered:
@@ -126,7 +154,7 @@ def main() -> None:
     base = Path("D:/code/data_driven_EF/")
     default_csv = base / "data" / "EFNY" / "table" / "metrics" / "EFNY_metrics.csv"
     default_task = base / "data" / "EFNY" / "table" / "metrics" / "EFNY_task.csv"
-    default_png = base / "data" / "EFNY" / "figures" / "EFNY_metrics_similarity_heatmap.png"
+    default_png = base / "data" / "EFNY" / "figures" / "metrics" / "EFNY_metrics_similarity_heatmap.png"
     parser.add_argument("--csv", default=str(default_csv))
     parser.add_argument("--task-csv", default=str(default_task))
     parser.add_argument("--out-png", default=str(default_png))
