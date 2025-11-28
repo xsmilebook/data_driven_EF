@@ -27,7 +27,7 @@ for ROIS in 100 200 400; do
     python "$SCRIPT" \
         --subject "$SUBJECT" \
         --n-rois $ROIS \
-        --in-dir "$ROOT_DIR/data/EFNY/functional_conn/rest" \
+        --in-dir "$ROOT_DIR/data/EFNY/functional_conn" \
         --out-dir "$ROOT_DIR/data/EFNY/functional_conn_z/rest"
 done
 
