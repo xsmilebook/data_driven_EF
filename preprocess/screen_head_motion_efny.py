@@ -112,6 +112,8 @@ def collect_rows(fmriprep_dir: Path) -> list[dict]:
         runs = subjects[subject_id]
         row = {"subid": subject_id}
         valid_num = 0
+        valid_fd_values = []  # Store FD values for valid sessions
+        
         for i in range(1, 5):
             r = runs.get(i)
             if r:
@@ -127,11 +129,25 @@ def collect_rows(fmriprep_dir: Path) -> list[dict]:
                 row[f"rest{i}_valid"] = "1" if is_valid else "0"
                 if is_valid:
                     valid_num += 1
+                    try:
+                        # Add FD value to list for mean calculation
+                        fd_value = float(r["fd"])
+                        valid_fd_values.append(fd_value)
+                    except (ValueError, TypeError):
+                        pass  # Skip invalid FD values
             else:
                 row[f"rest{i}_frame"] = "NA"
                 row[f"rest{i}_fd"] = "NA"
                 row[f"rest{i}_high_ratio"] = "NA"
                 row[f"rest{i}_valid"] = "0"
+        
+        # Calculate mean FD for valid sessions
+        if valid_fd_values:
+            mean_fd = sum(valid_fd_values) / len(valid_fd_values)
+            row["meanFD"] = f"{mean_fd:.6f}"
+        else:
+            row["meanFD"] = "NA"
+            
         row["valid_num"] = str(valid_num)
         row["valid_subject"] = "1" if valid_num >= 2 else "0"
         rows.append(row)
@@ -147,7 +163,7 @@ def write_csv(rows: list[dict], out_path: Path) -> None:
         "rest2_frame", "rest2_fd", "rest2_high_ratio", "rest2_valid",
         "rest3_frame", "rest3_fd", "rest3_high_ratio", "rest3_valid",
         "rest4_frame", "rest4_fd", "rest4_high_ratio", "rest4_valid",
-        "valid_num", "valid_subject",
+        "valid_num", "valid_subject", "meanFD",
     ]
     with out_path.open("w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=headers)

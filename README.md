@@ -148,4 +148,4 @@ bash src/functional_conn/submit_compute_fc.sh
 
 ## 更新日志
 
-- 2024年: 修复了`metrics_similarity_heatmap.py`中Flanker任务指标的显示问题，现在正确包含所有32个行为指标
+- 2025-12-11: 修复了`metrics_similarity_heatmap.py`中Flanker任务指标的显示问题，现在正确包含所有32个行为指标
