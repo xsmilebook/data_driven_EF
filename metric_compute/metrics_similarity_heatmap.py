@@ -27,7 +27,7 @@ def load_task_cfg(task_csv: Path) -> tuple[dict, dict]:
             continue
         dims[task] = dim
         ms = set()
-        for m in ["d_prime", "SSRT", "ACC", "Reaction_Time", "Constrast_ACC", "Constrast_RT", "Switch_Cost"]:
+        for m in ["d_prime", "ACC", "SSRT", "Reaction_Time", "Contrast_ACC", "Contrast_RT", "Switch_Cost"]:
             v = str(r.get(m, "")).strip().lower()
             if v in ("true", "1", "yes"):
                 ms.add(m)
@@ -63,7 +63,7 @@ def filter_by_task_validity(df: pd.DataFrame, dims: dict, valids: dict) -> tuple
 
 def order_by_groups(df: pd.DataFrame, labels: list[str], groups: list[str], order: list[str]) -> tuple[pd.DataFrame, list[str], list[str], list[int]]:
     # Define the metric type order
-    metric_order = ["d_prime", "SSRT", "ACC", "Reaction_Time", "Constrast_ACC", "Constrast_RT", "Switch_Cost"]
+    metric_order = ["d_prime", "ACC", "Contrast_ACC", "SSRT", "Reaction_Time", "Contrast_RT", "Switch_Cost"]
     
     items = list(zip(labels, groups))
     ordered = []
@@ -132,21 +132,46 @@ def plot_heatmap(mat: pd.DataFrame, out_path: Path, title: str, boundaries: list
     masked = np.ma.array(arr, mask=np.isnan(arr))
     cmap = plt.get_cmap("coolwarm").copy()
     cmap.set_bad(color="white")
-    size = max(6, 0.4 * len(labels))
+    
+    # Increase size for better readability with more metrics
+    size = max(8, 0.5 * len(labels))
     fig, ax = plt.subplots(figsize=(size, size))
+    
+    # Create the heatmap
     im = ax.imshow(masked, cmap=cmap, vmin=-1, vmax=1)
+    
+    # Set ticks and labels
     ax.set_xticks(range(len(labels)))
     ax.set_yticks(range(len(labels)))
-    ax.set_xticklabels(labels, rotation=90)
-    ax.set_yticklabels(labels)
-    fig.colorbar(im)
+    
+    # Improve label readability
+    ax.set_xticklabels(labels, rotation=90, fontsize=12, ha='center')
+    ax.set_yticklabels(labels, fontsize=12)
+    
+    # Add colorbar
+    cbar = fig.colorbar(im, ax=ax, shrink=0.8)
+    cbar.set_label('Correlation Coefficient', rotation=270, labelpad=15)
+    
+    # Add boundary lines between cognitive domains
     for b in boundaries[:-1]:
-        ax.axvline(b - 0.5, color="black", linewidth=2)
-        ax.axhline(b - 0.5, color="black", linewidth=2)
-    ax.set_title(title)
+        ax.axvline(b - 0.5, color="black", linewidth=2, alpha=0.7)
+        ax.axhline(b - 0.5, color="black", linewidth=2, alpha=0.7)
+    
+    # Add grid for better readability
+    ax.set_xticks(np.arange(-0.5, len(labels), 1), minor=True)
+    ax.set_yticks(np.arange(-0.5, len(labels), 1), minor=True)
+    ax.grid(which="minor", color="gray", linestyle="-", linewidth=0.3, alpha=0.3)
+    
+    ax.set_title(title, fontsize=14, fontweight='bold')
+    
+    # Adjust layout to prevent label cutoff
     fig.tight_layout()
+    
+    # Create output directory if needed
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path, dpi=300)
+    
+    # Save with high DPI for better quality
+    fig.savefig(out_path, dpi=300, bbox_inches='tight')
     plt.close(fig)
 
 def main() -> None:
@@ -177,7 +202,17 @@ def main() -> None:
     if filt_df.shape[1] == 0:
         print("No valid metric columns", file=sys.stderr)
         return
+    
+    print(f"Found {len(labels)} valid metrics:")
+    for i, label in enumerate(labels):
+        print(f"  {i+1}: {label} (group: {groups[i]})")
+    
     ordered_df, ordered_labels, ordered_groups, boundaries = order_by_groups(filt_df, labels, groups, ["Inhibition", "Working_Memory", "Shifting"])
+    
+    print(f"\nOrdered {len(ordered_labels)} metrics:")
+    for i, label in enumerate(ordered_labels):
+        print(f"  {i+1}: {label} (group: {ordered_groups[i]})")
+    
     corr = compute_pairwise_corr(ordered_df, args.method, args.min_pair_ratio)
     corr = corr.loc[ordered_labels, ordered_labels]
     out_path = Path(args.out_png)
