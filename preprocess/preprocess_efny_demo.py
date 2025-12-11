@@ -52,6 +52,7 @@ def convert_sex(sex_str):
 def merge_with_rsfmri_qc(demo_df, qc_file, output_file):
     """
     Merge demo data with rsfMRI QC data and identify missing subjects.
+    Only adds the meanFD column from QC data.
     
     Args:
         demo_df: Demo dataframe with subid column
@@ -59,7 +60,7 @@ def merge_with_rsfmri_qc(demo_df, qc_file, output_file):
         output_file: Path to output merged CSV file
     
     Returns:
-        merged_df: Merged dataframe
+        merged_df: Merged dataframe with meanFD column added
         missing_subjects: List of subjects in QC but not in demo
     """
     logging.info(f"Starting merge with rsfMRI QC data from {qc_file}")
@@ -70,6 +71,11 @@ def merge_with_rsfmri_qc(demo_df, qc_file, output_file):
         logging.info(f"Successfully loaded {len(qc_df)} rows from {qc_file}")
     except Exception as e:
         logging.error(f"Failed to read QC file: {e}")
+        return None, []
+    
+    # Check if meanFD column exists in QC data
+    if 'meanFD' not in qc_df.columns:
+        logging.error("QC file does not contain 'meanFD' column")
         return None, []
     
     # Get unique subjects from both datasets
@@ -95,10 +101,17 @@ def merge_with_rsfmri_qc(demo_df, qc_file, output_file):
         if len(missing_subjects) > 10:
             logging.warning(f"  ... and {len(missing_subjects) - 10} more")
     
-    # Perform inner merge on subid
-    merged_df = pd.merge(demo_df, qc_df, on='subid', how='inner')
+    # Create a copy of demo_df to avoid modifying the original
+    merged_df = demo_df.copy()
     
-    logging.info(f"Successfully merged data: {len(merged_df)} subjects with both demo and QC data")
+    # Only keep the meanFD column from QC data, using left join to preserve all demo subjects
+    meanfd_df = qc_df[['subid', 'meanFD']].copy()
+    merged_df = pd.merge(merged_df, meanfd_df, on='subid', how='inner')
+    
+    logging.info(f"Successfully added meanFD column to {len(merged_df)} subjects")
+
+    merged_df = merged_df[merged_df['age'] < 26]
+    merged_df = merged_df[merged_df['group'] == ""]
     
     # Save merged data
     try:
@@ -107,7 +120,8 @@ def merge_with_rsfmri_qc(demo_df, qc_file, output_file):
         
         # Print merge summary
         logging.info("\n=== Merge Summary ===")
-        logging.info(f"Total merged subjects: {len(merged_df)}")
+        logging.info(f"Total subjects in output: {len(merged_df)}")
+        logging.info(f"Subjects with meanFD data: {merged_df['meanFD'].notna().sum()}")
         logging.info(f"Demo only subjects: {len(demo_subjects - qc_subjects)}")
         logging.info(f"QC only subjects: {len(missing_subjects)}")
         
