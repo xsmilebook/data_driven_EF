@@ -105,6 +105,7 @@ def merge_with_rsfmri_qc(demo_df, qc_file, output_file):
     merged_df = demo_df.copy()
     
     # Only keep the meanFD column from QC data, using left join to preserve all demo subjects
+    qc_df = qc_df[qc_df['valid_subject'] == 1]
     meanfd_df = qc_df[['subid', 'meanFD']].copy()
     merged_df = pd.merge(merged_df, meanfd_df, on='subid', how='inner')
     

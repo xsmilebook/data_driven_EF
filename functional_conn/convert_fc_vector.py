@@ -160,9 +160,12 @@ class FisherZMatrixToVectorConverter:
     def save_summary_results(self, subject_vectors: Dict[str, np.ndarray], 
                            valid_subjects: List[str], missing_subjects: List[str]):
         """Save summary results and statistics."""
+        # Create output directory
+        output_dir = self.output_path / f"Schaefer{self.n_rois}"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
         # Save valid subjects list
-        valid_subjects_file = self.output_path / f"Schaefer{self.n_rois}" / f"valid_subjects_Schaefer{self.n_rois}.txt"
-        valid_subjects_file.parent.mkdir(parents=True, exist_ok=True)
+        valid_subjects_file = output_dir / f"valid_subjects_Schaefer{self.n_rois}.txt"
         with open(valid_subjects_file, 'w') as f:
             for subject_id in valid_subjects:
                 f.write(f"{subject_id}\n")
@@ -170,25 +173,44 @@ class FisherZMatrixToVectorConverter:
         
         # Save missing subjects list
         if missing_subjects:
-            missing_subjects_file = self.output_path / f"Schaefer{self.n_rois}" / f"missing_subjects_Schaefer{self.n_rois}.txt"
+            missing_subjects_file = output_dir / f"missing_subjects_Schaefer{self.n_rois}.txt"
             with open(missing_subjects_file, 'w') as f:
                 for subject_id in missing_subjects:
                     f.write(f"{subject_id}\n")
             logger.info(f"Saved missing subjects list to {missing_subjects_file}")
         
-        # Save vector dimensions info
+        # Create combined matrix: subjects × features
         if valid_subjects and subject_vectors:
             first_subject = valid_subjects[0]
             first_vector = subject_vectors[first_subject]
+            n_features = first_vector.shape[0]
             
-            info_file = self.output_path / f"Schaefer{self.n_rois}" / f"vector_info_Schaefer{self.n_rois}.txt"
+            # Initialize combined matrix
+            combined_matrix = np.zeros((len(valid_subjects), n_features))
+            
+            # Fill matrix in sublist order
+            for i, subject_id in enumerate(valid_subjects):
+                if subject_id in subject_vectors:
+                    combined_matrix[i, :] = subject_vectors[subject_id]
+                else:
+                    logger.warning(f"Subject {subject_id} not found in processed vectors")
+            
+            # Save combined matrix
+            combined_file = output_dir / f"{self.dataset_name}_Schaefer{self.n_rois}_FC_matrix.npy"
+            np.save(combined_file, combined_matrix)
+            logger.info(f"Saved combined FC matrix: {combined_matrix.shape} to {combined_file}")
+            
+            # Save vector dimensions info
+            info_file = output_dir / f"vector_info_Schaefer{self.n_rois}.txt"
             with open(info_file, 'w') as f:
                 f.write(f"Dataset: {self.dataset_name}\n")
                 f.write(f"Number of ROIs: {self.n_rois}\n")
                 f.write(f"Total subjects: {len(valid_subjects) + len(missing_subjects)}\n")
                 f.write(f"Valid subjects: {len(valid_subjects)}\n")
                 f.write(f"Missing subjects: {len(missing_subjects)}\n")
-                f.write(f"Vector dimension: {first_vector.shape[0]} features\n")
+                f.write(f"Vector dimension: {n_features} features\n")
+                f.write(f"Combined matrix shape: {combined_matrix.shape}\n")
+                f.write(f"Combined matrix file: {combined_file.name}\n")
             logger.info(f"Saved vector info to {info_file}")
     
     def run(self):
