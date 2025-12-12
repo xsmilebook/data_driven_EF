@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 import logging
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
