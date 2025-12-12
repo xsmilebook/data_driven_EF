@@ -13,7 +13,7 @@ conda activate ML
 # Set up paths for EFNY dataset
 PROJECT_ROOT="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF"
 INPUT_PATH="${PROJECT_ROOT}/data/EFNY/functional_conn_z/rest"
-SUBLIST_FILE="${PROJECT_ROOT}/data/EFNY/table/demo/sublist.txt"
+SUBLIST_FILE="${PROJECT_ROOT}/data/EFNY/table/sublist/sublist.txt"
 OUTPUT_PATH="${PROJECT_ROOT}/data/EFNY/fc_vector"
 DATASET_NAME="EFNY"
 

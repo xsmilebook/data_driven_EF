@@ -99,7 +99,7 @@ def main():
     parser = argparse.ArgumentParser(description="Compute Group Average FC Matrix")
     
     root_dir = Path(__file__).resolve().parents[2]
-    default_in_dir = root_dir / "data" / "EFNY" / "functional_conn_z" / "rest"
+    default_in_dir = root_dir / "data" / "EFNY" / "functional_conn" / "rest"
     default_sublist = root_dir / "data" / "EFNY" / "table" / "sublist" / "rest_valid_sublist.txt"
     default_fig_dir = root_dir / "data" / "EFNY" / "figures" / "functional_conn"
     default_out_dir = root_dir / "data" / "EFNY" / "avg_functional_conn_matrix"
