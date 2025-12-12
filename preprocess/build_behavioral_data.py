@@ -42,7 +42,7 @@ def extract_id_from_subject_code(subject_code):
         logging.error(f"Error extracting ID from subject_code '{subject_code}': {e}")
         return None
 
-def build_behavioral_data(metrics_file, demo_file, output_file):
+def build_behavioral_data(metrics_file, demo_file, output_file, keep_complete_only=True):
     """
     Build behavioral data table by merging metrics with demographic data.
     
@@ -50,6 +50,7 @@ def build_behavioral_data(metrics_file, demo_file, output_file):
         metrics_file: Path to EFNY_metrics.csv
         demo_file: Path to EFNY_demo_with_rsfmri.csv
         output_file: Path to output merged behavioral data
+        keep_complete_only: If True, only keep subjects with complete behavioral data
     
     Returns:
         bool: Success status
@@ -57,6 +58,7 @@ def build_behavioral_data(metrics_file, demo_file, output_file):
     logging.info(f"Starting behavioral data build process")
     logging.info(f"Metrics file: {metrics_file}")
     logging.info(f"Demo file: {demo_file}")
+    logging.info(f"Keep complete data only: {keep_complete_only}")
     
     # Read metrics data
     try:
@@ -101,7 +103,7 @@ def build_behavioral_data(metrics_file, demo_file, output_file):
     
     # Perform inner join on ID
     logging.info("Performing inner join on ID...")
-    merged_df = pd.merge(metrics_df, demo_df, on='id', how='inner')
+    merged_df = pd.merge(demo_df, metrics_df, on='id', how='inner')
     
     # Log merge statistics
     metrics_ids = set(metrics_df['id'].dropna().astype(int))
@@ -129,6 +131,34 @@ def build_behavioral_data(metrics_file, demo_file, output_file):
             logging.warning(f"  - {id_val}")
         if len(missing_from_metrics) > 10:
             logging.warning(f"  ... and {len(missing_from_metrics) - 10} more")
+    
+    # Filter for complete data only if requested
+    if keep_complete_only:
+        logging.info("Filtering for subjects with complete behavioral data...")
+        
+        # Identify behavioral metrics columns (exclude demo columns)
+        behavioral_cols = [col for col in merged_df.columns if col not in demo_df.columns and col != 'id']
+        logging.info(f"Behavioral metrics columns: {len(behavioral_cols)}")
+        
+        # Count missing values per subject
+        missing_counts = merged_df[behavioral_cols].isnull().sum(axis=1)
+        complete_subjects = missing_counts == 0
+        
+        logging.info(f"Subjects with complete data: {complete_subjects.sum()}/{len(merged_df)}")
+        logging.info(f"Subjects with missing data: {(~complete_subjects).sum()}/{len(merged_df)}")
+        
+        # Show distribution of missing values
+        missing_dist = missing_counts.value_counts().sort_index()
+        logging.info("Missing values distribution:")
+        for missing_num, count in missing_dist.items():
+            if missing_num <= 5:  # Only show up to 5 missing values
+                logging.info(f"  {count} subjects with {missing_num} missing values")
+            elif missing_num == missing_dist.index[-1]:  # Show the maximum
+                logging.info(f"  {count} subjects with {missing_num}+ missing values")
+        
+        # Filter to keep only complete subjects
+        merged_df = merged_df[complete_subjects].copy()
+        logging.info(f"Filtered dataset: {len(merged_df)} subjects with complete behavioral data")
     
     # Final merged data info
     logging.info(f"Final merged dataset: {len(merged_df)} rows")
@@ -162,7 +192,7 @@ def main():
                        default='d:\\code\\data_driven_EF\\data\\EFNY\\table\\demo\\EFNY_demo_with_rsfmri.csv',
                        help='Input demo CSV file path')
     parser.add_argument('--output', '-o', 
-                       default='d:\\code\\data_driven_EF\\data\\EFNY\\table\\EFNY_behavioral_data.csv',
+                       default='d:\\code\\data_driven_EF\\data\\EFNY\\table\\demo\\EFNY_behavioral_data.csv',
                        help='Output CSV file path')
     parser.add_argument('--log', '-l', 
                        default='d:\\code\\data_driven_EF\\data\\EFNY\\log\\preprocess\\build_behavioral_data.log',
@@ -182,7 +212,7 @@ def main():
         return 1
     
     # Run the build process
-    success = build_behavioral_data(args.metrics, args.demo, args.output)
+    success = build_behavioral_data(args.metrics, args.demo, args.output, keep_complete_only=True)
     
     return 0 if success else 1
 
