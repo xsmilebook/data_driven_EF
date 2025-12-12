@@ -19,7 +19,6 @@ DATASET_NAME="EFNY"
 
 # Create output directory if it doesn't exist
 mkdir -p "${OUTPUT_PATH}"
-mkdir -p logs
 
 # Run the conversion script for different ROI numbers
 echo "Starting FC matrix to vector conversion for ${DATASET_NAME}"
