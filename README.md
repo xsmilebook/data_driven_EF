@@ -194,6 +194,24 @@ X_scores, Y_scores = adaptive_pls_model.transform(brain_clean, behavioral_clean)
 canonical_corrs = adaptive_pls_model.calculate_canonical_correlations(X_scores, Y_scores)
 ```
 
+#### 协变量回归（混杂因素控制）
+
+```python
+# 系统会自动从行为数据中提取EFNY标准协变量：
+# age（年龄）、sex（性别）、meanFD（头动参数）
+
+# 如果行为数据中包含这些列，会自动使用真实数据
+# 如果缺失，会创建占位符数据并发出警告
+
+# 查看提取的协变量
+covariates = extract_covariates_from_behavioral_data(behavioral_data, subject_ids)
+print(f"协变量: {covariates.columns.tolist()}")
+print(f"协变量形状: {covariates.shape}")
+
+# 也可以从独立文件加载协变量
+covariates = pd.read_csv("path/to/covariates.csv")  # 需要包含age, sex, meanFD列
+```
+
 #### 交叉验证
 
 ```python
@@ -272,7 +290,8 @@ python src/scripts/run_single_task.py --help
 # --model_type: pls, adaptive_pls 或 scca
 # --n_components: 成分数量（对于adaptive_pls是最大搜索范围）
 # --use_synthetic: 使用合成数据进行测试
-# --regress_confounds: 是否回归混杂因素
+# --covariates_path: 协变量文件路径(.csv，可选)
+# --regress_confounds: 是否回归混杂因素(age, sex, meanFD)
 # --run_cv: 是否运行交叉验证
 # --cv_n_splits: CV折数
 # --output_dir: 输出目录

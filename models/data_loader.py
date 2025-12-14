@@ -232,14 +232,17 @@ def create_synthetic_data(n_subjects: int = 200,
     behavioral_loadings = np.random.normal(0, 0.4, size=(n_latent, n_behavioral_measures))
     behavioral_data = latent_factors @ behavioral_loadings + np.random.normal(0, 0.3, size=(n_subjects, n_behavioral_measures))
     
-    # 协变量
+    # 协变量（EFNY标准：age, sex, meanFD）
+    age = np.random.normal(25, 5, size=n_subjects)
     sex = np.random.choice([0, 1], size=n_subjects)
     meanFD = np.random.normal(0.15, 0.05, size=n_subjects)
-    covariates = pd.DataFrame({'sex': sex, 'meanFD': meanFD})
+    covariates = pd.DataFrame({'age': age, 'sex': sex, 'meanFD': meanFD})
     
     # 添加协变量效应
+    brain_data += np.outer(age, np.random.normal(0, 0.1, n_brain_features))
     brain_data += np.outer(sex, np.random.normal(0, 0.2, n_brain_features))
     brain_data += np.outer(meanFD, np.random.normal(0, 2, n_brain_features))
+    behavioral_data += np.outer(age, np.random.normal(0, 0.05, n_behavioral_measures))
     behavioral_data += np.outer(sex, np.random.normal(0, 0.1, n_behavioral_measures))
     behavioral_data += np.outer(meanFD, np.random.normal(0, 1, n_behavioral_measures))
     

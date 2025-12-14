@@ -12,7 +12,7 @@ project_dir="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF"
 
 # 基础参数 - Adaptive-PLS配置
 MODEL_TYPE="adaptive_pls"                 # 自适应PLS模型
-N_COMPONENTS=10                           # 最大搜索范围（1-8个成分）
+N_COMPONENTS=8                           # 最大搜索范围（1-8个成分）
 RANDOM_STATE=42
 
 # 根据任务ID设置参数

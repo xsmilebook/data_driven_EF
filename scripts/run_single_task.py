@@ -73,6 +73,11 @@ Examples:
     )
     
     parser.add_argument(
+        "--covariates_path", type=str, default=None,
+        help="协变量文件路径（.csv文件，可选）"
+    )
+    
+    parser.add_argument(
         "--n_subjects", type=int, default=200,
         help="合成数据的被试数量"
     )
@@ -157,8 +162,82 @@ Examples:
     return parser.parse_args()
 
 
+def extract_covariates_from_behavioral_data(behavioral_data, subject_ids, covariates_path=None, logger=None):
+    """从行为数据中提取协变量 - 仅支持age, sex, meanFD（EFNY标准）"""
+    if logger is None:
+        logger = logging.getLogger(__name__)
+    
+    # EFNY标准协变量列表（不区分大小写）
+    standard_covariates = ['age', 'sex', 'meanFD']
+    
+    if covariates_path:
+        # 从指定文件加载协变量
+        logger.info(f"Loading covariates from: {covariates_path}")
+        covariates = pd.read_csv(covariates_path)
+        
+        # 确保被试数量匹配
+        if len(covariates) != len(subject_ids):
+            logger.warning(f"Covariates shape mismatch: {len(covariates)} vs {len(subject_ids)}")
+            # 尝试按索引对齐
+            covariates = covariates.iloc[:len(subject_ids)]
+        
+        # 检查是否包含标准协变量（不区分大小写）
+        covariates_lower = {col.lower(): col for col in covariates.columns}
+        available_covs = []
+        for std_cov in standard_covariates:
+            if std_cov.lower() in covariates_lower:
+                available_covs.append(covariates_lower[std_cov.lower()])
+        
+        if available_covs:
+            logger.info(f"Found covariates in external file: {available_covs}")
+            return covariates[available_covs]
+        else:
+            logger.warning("No standard covariates found in external file, using all columns")
+            return covariates
+    else:
+        # 从行为数据中提取协变量（EFNY标准）
+        logger.info("Extracting EFNY standard covariates from behavioral data")
+        covariates = pd.DataFrame(index=range(len(subject_ids)))
+        
+        # 查找并提取协变量（不区分大小写）
+        behavioral_cols_lower = {col.lower(): col for col in behavioral_data.columns}
+        found_covs = []
+        
+        for cov_name in standard_covariates:
+            cov_name_lower = cov_name.lower()
+            
+            if cov_name_lower in behavioral_cols_lower:
+                # 找到匹配的列
+                original_col = behavioral_cols_lower[cov_name_lower]
+                covariates[cov_name] = behavioral_data[original_col].values
+                found_covs.append(cov_name)
+                logger.info(f"  Extracted {cov_name} from behavioral data")
+            else:
+                # 没有找到，创建占位符数据
+                logger.warning(f"  {cov_name} not found in behavioral data, creating placeholder")
+                if cov_name_lower == 'sex':
+                    covariates[cov_name] = np.random.choice([0, 1], size=len(subject_ids))
+                elif cov_name_lower == 'age':
+                    covariates[cov_name] = np.random.normal(25, 5, size=len(subject_ids))
+                elif cov_name_lower == 'meanfd':
+                    covariates[cov_name] = np.random.normal(0.15, 0.05, size=len(subject_ids))
+        
+        # 如果至少找到一个协变量，返回提取的协变量
+        if found_covs:
+            logger.info(f"Successfully extracted EFNY covariates: {found_covs}")
+            return covariates[found_covs]
+        else:
+            # 如果没有找到任何协变量，创建基本EFNY协变量集
+            logger.warning("No EFNY standard covariates found, creating basic set")
+            return pd.DataFrame({
+                'age': np.random.normal(25, 5, size=len(subject_ids)),
+                'sex': np.random.choice([0, 1], size=len(subject_ids)),
+                'meanFD': np.random.normal(0.15, 0.05, size=len(subject_ids))
+            })
+
+
 def load_data(args):
-    """加载数据"""
+    """加载数据 - 使用默认EFNY数据路径"""
     logger = logging.getLogger(__name__)
     
     if args.use_synthetic:
@@ -171,22 +250,22 @@ def load_data(args):
         )
         subject_ids = np.arange(args.n_subjects)
     else:
-        logger.info("Loading real EFNY data")
+        logger.info("Loading real EFNY data using default paths")
+        
+        # 使用默认EFNY数据加载器
         data_loader = EFNYDataLoader()
         brain_data, behavioral_data, subject_ids = data_loader.load_all_data()
         
-        # 创建协变量（从行为数据中提取年龄、性别等）
-        # 这里简化处理，实际使用时需要根据数据结构调整
-        covariates = pd.DataFrame({
-            'sex': np.random.choice([0, 1], size=len(subject_ids)),  # 临时随机生成
-            'age': np.random.normal(25, 5, size=len(subject_ids)),   # 临时随机生成
-            'meanFD': np.random.normal(0.15, 0.05, size=len(subject_ids))  # 临时随机生成
-        })
+        # 处理协变量（EFNY标准：age, sex, meanFD）
+        covariates = extract_covariates_from_behavioral_data(
+            behavioral_data, subject_ids, args.covariates_path, logger
+        )
     
     logger.info(f"Data loaded successfully:")
     logger.info(f"  Brain data shape: {brain_data.shape}")
     logger.info(f"  Behavioral data shape: {behavioral_data.shape}")
     logger.info(f"  Covariates shape: {covariates.shape}")
+    logger.info(f"  Subject IDs: {len(subject_ids)}")
     
     return brain_data, behavioral_data, covariates, subject_ids
 
