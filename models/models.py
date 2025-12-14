@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Tuple, Optional, Union
 from sklearn.cross_decomposition import PLSCanonical
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import KFold
 from scipy.stats import pearsonr
 import logging
 
@@ -426,7 +427,7 @@ def create_model(model_type: str, **kwargs) -> BaseBrainBehaviorModel:
     工厂函数 - 创建模型实例
     
     Args:
-        model_type: 模型类型 ('pls' 或 'scca')
+        model_type: 模型类型 ('pls', 'scca', 'adaptive_pls')
         **kwargs: 模型参数
         
     Returns:
@@ -441,8 +442,238 @@ def create_model(model_type: str, **kwargs) -> BaseBrainBehaviorModel:
         return PLSModel(**kwargs)
     elif model_type == 'scca':
         return SparseCCAModel(**kwargs)
+    elif model_type == 'adaptive_pls':
+        return AdaptivePLSModel(**kwargs)
     else:
-        raise ValueError(f"Unsupported model type: {model_type}. Supported: 'pls', 'scca'")
+        raise ValueError(f"Unsupported model type: {model_type}. Supported: 'pls', 'scca', 'adaptive_pls'")
+
+
+class AdaptivePLSModel(BaseBrainBehaviorModel):
+    """
+    自适应PLS模型 - 使用内部交叉验证确定最优成分数量
+    """
+    
+    def __init__(self, n_components_range: list = None, cv_folds: int = 5, 
+                 criterion: str = 'canonical_correlation', random_state: Optional[int] = None,
+                 scale: bool = True, max_iter: int = 500, tol: float = 1e-06):
+        """
+        初始化自适应PLS模型
+        
+        Args:
+            n_components_range: 成分数量搜索范围，默认 [1, 2, 3, 4, 5]
+            cv_folds: 内部交叉验证折数
+            criterion: 选择标准 ('canonical_correlation', 'variance_explained', 'stability')
+            random_state: 随机种子
+            scale: 是否标准化数据
+            max_iter: 最大迭代次数
+            tol: 收敛容差
+        """
+        if n_components_range is None:
+            n_components_range = [1, 2, 3, 4, 5]
+        
+        self.n_components_range = n_components_range
+        self.cv_folds = cv_folds
+        self.criterion = criterion
+        self.random_state = random_state
+        self.scale = scale
+        self.max_iter = max_iter
+        self.tol = tol
+        
+        self.optimal_n_components = None
+        self.cv_results_ = None
+        self.model = None
+        self.is_fitted = False
+        self.n_components = None  # 用于兼容性
+        
+    def _evaluate_n_components(self, X: np.ndarray, Y: np.ndarray, 
+                              n_components: int) -> Dict[str, float]:
+        """
+        评估特定成分数量的性能
+        
+        Args:
+            X: 脑数据
+            Y: 行为数据
+            n_components: 成分数量
+            
+        Returns:
+            评估指标字典
+        """
+        # 创建内部交叉验证
+        kf = KFold(n_splits=self.cv_folds, shuffle=True, 
+                  random_state=self.random_state)
+        
+        canonical_corrs = []
+        var_exp_X_list = []
+        var_exp_Y_list = []
+        stability_scores = []
+        
+        for train_idx, val_idx in kf.split(X):
+            # 分割数据
+            X_train, X_val = X[train_idx], X[val_idx]
+            Y_train, Y_val = Y[train_idx], Y[val_idx]
+            
+            # 创建并拟合模型
+            pls_model = PLSCanonical(
+                n_components=n_components,
+                scale=self.scale,
+                max_iter=self.max_iter,
+                tol=self.tol
+            )
+            
+            pls_model.fit(X_train, Y_train)
+            
+            # 转换验证集
+            X_val_scores, Y_val_scores = pls_model.transform(X_val, Y_val)
+            
+            # 计算典型相关系数
+            corrs = []
+            for i in range(n_components):
+                corr, _ = pearsonr(X_val_scores[:, i], Y_val_scores[:, i])
+                corrs.append(corr)
+            canonical_corrs.append(np.mean(corrs))
+            
+            # 计算方差解释（简化版）
+            var_exp_X_list.append(np.var(X_val_scores, axis=0).sum() / 
+                                np.var(X_val, axis=0).sum() * 100)
+            var_exp_Y_list.append(np.var(Y_val_scores, axis=0).sum() / 
+                                np.var(Y_val, axis=0).sum() * 100)
+            
+            # 计算稳定性（载荷的一致性）
+            if hasattr(pls_model, 'x_loadings_'):
+                loadings = pls_model.x_loadings_
+                # 计算载荷的稀疏性和稳定性
+                stability = np.mean(np.abs(loadings)) / (np.std(loadings) + 1e-8)
+                stability_scores.append(stability)
+        
+        return {
+            'canonical_correlation': np.mean(canonical_corrs),
+            'variance_explained_X': np.mean(var_exp_X_list),
+            'variance_explained_Y': np.mean(var_exp_Y_list),
+            'stability': np.mean(stability_scores) if stability_scores else 0.0,
+            'canonical_correlation_std': np.std(canonical_corrs)
+        }
+    
+    def fit(self, X: Union[np.ndarray, pd.DataFrame], 
+            Y: Union[np.ndarray, pd.DataFrame]) -> 'AdaptivePLSModel':
+        """
+        拟合自适应PLS模型 - 自动选择最优成分数量
+        
+        Args:
+            X: 脑数据 (n_samples, n_brain_features)
+            Y: 行为数据 (n_samples, n_behavioral_features)
+            
+        Returns:
+            self
+        """
+        logger.info(f"Starting adaptive PLS fitting with component range: {self.n_components_range}")
+        logger.info(f"X shape: {X.shape}, Y shape: {Y.shape}")
+        
+        # 转换数据格式
+        if isinstance(X, pd.DataFrame):
+            X_values = X.values
+        else:
+            X_values = X
+            
+        if isinstance(Y, pd.DataFrame):
+            Y_values = Y.values
+        else:
+            Y_values = Y
+        
+        # 评估每个成分数量
+        cv_results = {}
+        best_score = -np.inf
+        best_n_components = 1
+        
+        for n_comp in self.n_components_range:
+            logger.info(f"Evaluating n_components = {n_comp}")
+            metrics = self._evaluate_n_components(X_values, Y_values, n_comp)
+            cv_results[n_comp] = metrics
+            
+            # 根据选择标准选择最优成分数量
+            score = metrics[self.criterion]
+            if score > best_score:
+                best_score = score
+                best_n_components = n_comp
+        
+        self.optimal_n_components = best_n_components
+        self.cv_results_ = cv_results
+        self.n_components = best_n_components  # 更新n_components用于兼容性
+        
+        logger.info(f"Optimal n_components selected: {self.optimal_n_components} (criterion: {self.criterion})")
+        
+        # 使用最优成分数量创建最终模型
+        self.model = PLSCanonical(
+            n_components=self.optimal_n_components,
+            scale=self.scale,
+            max_iter=self.max_iter,
+            tol=self.tol
+        )
+        
+        # 拟合最终模型
+        self.model.fit(X_values, Y_values)
+        self.is_fitted = True
+        
+        logger.info("Adaptive PLS model fitting completed")
+        return self
+    
+    def transform(self, X: Union[np.ndarray, pd.DataFrame], 
+                  Y: Union[np.ndarray, pd.DataFrame]) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        转换数据到潜变量空间
+        
+        Args:
+            X: 脑数据
+            Y: 行为数据
+            
+        Returns:
+            X_scores: 脑潜变量分数
+            Y_scores: 行为潜变量分数
+        """
+        if not self.is_fitted:
+            raise ValueError("Model must be fitted before transformation")
+        
+        return self.model.transform(X, Y)
+    
+    def get_loadings(self) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        获取载荷矩阵
+        
+        Returns:
+            X_loadings: 脑载荷矩阵
+            Y_loadings: 行为载荷矩阵
+        """
+        if not self.is_fitted:
+            raise ValueError("Model must be fitted before getting loadings")
+        
+        return self.model.x_loadings_, self.model.y_loadings_
+    
+    def get_model_info(self) -> Dict[str, Union[int, bool, float, str]]:
+        """
+        获取模型信息
+        
+        Returns:
+            模型参数字典
+        """
+        return {
+            'model_type': 'Adaptive-PLS',
+            'n_components_range': self.n_components_range,
+            'optimal_n_components': self.optimal_n_components,
+            'cv_folds': self.cv_folds,
+            'criterion': self.criterion,
+            'scale': self.scale,
+            'max_iter': self.max_iter,
+            'tol': self.tol,
+            'is_fitted': self.is_fitted
+        }
+    
+    def get_cv_results(self) -> Dict[int, Dict[str, float]]:
+        """
+        获取交叉验证结果
+        
+        Returns:
+            各成分数量的评估结果
+        """
+        return self.cv_results_
 
 
 def get_available_models() -> list:
@@ -452,4 +683,4 @@ def get_available_models() -> list:
     Returns:
         可用模型类型列表
     """
-    return ['pls', 'scca']
+    return ['pls', 'scca', 'adaptive_pls']

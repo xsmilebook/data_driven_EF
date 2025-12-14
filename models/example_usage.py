@@ -10,7 +10,7 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent
 sys.path.insert(0, str(project_root))
 
-from src.models import (
+from models import (
     EFNYDataLoader, create_synthetic_data, ConfoundRegressor,
     create_model, CrossValidator, PermutationTester,
     setup_logging, save_results, get_available_models
@@ -205,7 +205,8 @@ def example_save_and_load_results():
     }
     
     # 保存结果
-    from src.models.utils import save_results, load_results
+    # 保存结果
+    from models.utils import save_results, load_results
     
     output_path = Path("example_results")
     saved_files = save_results(results, output_path)
@@ -221,6 +222,68 @@ def example_save_and_load_results():
         print(f"  模型类型: {loaded_results['model_type']}")
         print(f"  成分数量: {loaded_results['n_components']}")
         print(f"  典型相关: {loaded_results['canonical_correlations']}")
+
+
+def example_adaptive_pls():
+    """自适应PLS模型示例 - 自动选择n_components"""
+    print("\n" + "="*60)
+    print("示例 7: 自适应PLS模型（自动选择n_components）")
+    print("="*60)
+    
+    # 创建数据
+    brain_data, behavioral_data, covariates = create_synthetic_data(
+        n_subjects=200, n_brain_features=150, n_behavioral_measures=25
+    )
+    
+    # 预处理
+    confound_regressor = ConfoundRegressor(standardize=True)
+    brain_clean = confound_regressor.fit_transform(brain_data, confounds=covariates)
+    behavioral_clean = confound_regressor.fit_transform(behavioral_data, confounds=covariates)
+    
+    # 创建自适应PLS模型
+    adaptive_model = create_model(
+        'adaptive_pls', 
+        n_components_range=[1, 2, 3, 4, 5, 6],  # 搜索范围
+        cv_folds=5,                            # 内部CV折数
+        criterion='canonical_correlation',     # 选择标准
+        random_state=42
+    )
+    
+    print(f"开始自适应成分选择，搜索范围: {adaptive_model.n_components_range}")
+    
+    # 拟合模型（会自动选择最优n_components）
+    adaptive_model.fit(brain_clean, behavioral_clean)
+    
+    # 获取结果
+    X_scores, Y_scores = adaptive_model.transform(brain_clean, behavioral_clean)
+    canonical_corrs = adaptive_model.calculate_canonical_correlations(X_scores, Y_scores)
+    variance_explained = adaptive_model.calculate_variance_explained(
+        brain_clean, behavioral_clean, X_scores, Y_scores
+    )
+    
+    # 显示自适应选择结果
+    model_info = adaptive_model.get_model_info()
+    cv_results = adaptive_model.get_cv_results()
+    
+    print(f"\n自适应选择结果:")
+    print(f"  最优成分数量: {model_info['optimal_n_components']}")
+    print(f"  选择标准: {model_info['criterion']}")
+    print(f"  内部CV折数: {model_info['cv_folds']}")
+    
+    print(f"\n各成分数量评估结果:")
+    print("n_components | 典型相关 | 方差解释X% | 方差解释Y%")
+    print("-" * 50)
+    for n_comp, metrics in cv_results.items():
+        print(f"     {n_comp}      |   {metrics['canonical_correlation']:.4f}   |    {metrics['variance_explained_X']:.2f}     |    {metrics['variance_explained_Y']:.2f}")
+    
+    print(f"\n最终模型结果（n_components={model_info['optimal_n_components']}）:")
+    print("典型相关系数:")
+    for i, corr in enumerate(canonical_corrs):
+        print(f"  成分 {i+1}: {corr:.4f}")
+    
+    print("\n行为方差解释:")
+    for i, var_exp in enumerate(variance_explained['variance_explained_Y']):
+        print(f"  成分 {i+1}: {var_exp:.2f}%")
 
 
 def main():
@@ -239,6 +302,7 @@ def main():
         example_available_models()
         example_real_data_loading()
         example_save_and_load_results()
+        example_adaptive_pls()  # 新增的自适应PLS示例
         
         print("\n" + "="*60)
         print("所有示例运行完成！")

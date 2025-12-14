@@ -234,27 +234,42 @@ def create_model_instance(args):
     """创建模型实例"""
     logger = logging.getLogger(__name__)
     
-    model_params = {
-        'n_components': args.n_components,
-        'random_state': args.random_state
-    }
-    
-    if args.model_type == 'pls':
-        model_params.update({
+    if args.model_type == 'adaptive_pls':
+        # 自适应PLS模型 - 自动选择n_components
+        model_params = {
+            'n_components_range': list(range(1, args.n_components + 1)),  # 搜索范围
+            'cv_folds': 5,
+            'criterion': 'canonical_correlation',
+            'random_state': args.random_state,
             'scale': True,
             'max_iter': 500,
             'tol': 1e-06
-        })
-    elif args.model_type == 'scca':
-        model_params.update({
-            'sparsity_X': 0.1,
-            'sparsity_Y': 0.1,
-            'max_iter': 1000,
-            'tol': 1e-06
-        })
+        }
+        logger.info(f"Creating Adaptive-PLS model with component search range: 1-{args.n_components}")
+    else:
+        # 标准模型
+        model_params = {
+            'n_components': args.n_components,
+            'random_state': args.random_state
+        }
+        
+        if args.model_type == 'pls':
+            model_params.update({
+                'scale': True,
+                'max_iter': 500,
+                'tol': 1e-06
+            })
+        elif args.model_type == 'scca':
+            model_params.update({
+                'sparsity_X': 0.1,
+                'sparsity_Y': 0.1,
+                'max_iter': 1000,
+                'tol': 1e-06
+            })
+        
+        logger.info(f"Created {args.model_type.upper()} model with {args.n_components} components")
     
     model = create_model(args.model_type, **model_params)
-    logger.info(f"Created {args.model_type.upper()} model with {args.n_components} components")
     
     return model
 

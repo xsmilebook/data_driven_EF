@@ -162,6 +162,38 @@ X_scores, Y_scores = pls_model.transform(brain_clean, behavioral_clean)
 canonical_corrs = pls_model.calculate_canonical_correlations(X_scores, Y_scores)
 ```
 
+#### 自适应PLS模型（自动选择n_components）
+
+```python
+from src.models import create_model
+
+# 创建自适应PLS模型 - 自动选择最优成分数量
+adaptive_pls_model = create_model(
+    'adaptive_pls',
+    n_components_range=[1, 2, 3, 4, 5, 6],  # 搜索范围
+    cv_folds=5,                            # 内部交叉验证折数
+    criterion='canonical_correlation',     # 选择标准
+    random_state=42
+)
+
+# 拟合模型（会自动选择最优n_components）
+adaptive_pls_model.fit(brain_clean, behavioral_clean)
+
+# 获取最优成分数量
+optimal_n_components = adaptive_pls_model.optimal_n_components
+print(f"自动选择的最优成分数量: {optimal_n_components}")
+
+# 获取详细的交叉验证结果
+cv_results = adaptive_pls_model.get_cv_results()
+print("各成分数量评估结果:")
+for n_comp, metrics in cv_results.items():
+    print(f"  n_components={n_comp}: 典型相关={metrics['canonical_correlation']:.4f}")
+
+# 使用模型进行预测
+X_scores, Y_scores = adaptive_pls_model.transform(brain_clean, behavioral_clean)
+canonical_corrs = adaptive_pls_model.calculate_canonical_correlations(X_scores, Y_scores)
+```
+
 #### 交叉验证
 
 ```python
@@ -207,6 +239,12 @@ python src/scripts/run_single_task.py \
     --model_type pls \
     --n_components 5
 
+# 自适应PLS模型（自动选择n_components）
+python src/scripts/run_single_task.py \
+    --task_id 0 \
+    --model_type adaptive_pls \
+    --n_components 6  # 最大搜索范围
+
 # 置换检验（task_id = 1-1000 用于不同的置换）
 python src/scripts/run_single_task.py \
     --task_id 1 \
@@ -231,8 +269,8 @@ python src/scripts/run_single_task.py --help
 
 # 关键参数：
 # --task_id: 0 表示真实数据，1-N 表示置换
-# --model_type: pls 或 scca
-# --n_components: 成分数量
+# --model_type: pls, adaptive_pls 或 scca
+# --n_components: 成分数量（对于adaptive_pls是最大搜索范围）
 # --use_synthetic: 使用合成数据进行测试
 # --regress_confounds: 是否回归混杂因素
 # --run_cv: 是否运行交叉验证
@@ -256,11 +294,11 @@ python -c "from src.models.example_usage import example_basic_analysis; example_
 #### 合成数据测试
 
 ```bash
-# 使用合成数据进行测试
+# 使用合成数据测试自适应PLS模型
 python src/scripts/run_single_task.py \
     --task_id 0 \
-    --model_type pls \
-    --n_components 3 \
+    --model_type adaptive_pls \
+    --n_components 5 \
     --use_synthetic \
     --n_subjects 100 \
     --n_brain_features 200 \
@@ -299,10 +337,11 @@ python src/scripts/run_single_task.py \
 
 ### 🔍 模型比较
 
-| 模型 | 描述 | 使用场景 | 实现状态 |
-|-------|-------------|----------|---------------------|
-| PLS | 偏最小二乘法 | 一般脑-行为关联 | ✅ 完整 |
-| Sparse-CCA | 稀疏典型相关分析 | 特征选择和可解释性 | ⚠️ 回退到CCA |
+| 模型 | 描述 | 使用场景 | 实现状态 | 特点 |
+|-------|-------------|----------|---------------------|-------|
+| PLS | 偏最小二乘法 | 一般脑-行为关联 | ✅ 完整 | 固定n_components |
+| Adaptive-PLS | 自适应偏最小二乘法 | 自动选择最优成分数量 | ✅ 完整 | 内部CV确定n_components |
+| Sparse-CCA | 稀疏典型相关分析 | 特征选择和可解释性 | ⚠️ 回退到CCA | 稀疏正则化 |
 
 ### ⚙️ 配置
 
@@ -328,6 +367,7 @@ python src/scripts/run_single_task.py \
 - `BaseBrainBehaviorModel`: 所有模型的基类
 - `PLSModel`: 偏最小二乘法实现
 - `SparseCCAModel`: 稀疏CCA（带回退）
+- `AdaptivePLSModel`: 自适应PLS（自动选择n_components）
 - `create_model`: 模型创建的工厂函数
 
 #### 评估
