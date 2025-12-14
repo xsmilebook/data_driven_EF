@@ -217,38 +217,42 @@ class CrossValidator:
             汇总结果字典
         """
         n_folds = len(fold_results)
-        n_components = fold_results[0]['n_components']
+        
+        # 获取最大成分数量（处理AdaptivePLS的情况）
+        max_n_components = max(result['n_components'] for result in fold_results)
         
         # 初始化汇总数组
-        mean_canonical_corrs = np.zeros(n_components)
-        std_canonical_corrs = np.zeros(n_components)
-        mean_var_exp_X = np.zeros(n_components)
-        std_var_exp_X = np.zeros(n_components)
-        mean_var_exp_Y = np.zeros(n_components)
-        std_var_exp_Y = np.zeros(n_components)
+        mean_canonical_corrs = np.zeros(max_n_components)
+        std_canonical_corrs = np.zeros(max_n_components)
+        mean_var_exp_X = np.zeros(max_n_components)
+        std_var_exp_X = np.zeros(max_n_components)
+        mean_var_exp_Y = np.zeros(max_n_components)
+        std_var_exp_Y = np.zeros(max_n_components)
         
-        # 收集各折结果
-        all_canonical_corrs = np.zeros((n_folds, n_components))
-        all_var_exp_X = np.zeros((n_folds, n_components))
-        all_var_exp_Y = np.zeros((n_folds, n_components))
+        # 收集各折结果（填充到最大尺寸）
+        all_canonical_corrs = np.full((n_folds, max_n_components), np.nan)
+        all_var_exp_X = np.full((n_folds, max_n_components), np.nan)
+        all_var_exp_Y = np.full((n_folds, max_n_components), np.nan)
         
         for i, fold_result in enumerate(fold_results):
-            all_canonical_corrs[i] = fold_result['canonical_correlations']
-            all_var_exp_X[i] = fold_result['variance_explained_X']
-            all_var_exp_Y[i] = fold_result['variance_explained_Y']
+            n_comp = fold_result['n_components']
+            all_canonical_corrs[i, :n_comp] = fold_result['canonical_correlations'][:n_comp]
+            all_var_exp_X[i, :n_comp] = fold_result['variance_explained_X'][:n_comp]
+            all_var_exp_Y[i, :n_comp] = fold_result['variance_explained_Y'][:n_comp]
         
-        # 计算均值和标准差
-        mean_canonical_corrs = np.mean(all_canonical_corrs, axis=0)
-        std_canonical_corrs = np.std(all_canonical_corrs, axis=0)
-        mean_var_exp_X = np.mean(all_var_exp_X, axis=0)
-        std_var_exp_X = np.std(all_var_exp_X, axis=0)
-        mean_var_exp_Y = np.mean(all_var_exp_Y, axis=0)
-        std_var_exp_Y = np.std(all_var_exp_Y, axis=0)
+        # 计算均值和标准差（忽略NaN值）
+        with np.errstate(all='ignore'):
+            mean_canonical_corrs = np.nanmean(all_canonical_corrs, axis=0)
+            std_canonical_corrs = np.nanstd(all_canonical_corrs, axis=0)
+            mean_var_exp_X = np.nanmean(all_var_exp_X, axis=0)
+            std_var_exp_X = np.nanstd(all_var_exp_X, axis=0)
+            mean_var_exp_Y = np.nanmean(all_var_exp_Y, axis=0)
+            std_var_exp_Y = np.nanstd(all_var_exp_Y, axis=0)
         
         # 创建汇总结果
         cv_results = {
             'n_folds': n_folds,
-            'n_components': n_components,
+            'max_n_components': max_n_components,
             'mean_canonical_correlations': mean_canonical_corrs,
             'std_canonical_correlations': std_canonical_corrs,
             'mean_variance_explained_X': mean_var_exp_X,

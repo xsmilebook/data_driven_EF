@@ -35,6 +35,21 @@ class BaseBrainBehaviorModel(ABC):
         self.random_state = random_state
         self.model = None
         self.is_fitted = False
+    
+    def get_params(self, deep: bool = True):
+        """
+        获取模型参数（用于交叉验证中的模型复制）
+        
+        Args:
+            deep: 是否深拷贝
+            
+        Returns:
+            参数字典
+        """
+        return {
+            'n_components': self.n_components,
+            'random_state': self.random_state
+        }
         
     @abstractmethod
     def fit(self, X: Union[np.ndarray, pd.DataFrame], 
@@ -197,8 +212,7 @@ class PLSModel(BaseBrainBehaviorModel):
             n_components=n_components,
             scale=scale,
             max_iter=max_iter,
-            tol=tol,
-            random_state=random_state
+            tol=tol
         )
     
     def fit(self, X: Union[np.ndarray, pd.DataFrame], 
@@ -293,6 +307,23 @@ class PLSModel(BaseBrainBehaviorModel):
             'max_iter': self.max_iter,
             'tol': self.tol,
             'is_fitted': self.is_fitted
+        }
+    
+    def get_params(self, deep: bool = True):
+        """
+        获取模型参数（用于交叉验证中的模型复制）
+        
+        Args:
+            deep: 是否深拷贝
+            
+        Returns:
+            参数字典
+        """
+        return {
+            'n_components': self.n_components,
+            'scale': self.scale,
+            'max_iter': self.max_iter,
+            'tol': self.tol
         }
 
 
@@ -674,6 +705,25 @@ class AdaptivePLSModel(BaseBrainBehaviorModel):
             各成分数量的评估结果
         """
         return self.cv_results_
+    
+    def get_params(self, deep: bool = True):
+        """
+        获取模型参数（用于交叉验证中的模型复制）
+        
+        Args:
+            deep: 是否深拷贝
+            
+        Returns:
+            参数字典
+        """
+        return {
+            'n_components_range': self.n_components_range,
+            'cv_folds': self.cv_folds,
+            'criterion': self.criterion,
+            'scale': self.scale,
+            'max_iter': self.max_iter,
+            'tol': self.tol
+        }
 
 
 def get_available_models() -> list:

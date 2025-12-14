@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class EFNYDataLoader:
     """EFNY 数据集加载器"""
     
-    def __init__(self, data_root: Union[str, Path] = "d:/code/data_driven_EF/data/EFNY"):
+    def __init__(self, data_root: Union[str, Path] = "/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/data/EFNY"):
         """
         初始化数据加载器
         

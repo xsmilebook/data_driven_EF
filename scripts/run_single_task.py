@@ -319,7 +319,6 @@ def create_model_instance(args):
             'n_components_range': list(range(1, args.n_components + 1)),  # 搜索范围
             'cv_folds': 5,
             'criterion': 'canonical_correlation',
-            'random_state': args.random_state,
             'scale': True,
             'max_iter': 5000,
             'tol': 1e-06
@@ -328,8 +327,7 @@ def create_model_instance(args):
     else:
         # 标准模型
         model_params = {
-            'n_components': args.n_components,
-            'random_state': args.random_state
+            'n_components': args.n_components
         }
         
         if args.model_type == 'pls':

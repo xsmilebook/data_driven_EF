@@ -11,6 +11,7 @@ from typing import Optional, Union, Dict, Any
 from datetime import datetime
 import json
 import numpy as np
+import pandas as pd
 
 
 def setup_logging(log_level: str = "INFO", 
@@ -275,12 +276,12 @@ def check_data_quality(X: np.ndarray, Y: np.ndarray,
                       confounds: Optional[np.ndarray] = None,
                       max_missing_rate: float = 0.1) -> Dict[str, Any]:
     """
-    检查数据质量
+    检查数据质量 - 支持pandas DataFrame和numpy数组
     
     Args:
-        X: 脑数据
-        Y: 行为数据
-        confounds: 混杂变量
+        X: 脑数据 (DataFrame或ndarray)
+        Y: 行为数据 (DataFrame或ndarray)
+        confounds: 混杂变量 (DataFrame或ndarray)
         max_missing_rate: 最大允许缺失率
         
     Returns:
@@ -293,24 +294,37 @@ def check_data_quality(X: np.ndarray, Y: np.ndarray,
         'n_features_Y': Y.shape[1]
     }
     
-    # 检查缺失值
-    X_missing_rate = np.isnan(X).sum() / X.size
-    Y_missing_rate = np.isnan(Y).sum() / Y.size
+    # 检查缺失值 - 支持DataFrame和ndarray
+    def calculate_missing_rate(data):
+        """计算缺失值比例"""
+        if isinstance(data, pd.DataFrame):
+            return data.isnull().sum().sum() / (data.shape[0] * data.shape[1])
+        else:  # numpy array
+            return np.isnan(data).sum() / data.size
+    
+    X_missing_rate = calculate_missing_rate(X)
+    Y_missing_rate = calculate_missing_rate(Y)
     
     report['missing_rate_X'] = X_missing_rate
     report['missing_rate_Y'] = Y_missing_rate
     
     if confounds is not None:
         report['n_features_confounds'] = confounds.shape[1]
-        confounds_missing_rate = np.isnan(confounds).sum() / confounds.size
+        confounds_missing_rate = calculate_missing_rate(confounds)
         report['missing_rate_confounds'] = confounds_missing_rate
     
-    # 检查异常值
-    X_std = np.nanstd(X, axis=0)
-    Y_std = np.nanstd(Y, axis=0)
+    # 检查异常值 - 支持DataFrame和ndarray
+    def calculate_zero_variance_features(data):
+        """计算零方差特征数量"""
+        if isinstance(data, pd.DataFrame):
+            std_values = data.std(axis=0)
+            return (std_values == 0).sum()
+        else:  # numpy array
+            std_values = np.nanstd(data, axis=0)
+            return np.sum(std_values == 0)
     
-    report['zero_variance_features_X'] = np.sum(X_std == 0)
-    report['zero_variance_features_Y'] = np.sum(Y_std == 0)
+    report['zero_variance_features_X'] = calculate_zero_variance_features(X)
+    report['zero_variance_features_Y'] = calculate_zero_variance_features(Y)
     
     # 质量评估
     report['quality_passed'] = (
