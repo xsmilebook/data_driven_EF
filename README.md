@@ -134,65 +134,11 @@ src/models/
 
 #### 基础分析
 
-```python
-from src.models import EFNYDataLoader, create_model, ConfoundRegressor
-
-# 加载数据
-data_loader = EFNYDataLoader()
-brain_data, behavioral_data, subject_ids = data_loader.load_all_data()
-
-# 创建合成协变量（或加载真实协变量）
-covariates = pd.DataFrame({
-    'sex': np.random.choice([0, 1], size=len(subject_ids)),
-    'age': np.random.normal(25, 5, size=len(subject_ids)),
-    'meanFD': np.random.normal(0.15, 0.05, size=len(subject_ids))
-})
-
-# 预处理：回归混杂因素
-confound_regressor = ConfoundRegressor(standardize=True)
-brain_clean = confound_regressor.fit_transform(brain_data, confounds=covariates)
-behavioral_clean = confound_regressor.fit_transform(behavioral_data, confounds=covariates)
-
-# 创建并拟合PLS模型
-pls_model = create_model('pls', n_components=5, random_state=42)
-pls_model.fit(brain_clean, behavioral_clean)
-
-# 获取结果
-X_scores, Y_scores = pls_model.transform(brain_clean, behavioral_clean)
-canonical_corrs = pls_model.calculate_canonical_correlations(X_scores, Y_scores)
-```
+基础用法示例请参考 `src/models/example_usage.py` 中的函数，实现了从数据加载、混杂回归到PLS建模的完整流程。
 
 #### 自适应PLS模型（自动选择n_components）
 
-```python
-from src.models import create_model
-
-# 创建自适应PLS模型 - 自动选择最优成分数量
-adaptive_pls_model = create_model(
-    'adaptive_pls',
-    n_components_range=[1, 2, 3, 4, 5, 6],  # 搜索范围
-    cv_folds=5,                            # 内部交叉验证折数
-    criterion='canonical_correlation',     # 选择标准
-    random_state=42
-)
-
-# 拟合模型（会自动选择最优n_components）
-adaptive_pls_model.fit(brain_clean, behavioral_clean)
-
-# 获取最优成分数量
-optimal_n_components = adaptive_pls_model.optimal_n_components
-print(f"自动选择的最优成分数量: {optimal_n_components}")
-
-# 获取详细的交叉验证结果
-cv_results = adaptive_pls_model.get_cv_results()
-print("各成分数量评估结果:")
-for n_comp, metrics in cv_results.items():
-    print(f"  n_components={n_comp}: 典型相关={metrics['canonical_correlation']:.4f}")
-
-# 使用模型进行预测
-X_scores, Y_scores = adaptive_pls_model.transform(brain_clean, behavioral_clean)
-canonical_corrs = adaptive_pls_model.calculate_canonical_correlations(X_scores, Y_scores)
-```
+自适应PLS的示例同样可在 `src/models/example_usage.py` 中查看，这里不再重复列出完整代码。
 
 #### 协变量回归（混杂因素控制）
 
@@ -270,15 +216,40 @@ python src/scripts/run_single_task.py \
     --n_components 5
 ```
 
-#### SLURM作业数组
+#### SLURM作业数组（推荐两步流程）
 
 ```bash
-# 提交数组作业进行置换检验
-sbatch src/scripts/submit_hpc_job.sh
+# 第一步：先运行真实数据（task_id=0），用于选择最优成分数
+sbatch --array=0 src/scripts/submit_hpc_job.sh
 
-# 或提交特定范围
+# 等待0号任务完成后，第二步：提交1-N号置换检验任务
 sbatch --array=1-1000 src/scripts/submit_hpc_job.sh
 ```
+
+在当前实现中：
+- `task_id=0` 使用 `adaptive_pls` 在 1–N 个成分范围内进行内部交叉验证，自动选择最佳成分数，并在真实数据上拟合最终模型。
+- 真实数据分析完成后，会在 `results/models` 目录自动生成一个 `best_n_components_adaptive_pls.json` 文件，记录真实数据选出的最佳成分数。
+- `task_id>0` 的置换任务会读取该文件，在置换检验中使用固定成分数的 PLS 模型（做法B），从而避免在每次置换中重新做超参数搜索。
+
+#### 置换结果汇总与显著性分析
+
+为了方便在集群上对置换结果做统计检验，可以使用专门的汇总脚本 `temp/analyze_permutation_results.py`，该脚本会：
+- 自动扫描 `results/models` 下 `task_1..N` 对应的结果文件；
+- 提取每个置换的 `canonical_correlations`，形成置换分布；
+- 与真实数据的相关系数进行比较，计算每个成分的 p 值；
+- 输出一个包含观测相关、置换均值、置换标准差和 p 值的表格，并可选地生成简单图形。
+
+示例用法（在集群上）：
+
+```bash
+python temp/analyze_permutation_results.py \
+  --results_root /ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/results/models \
+  --model_type adaptive_pls \
+  --max_task_id 1000 \
+  --output_prefix efny_perm_summary_adaptive_pls
+```
+
+运行后会在 `results_root` 下生成一个汇总文件（CSV）和可选的图像文件，便于快速查看每个成分的显著性。
 
 #### 命令行选项
 
