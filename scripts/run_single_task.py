@@ -12,6 +12,7 @@ from typing import Dict, Any, Optional
 import numpy as np
 import pandas as pd
 import logging
+import json
 
 # 添加项目根目录到 Python 路径
 project_root = Path(__file__).resolve().parent.parent.parent
@@ -456,6 +457,8 @@ def run_analysis(model, brain_data, behavioral_data, args):
             
             cv_results = cv_evaluator.run_cv_evaluation(model, brain_data, behavioral_data)
             result['cv_results'] = cv_results
+            if 'all_canonical_correlations' in cv_results:
+                result['cv_all_canonical_correlations'] = cv_results['all_canonical_correlations']
             
             logger.info("Cross-validation completed")
         
