@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Tuple, Optional, Union, Any
 from sklearn.model_selection import KFold, StratifiedKFold
+from sklearn.cluster import KMeans
 from sklearn.metrics import explained_variance_score, mean_squared_error
 from scipy.stats import pearsonr
 import logging
@@ -37,16 +38,7 @@ class CrossValidator:
         self.shuffle = shuffle
         self.random_state = random_state
         self.stratify = stratify
-        
-        # 创建交叉验证分割器
-        if stratify:
-            self.cv_splitter = StratifiedKFold(
-                n_splits=n_splits, shuffle=shuffle, random_state=random_state
-            )
-        else:
-            self.cv_splitter = KFold(
-                n_splits=n_splits, shuffle=shuffle, random_state=random_state
-            )
+        self.cv_splitter = None
     
     def run_cv_evaluation(self, model: BaseBrainBehaviorModel,
                          X: Union[np.ndarray, pd.DataFrame],
@@ -101,12 +93,39 @@ class CrossValidator:
         
         n_samples = X_values.shape[0]
         
+        # 创建交叉验证分割器（支持基于聚类的分层）
+        if self.stratify:
+            n_clusters = min(
+                max(2, self.n_splits * 2),
+                max(2, n_samples // max(2, self.n_splits))
+            )
+            logger.info(f"Using cluster-based stratified CV with {n_clusters} clusters")
+            km = KMeans(
+                n_clusters=n_clusters,
+                random_state=self.random_state,
+                n_init=10
+            )
+            cluster_labels = km.fit_predict(Y_values)
+            self.cv_splitter = StratifiedKFold(
+                n_splits=self.n_splits,
+                shuffle=self.shuffle,
+                random_state=self.random_state
+            )
+            split_iterator = self.cv_splitter.split(X_values, cluster_labels)
+        else:
+            self.cv_splitter = KFold(
+                n_splits=self.n_splits,
+                shuffle=self.shuffle,
+                random_state=self.random_state
+            )
+            split_iterator = self.cv_splitter.split(X_values)
+        
         # 初始化结果存储
         fold_results = []
         all_predictions = []
         
         # 交叉验证循环
-        for fold_idx, (train_idx, test_idx) in enumerate(self.cv_splitter.split(X_values)):
+        for fold_idx, (train_idx, test_idx) in enumerate(split_iterator):
             logger.info(f"Processing fold {fold_idx + 1}/{self.n_splits}")
             
             # 分割数据

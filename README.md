@@ -219,17 +219,20 @@ python src/scripts/run_single_task.py \
 #### SLURM作业数组（推荐两步流程）
 
 ```bash
-# 第一步：先运行真实数据（task_id=0），用于选择最优成分数
-sbatch --array=0 src/scripts/submit_hpc_job.sh
+# 第一步：在真实数据上重复运行（例如101次），评估CV稳定性并选择最佳成分数
+sbatch src/scripts/submit_hpc_real.sh
 
-# 等待0号任务完成后，第二步：提交1-N号置换检验任务
-sbatch --array=1-1000 src/scripts/submit_hpc_job.sh
+# 检查0号（或指定）真实任务的结果并确认best_n_components_adaptive_pls.json已生成
+
+# 第二步：提交置换检验阵列任务（task_id=1..1000）
+sbatch src/scripts/submit_hpc_perm.sh
 ```
 
 在当前实现中：
-- `task_id=0` 使用 `adaptive_pls` 在 1–N 个成分范围内进行内部交叉验证，自动选择最佳成分数，并在真实数据上拟合最终模型。
-- 真实数据分析完成后，会在 `results/models` 目录自动生成一个 `best_n_components_adaptive_pls.json` 文件，记录真实数据选出的最佳成分数。
-- `task_id>0` 的置换任务会读取该文件，在置换检验中使用固定成分数的 PLS 模型（做法B），从而避免在每次置换中重新做超参数搜索。
+- 真实数据脚本 `submit_hpc_real.sh` 会多次运行 `task_id=0` 的真实分析（通过改变随机种子），输出保存到 `results/real/...`。
+- 每次真实分析使用 `adaptive_pls` 在 1–N 个成分范围内进行内部交叉验证，自动选择最佳成分数，并在真实数据上拟合最终模型。
+- 真实数据分析完成后，会在 `results/models` 根目录自动生成（或更新）一个 `best_n_components_adaptive_pls.json` 文件，记录真实数据选出的最佳成分数。
+- 置换脚本 `submit_hpc_perm.sh` 会针对 `task_id=1..1000` 的任务，读取该文件，在置换检验中使用固定成分数的 PLS 模型（做法B），从而避免在每次置换中重新做超参数搜索。
 
 #### 置换结果汇总与显著性分析
 
