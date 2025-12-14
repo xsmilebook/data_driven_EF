@@ -290,15 +290,19 @@ def check_data_quality(X: np.ndarray, Y: np.ndarray,
     report = {
         'timestamp': create_timestamp(),
         'n_samples': X.shape[0],
-        'n_features_X': X.shape[1],
-        'n_features_Y': Y.shape[1]
+        'n_features_X': X.select_dtypes(include=[np.number]).shape[1] if isinstance(X, pd.DataFrame) else X.shape[1],
+        'n_features_Y': Y.select_dtypes(include=[np.number]).shape[1] if isinstance(Y, pd.DataFrame) else Y.shape[1]
     }
     
     # 检查缺失值 - 支持DataFrame和ndarray
     def calculate_missing_rate(data):
         """计算缺失值比例"""
         if isinstance(data, pd.DataFrame):
-            return data.isnull().sum().sum() / (data.shape[0] * data.shape[1])
+            # 只选择数值列，避免字符串列导致的错误
+            numeric_data = data.select_dtypes(include=[np.number])
+            if numeric_data.empty:
+                return 0.0
+            return numeric_data.isnull().sum().sum() / (numeric_data.shape[0] * numeric_data.shape[1])
         else:  # numpy array
             return np.isnan(data).sum() / data.size
     
@@ -317,7 +321,11 @@ def check_data_quality(X: np.ndarray, Y: np.ndarray,
     def calculate_zero_variance_features(data):
         """计算零方差特征数量"""
         if isinstance(data, pd.DataFrame):
-            std_values = data.std(axis=0)
+            # 只选择数值列，避免字符串列导致的错误
+            numeric_data = data.select_dtypes(include=[np.number])
+            if numeric_data.empty:
+                return 0
+            std_values = numeric_data.std(axis=0)
             return (std_values == 0).sum()
         else:  # numpy array
             std_values = np.nanstd(data, axis=0)

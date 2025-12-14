@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=efny_pls_analysis      # jobname
-#SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/log/task_adaptive_pls/efny_pls_%A_%a.out   # standard output file
-#SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/log/task_adaptive_pls/efny_pls_%A_%a.err    # standard error file   
+#SBATCH --job-name=efny_adaptive_pls_analysis      # jobname
+#SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/log/task_adaptive_pls/efny_adaptive_pls_%A_%a.out   # standard output file
+#SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/log/task_adaptive_pls/efny_adaptive_pls_%A_%a.err    # standard error file   
 #SBATCH --partition=q_fat_c               # partition name
 #SBATCH --cpus-per-task=1                 # number of cpus per task
 #SBATCH --array=0-1000                    # array job, 0 is real data, 1-1000 are permutation tests
@@ -12,7 +12,7 @@ project_dir="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF"
 
 # 基础参数 - Adaptive-PLS配置
 MODEL_TYPE="adaptive_pls"                 # 自适应PLS模型
-N_COMPONENTS=8                           # 最大搜索范围（1-8个成分）
+N_COMPONENTS=10                            # 最大搜索范围（1-10个成分）
 RANDOM_STATE=42
 
 # 根据任务ID设置参数
