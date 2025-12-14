@@ -22,8 +22,9 @@ from src.models.preprocessing import ConfoundRegressor, create_preprocessing_pip
 from src.models.models import create_model, get_available_models
 from src.models.evaluation import CrossValidator, PermutationTester
 from src.models.utils import (
-    setup_logging, get_results_dir, create_timestamp, 
-    save_results, validate_data_shapes, check_data_quality, ConfigManager, config
+    setup_logging, get_results_dir, create_timestamp,
+    save_results, validate_data_shapes, check_data_quality,
+    ConfigManager, config, load_results
 )
 
 
@@ -378,11 +379,34 @@ def run_analysis(model, brain_data, behavioral_data, args):
         
         # 设置置换种子
         permutation_seed = args.random_state + args.task_id
+
+        # 做法B：如果使用adaptive_pls，则在置换检验中固定成分数量，
+        # 使用真实数据分析选出的最佳成分数，改用标准PLS模型
+        if args.model_type == 'adaptive_pls':
+            try:
+                best_k = load_best_n_components(args.model_type)
+                logger.info(f"Using fixed n_components={best_k} for permutation test (approach B)")
+                from src.models.models import create_model
+                base_model = create_model(
+                    'pls',
+                    n_components=best_k,
+                    scale=True,
+                    max_iter=5000,
+                    tol=1e-06
+                )
+            except Exception as e:
+                logger.error(
+                    f"Failed to load best_n_components for permutation test, "
+                    f"falling back to current model. Error: {e}"
+                )
+                base_model = model
+        else:
+            base_model = model
         
         # 运行置换检验
         perm_tester = PermutationTester(n_permutations=1, random_state=permutation_seed)
         result = perm_tester.run_permutation_test(
-            model, brain_data, behavioral_data, 
+            base_model, brain_data, behavioral_data, 
             permutation_seed=permutation_seed
         )
         
@@ -481,12 +505,49 @@ def save_results_with_metadata(result, args):
     
     # 保存结果
     saved_files = save_results(result, output_path, format="both")
-    
+
     logger.info(f"Results saved to:")
     for format_type, file_path in saved_files.items():
         logger.info(f"  {format_type}: {file_path}")
-    
+
+    # 如果是真实数据且使用自适应PLS，单独保存最佳成分数量，供置换检验使用
+    if result.get('task_type') == 'real_data':
+        model_info = result.get('model_info', {})
+        if model_info.get('model_type') == 'Adaptive-PLS':
+            optimal_n_components = model_info.get('optimal_n_components')
+            if optimal_n_components is not None:
+                summary_dir = get_results_dir()
+                summary_path = summary_dir / f"best_n_components_{args.model_type}.json"
+                summary_data = {
+                    'model_type': args.model_type,
+                    'optimal_n_components': int(optimal_n_components),
+                    'timestamp': timestamp,
+                    'source_result_json': str(saved_files.get('json', '')),
+                    'source_result_npz': str(saved_files.get('npz', ''))
+                }
+                with open(summary_path, 'w', encoding='utf-8') as f:
+                    json.dump(summary_data, f, indent=2, ensure_ascii=False)
+                logger.info(f"Best n_components summary saved to: {summary_path}")
+
     return saved_files
+
+
+def load_best_n_components(model_type: str) -> int:
+    """从汇总文件中加载真实数据选出的最佳成分数量"""
+    summary_dir = get_results_dir()
+    summary_path = summary_dir / f"best_n_components_{model_type}.json"
+    if not summary_path.exists():
+        raise FileNotFoundError(
+            f"Best n_components summary not found: {summary_path}. "
+            f"请先运行 task_id=0 的真实数据分析以生成该文件。"
+        )
+    summary = load_results(summary_path)
+    optimal_n_components = summary.get('optimal_n_components')
+    if optimal_n_components is None:
+        raise ValueError(
+            f"No 'optimal_n_components' found in summary file: {summary_path}"
+        )
+    return int(optimal_n_components)
 
 
 def main():
