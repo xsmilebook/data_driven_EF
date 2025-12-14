@@ -35,6 +35,20 @@
       "min_std": 1e-06
     }
   },
+  "behavioral": {
+    "selected_measures": [
+      "SST_SSRT", "CPT_d_prime", "CPT_ACC", "CPT_Reaction_Time",
+      "FLANKER_Contrast_ACC", "FLANKER_Contrast_RT", "ColorStroop_Contrast_ACC",
+      "ColorStroop_Contrast_RT", "EmotionStroop_Contrast_ACC", "EmotionStroop_Contrast_RT",
+      "Number1Back_ACC", "Number1Back_Reaction_Time", "Number2Back_ACC",
+      "Number2Back_Reaction_Time", "Spatial1Back_ACC", "Spatial1Back_Reaction_Time",
+      "Spatial2Back_ACC", "Spatial2Back_Reaction_Time", "Emotion1Back_ACC",
+      "Emotion1Back_Reaction_Time", "Emotion2Back_ACC", "Emotion2Back_Reaction_Time",
+      "KT_ACC", "DCCS_ACC", "DCCS_Reaction_Time", "DCCS_Switch_Cost",
+      "EmotionSwitch_ACC", "EmotionSwitch_Reaction_Time", "DT_ACC",
+      "DT_Reaction_Time", "DT_Switch_Cost"
+    ]
+  },
   
   "evaluation": {
     "cv": {

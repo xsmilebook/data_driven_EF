@@ -361,6 +361,14 @@ class ConfigManager:
         self.config_file = config_file
         self.config = self._load_default_config()
         
+        # 默认加载同目录下的config.json（若存在）
+        try:
+            default_cfg = Path(__file__).resolve().parent / 'config.json'
+            if default_cfg.exists():
+                self.load_config(default_cfg)
+        except Exception:
+            pass
+        
         if config_file is not None:
             self.load_config(config_file)
     
@@ -372,6 +380,20 @@ class ConfigManager:
                 'brain_file': 'fc_vector/Schaefer400/EFNY_Schaefer400_FC_matrix.npy',
                 'behavioral_file': 'table/demo/EFNY_behavioral_data.csv',
                 'sublist_file': 'table/sublist/sublist.txt'
+            },
+            'behavioral': {
+                'selected_measures': [
+                    'SST_SSRT', 'CPT_d_prime', 'CPT_ACC', 'CPT_Reaction_Time',
+                    'FLANKER_Contrast_ACC', 'FLANKER_Contrast_RT', 'ColorStroop_Contrast_ACC',
+                    'ColorStroop_Contrast_RT', 'EmotionStroop_Contrast_ACC', 'EmotionStroop_Contrast_RT',
+                    'Number1Back_ACC', 'Number1Back_Reaction_Time', 'Number2Back_ACC',
+                    'Number2Back_Reaction_Time', 'Spatial1Back_ACC', 'Spatial1Back_Reaction_Time',
+                    'Spatial2Back_ACC', 'Spatial2Back_Reaction_Time', 'Emotion1Back_ACC',
+                    'Emotion1Back_Reaction_Time', 'Emotion2Back_ACC', 'Emotion2Back_Reaction_Time',
+                    'KT_ACC', 'DCCS_ACC', 'DCCS_Reaction_Time', 'DCCS_Switch_Cost',
+                    'EmotionSwitch_ACC', 'EmotionSwitch_Reaction_Time', 'DT_ACC',
+                    'DT_Reaction_Time', 'DT_Switch_Cost'
+                ]
             },
             'model': {
                 'default_n_components': 5,

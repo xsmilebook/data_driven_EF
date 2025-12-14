@@ -23,7 +23,7 @@ from src.models.models import create_model, get_available_models
 from src.models.evaluation import CrossValidator, PermutationTester
 from src.models.utils import (
     setup_logging, get_results_dir, create_timestamp, 
-    save_results, validate_data_shapes, check_data_quality, ConfigManager
+    save_results, validate_data_shapes, check_data_quality, ConfigManager, config
 )
 
 
@@ -249,6 +249,14 @@ def load_data(args):
             random_state=args.random_state
         )
         subject_ids = np.arange(args.n_subjects)
+        # 选择用于分析的行为指标（通过配置）
+        selected_measures = config.get('behavioral.selected_measures', [])
+        if isinstance(behavioral_data, pd.DataFrame) and selected_measures:
+            existing = [m for m in selected_measures if m in behavioral_data.columns]
+            missing = [m for m in selected_measures if m not in behavioral_data.columns]
+            if missing:
+                logger.warning(f"Behavioral measures missing in synthetic data and will be skipped: {missing}")
+            behavioral_data = behavioral_data[existing]
     else:
         logger.info("Loading real EFNY data using default paths")
         
@@ -260,6 +268,15 @@ def load_data(args):
         covariates = extract_covariates_from_behavioral_data(
             behavioral_data, subject_ids, args.covariates_path, logger
         )
+        
+        # 选择用于分析的行为指标（通过配置）
+        selected_measures = config.get('behavioral.selected_measures', [])
+        if isinstance(behavioral_data, pd.DataFrame) and selected_measures:
+            existing = [m for m in selected_measures if m in behavioral_data.columns]
+            missing = [m for m in selected_measures if m not in behavioral_data.columns]
+            if missing:
+                logger.warning(f"Behavioral measures missing and will be skipped: {missing}")
+            behavioral_data = behavioral_data[existing]
     
     logger.info(f"Data loaded successfully:")
     logger.info(f"  Brain data shape: {brain_data.shape}")
@@ -297,7 +314,7 @@ def preprocess_data(brain_data, behavioral_data, covariates, args):
         # 回归脑数据
         brain_clean = confound_regressor.fit_transform(brain_data, confounds=covariates)
         
-        # 回归行为数据
+        # 回归行为数据（所有列，假定均为数值）
         behavioral_clean = confound_regressor.fit_transform(behavioral_data, confounds=covariates)
         
         logger.info("Confound regression completed")
@@ -494,7 +511,7 @@ def main():
     try:
         # 加载配置（如果提供）
         if args.config_file:
-            config = ConfigManager(args.config_file)
+            config.load_config(args.config_file)
             logger.info(f"Configuration loaded from: {args.config_file}")
         
         # 步骤1: 加载数据
