@@ -1,25 +1,18 @@
 #!/bin/bash
-#SBATCH --job-name=efny_pls_analysis      # 作业名称
-#SBATCH --output=logs/efny_pls_%A_%a.out   # 输出文件
-#SBATCH --error=logs/efny_pls_%A_%a.err    # 错误文件
-#SBATCH --time=2:00:00                    # 运行时间限制
-#SBATCH --mem=8G                          # 内存需求
-#SBATCH --cpus-per-task=4                 # CPU核心数
-#SBATCH --array=0-1000                    # 数组作业，0是真实数据，1-1000是置换检验
+#SBATCH --job-name=efny_pls_analysis      # jobname
+#SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/log/task_pls/efny_pls_%A_%a.out   # standard output file
+#SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/log/task_pls/efny_pls_%A_%a.err    # standard error file   
+#SBATCH --partition=q_fat_c               # partition name
+#SBATCH --cpus-per-task=1                 # number of cpus per task
+#SBATCH --array=0-1000                    # array job, 0 is real data, 1-1000 are permutation tests
 
-# 加载必要的模块
-module load python/3.8
-module load gcc/9.3.0
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+conda activate ML
+project_dir="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF"
 
-# 设置环境变量
-export PYTHONPATH="/path/to/your/project:$PYTHONPATH"
-
-# 激活虚拟环境
-source /path/to/your/venv/bin/activate
-
-# 基础参数
-MODEL_TYPE="pls"
-N_COMPONENTS=5
+# 基础参数 - Adaptive-PLS配置
+MODEL_TYPE="adaptive_pls"                 # 自适应PLS模型
+N_COMPONENTS=10                           # 最大搜索范围（1-8个成分）
 RANDOM_STATE=42
 
 # 根据任务ID设置参数
@@ -34,24 +27,26 @@ else
 fi
 
 # 创建输出目录
-mkdir -p results/models/task_${SLURM_ARRAY_TASK_ID}_${MODEL_TYPE}
-mkdir -p logs
+mkdir -p ${project_dir}/results/models/task_${SLURM_ARRAY_TASK_ID}_${MODEL_TYPE}
+mkdir -p ${project_dir}/log/task_${MODEL_TYPE}
 
 # 运行分析
 echo "Starting task $SLURM_ARRAY_TASK_ID at $(date)"
 echo "Task type: $TASK_TYPE"
-echo "Model: $MODEL_TYPE"
-echo "Components: $N_COMPONENTS"
+echo "Model: $MODEL_TYPE (Adaptive)"
+echo "Component search range: 1-${N_COMPONENTS}"
+echo "Internal CV folds: 5"
+echo "Selection criterion: canonical_correlation"
 
-python /path/to/your/project/src/scripts/run_single_task.py \
+python ${project_dir}/src/scripts/run_single_task.py \
     --task_id $SLURM_ARRAY_TASK_ID \
     --model_type $MODEL_TYPE \
     --n_components $N_COMPONENTS \
-    --output_dir results/models/task_${SLURM_ARRAY_TASK_ID}_${MODEL_TYPE} \
+    --output_dir ${project_dir}/results/models/task_${SLURM_ARRAY_TASK_ID}_${MODEL_TYPE} \
     --output_prefix $OUTPUT_PREFIX \
     --random_state $RANDOM_STATE \
     --log_level INFO \
-    --log_file logs/task_${SLURM_ARRAY_TASK_ID}.log
+    --log_file ${project_dir}/log/task_${MODEL_TYPE}/task_${SLURM_ARRAY_TASK_ID}.log
 
 # 检查退出状态
 if [ $? -eq 0 ]; then

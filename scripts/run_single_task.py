@@ -242,7 +242,7 @@ def create_model_instance(args):
             'criterion': 'canonical_correlation',
             'random_state': args.random_state,
             'scale': True,
-            'max_iter': 500,
+            'max_iter': 5000,
             'tol': 1e-06
         }
         logger.info(f"Creating Adaptive-PLS model with component search range: 1-{args.n_components}")
@@ -256,14 +256,14 @@ def create_model_instance(args):
         if args.model_type == 'pls':
             model_params.update({
                 'scale': True,
-                'max_iter': 500,
+                'max_iter': 5000,
                 'tol': 1e-06
             })
         elif args.model_type == 'scca':
             model_params.update({
                 'sparsity_X': 0.1,
                 'sparsity_Y': 0.1,
-                'max_iter': 1000,
+                'max_iter': 10000,
                 'tol': 1e-06
             })
         
