@@ -21,13 +21,16 @@ _PMD = None
 _cca_zoo_import_error = None
 
 try:
-    from cca_zoo.linear import PMD as _PMD  # type: ignore
-except ImportError as e_linear:
+    from cca_zoo.linear import SCCA_PMD as _PMD  # type: ignore
+except ImportError as e_scca_pmd:
     try:
-        from cca_zoo.models import PMD as _PMD  # type: ignore
-    except ImportError as e_models:
-        _PMD = None
-        _cca_zoo_import_error = (e_linear, e_models)
+        from cca_zoo.linear import PMD as _PMD  # type: ignore
+    except ImportError as e_linear:
+        try:
+            from cca_zoo.models import PMD as _PMD  # type: ignore
+        except ImportError as e_models:
+            _PMD = None
+            _cca_zoo_import_error = (e_scca_pmd, e_linear, e_models)
 
 
 class BaseBrainBehaviorModel(ABC):
@@ -369,8 +372,9 @@ class SparseCCAModel(BaseBrainBehaviorModel):
 
         if _PMD is None:
             raise ImportError(
-                "SparseCCAModel requires the 'cca-zoo' library with PMD implementation. "
-                "Please install it with: pip install cca-zoo"
+                "SparseCCAModel requires the 'cca-zoo' library with a Sparse CCA PMD "
+                "implementation (tested with cca-zoo>=2.0, class SCCA_PMD). "
+                "Please install or upgrade it with: pip install -U cca-zoo"
             )
 
         self.scaler_X = StandardScaler()
