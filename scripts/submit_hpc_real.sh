@@ -17,7 +17,7 @@ ATLAS="schaefer100"
 
 TASK_TYPE="real"
 
-mkdir -p ${project_dir}/results/real/run_${SLURM_ARRAY_TASK_ID}_${MODEL_TYPE}
+mkdir -p ${project_dir}/results/real/${ATLAS}/run_${SLURM_ARRAY_TASK_ID}_${MODEL_TYPE}
 mkdir -p ${project_dir}/log/real_adaptive_pls
 
 echo "Starting REAL run $SLURM_ARRAY_TASK_ID at $(date)"

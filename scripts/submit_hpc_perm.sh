@@ -13,10 +13,9 @@ project_dir="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF"
 MODEL_TYPE="adaptive_pls"
 N_COMPONENTS=10
 RANDOM_STATE=42
+ATLAS="schaefer100"
 
-TASK_TYPE="permutation"
-
-mkdir -p ${project_dir}/results/perm/task_${SLURM_ARRAY_TASK_ID}_${MODEL_TYPE}
+mkdir -p ${project_dir}/results/perm/${ATLAS}/task_${SLURM_ARRAY_TASK_ID}_${MODEL_TYPE}
 mkdir -p ${project_dir}/log/perm_adaptive_pls
 
 echo "Starting PERM task $SLURM_ARRAY_TASK_ID at $(date)"
@@ -27,7 +26,7 @@ python ${project_dir}/src/scripts/run_single_task.py \
     --task_id $SLURM_ARRAY_TASK_ID \
     --model_type $MODEL_TYPE \
     --n_components $N_COMPONENTS \
-    --output_dir ${project_dir}/results/perm/task_${SLURM_ARRAY_TASK_ID}_${MODEL_TYPE} \
+    --output_dir ${project_dir}/results/perm/${ATLAS}/task_${SLURM_ARRAY_TASK_ID}_${MODEL_TYPE} \
     --output_prefix efny_perm_${MODEL_TYPE} \
     --random_state $RANDOM_STATE \
     --log_level INFO \
@@ -39,4 +38,3 @@ else
     echo "Permutation task $SLURM_ARRAY_TASK_ID failed at $(date)"
     exit 1
 fi
-

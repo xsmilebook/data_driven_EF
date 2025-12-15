@@ -24,7 +24,7 @@ class EFNYDataLoader:
             data_root: EFNY 数据根目录
         """
         self.data_root = Path(data_root)
-        self.brain_data_path = self.data_root / "fc_vector" / "Schaefer400" / "EFNY_Schaefer100_FC_matrix.npy"
+        self.brain_data_path = self.data_root / "fc_vector" / "Schaefer100" / "EFNY_Schaefer100_FC_matrix.npy"
         self.behavioral_data_path = self.data_root / "table" / "demo" / "EFNY_behavioral_data.csv"
         self.sublist_path = self.data_root / "table" / "sublist" / "sublist.txt"
         
@@ -184,16 +184,18 @@ class EFNYDataLoader:
 
 
 def create_synthetic_data(n_subjects: int = 200, 
-                          n_brain_features: int = 4950,
+                          n_brain_features: Optional[int] = None,
                           n_behavioral_measures: int = 30,
+                          atlas: str = "schaefer100",
                           random_state: Optional[int] = 42) -> Tuple[np.ndarray, pd.DataFrame, pd.DataFrame]:
     """
     创建合成数据用于测试
     
     Args:
         n_subjects: 被试数量
-        n_brain_features: 脑特征数量
+        n_brain_features: 脑特征数量（若为None则根据atlas自动推断）
         n_behavioral_measures: 行为指标数量
+        atlas: 脑图谱名称（例如"schaefer100"或"schaefer400"）
         random_state: 随机种子
         
     Returns:
@@ -201,7 +203,16 @@ def create_synthetic_data(n_subjects: int = 200,
         behavioral_data: 合成行为数据
         covariates: 合成协变量
     """
-    logger.info(f"Creating synthetic data: {n_subjects} subjects, {n_brain_features} features")
+    if n_brain_features is None:
+        atlas_lower = atlas.lower()
+        if atlas_lower == "schaefer100":
+            n_brain_features = 100 * 99 // 2
+        elif atlas_lower == "schaefer400":
+            n_brain_features = 400 * 399 // 2
+        else:
+            raise ValueError(f"Unsupported atlas for synthetic data: {atlas}")
+
+    logger.info(f"Creating synthetic data: {n_subjects} subjects, {n_brain_features} features (atlas={atlas})")
     
     if random_state is not None:
         np.random.seed(random_state)

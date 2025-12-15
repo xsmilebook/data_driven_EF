@@ -85,6 +85,11 @@ Examples:
     )
     
     parser.add_argument(
+        "--atlas", type=str, default="schaefer100",
+        help="合成数据使用的脑图谱名称（仅在use_synthetic时生效）"
+    )
+    
+    parser.add_argument(
         "--n_brain_features", type=int, default=4950,
         help="合成数据的脑特征数量"
     )
@@ -246,8 +251,9 @@ def load_data(args):
         logger.info("Using synthetic data for testing")
         brain_data, behavioral_data, covariates = create_synthetic_data(
             n_subjects=args.n_subjects,
-            n_brain_features=args.n_brain_features,
             n_behavioral_measures=args.n_behavioral_measures,
+            n_brain_features=args.n_brain_features,
+            atlas=args.atlas,
             random_state=args.random_state
         )
         subject_ids = np.arange(args.n_subjects)

@@ -1,7 +1,7 @@
 {
   "data": {
-    "root_dir": "d:/code/data_driven_EF/data/EFNY",
-    "brain_file": "fc_vector/Schaefer400/EFNY_Schaefer400_FC_matrix.npy",
+    "root_dir": "/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/data/EFNY",
+    "brain_file": "fc_vector/Schaefer100/EFNY_Schaefer100_FC_matrix.npy",
     "behavioral_file": "table/demo/EFNY_behavioral_data.csv",
     "sublist_file": "table/sublist/sublist.txt",
     "max_missing_rate": 0.1,
