@@ -24,7 +24,7 @@ class EFNYDataLoader:
             data_root: EFNY 数据根目录
         """
         self.data_root = Path(data_root)
-        self.brain_data_path = self.data_root / "fc_vector" / "Schaefer400" / "EFNY_Schaefer400_FC_matrix.npy"
+        self.brain_data_path = self.data_root / "fc_vector" / "Schaefer400" / "EFNY_Schaefer100_FC_matrix.npy"
         self.behavioral_data_path = self.data_root / "table" / "demo" / "EFNY_behavioral_data.csv"
         self.sublist_path = self.data_root / "table" / "sublist" / "sublist.txt"
         

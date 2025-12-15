@@ -13,6 +13,7 @@ project_dir="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF"
 MODEL_TYPE="adaptive_pls"
 N_COMPONENTS=10
 RANDOM_STATE_BASE=42
+ATLAS="schaefer100"
 
 TASK_TYPE="real"
 
@@ -29,7 +30,7 @@ python ${project_dir}/src/scripts/run_single_task.py \
     --task_id 0 \
     --model_type $MODEL_TYPE \
     --n_components $N_COMPONENTS \
-    --output_dir ${project_dir}/results/real/run_${SLURM_ARRAY_TASK_ID}_${MODEL_TYPE} \
+    --output_dir ${project_dir}/results/real/${ATLAS}/run_${SLURM_ARRAY_TASK_ID}_${MODEL_TYPE} \
     --output_prefix efny_real_${MODEL_TYPE}_run_${SLURM_ARRAY_TASK_ID} \
     --random_state $((RANDOM_STATE_BASE + SLURM_ARRAY_TASK_ID)) \
     --log_level INFO \
