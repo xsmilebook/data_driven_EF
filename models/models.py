@@ -17,20 +17,20 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-_PMD = None
+_SCCA_IPLS = None
+_scca_ipls_uses_latent_dimensions = False
 _cca_zoo_import_error = None
 
 try:
-    from cca_zoo.linear import SCCA_PMD as _PMD  # type: ignore
-except ImportError as e_scca_pmd:
+    from cca_zoo.linear import SCCA_IPLS as _SCCA_IPLS  # type: ignore
+    _scca_ipls_uses_latent_dimensions = True
+except ImportError as e_linear:
     try:
-        from cca_zoo.linear import PMD as _PMD  # type: ignore
-    except ImportError as e_linear:
-        try:
-            from cca_zoo.models import PMD as _PMD  # type: ignore
-        except ImportError as e_models:
-            _PMD = None
-            _cca_zoo_import_error = (e_scca_pmd, e_linear, e_models)
+        from cca_zoo.models import SCCA_IPLS as _SCCA_IPLS  # type: ignore
+        _scca_ipls_uses_latent_dimensions = False
+    except ImportError as e_models:
+        _SCCA_IPLS = None
+        _cca_zoo_import_error = (e_linear, e_models)
 
 
 class BaseBrainBehaviorModel(ABC):
@@ -370,22 +370,31 @@ class SparseCCAModel(BaseBrainBehaviorModel):
         self.max_iter = max_iter
         self.tol = tol
 
-        if _PMD is None:
+        if _SCCA_IPLS is None:
             raise ImportError(
-                "SparseCCAModel requires the 'cca-zoo' library with a Sparse CCA PMD "
-                "implementation (tested with cca-zoo>=2.0, class SCCA_PMD). "
+                "SparseCCAModel requires the 'cca-zoo' library with the SCCA_IPLS "
+                "implementation (tested with cca-zoo>=2.0). "
                 "Please install or upgrade it with: pip install -U cca-zoo"
             )
 
         self.scaler_X = StandardScaler()
         self.scaler_Y = StandardScaler()
 
-        self.model = _PMD(
-            latent_dims=self.n_components,
-            c=[self.sparsity_X, self.sparsity_Y],
-            max_iter=self.max_iter,
-            tol=self.tol,
-        )
+        if _scca_ipls_uses_latent_dimensions:
+            self.model = _SCCA_IPLS(
+                latent_dimensions=self.n_components,
+                random_state=self.random_state,
+                tol=self.tol,
+                epochs=self.max_iter,
+            )
+        else:
+            self.model = _SCCA_IPLS(
+                latent_dims=self.n_components,
+                random_state=self.random_state,
+                c=[self.sparsity_X, self.sparsity_Y],
+                max_iter=self.max_iter,
+                tol=self.tol,
+            )
     
     def fit(self, X: Union[np.ndarray, pd.DataFrame], 
             Y: Union[np.ndarray, pd.DataFrame]) -> 'SparseCCAModel':
@@ -459,10 +468,13 @@ class SparseCCAModel(BaseBrainBehaviorModel):
         if not self.is_fitted:
             raise ValueError("Model must be fitted before getting loadings")
 
-        if not hasattr(self.model, "weights_"):
-            raise AttributeError("Underlying PMD model does not have 'weights_' attribute")
+        if hasattr(self.model, "weights"):
+            X_loadings, Y_loadings = self.model.weights
+        elif hasattr(self.model, "weights_"):
+            X_loadings, Y_loadings = self.model.weights_
+        else:
+            raise AttributeError("Underlying SCCA_IPLS model does not expose weights")
 
-        X_loadings, Y_loadings = self.model.weights_
         return X_loadings, Y_loadings
     
     def get_model_info(self) -> Dict[str, Union[int, float, str]]:
@@ -480,7 +492,7 @@ class SparseCCAModel(BaseBrainBehaviorModel):
             'max_iter': self.max_iter,
             'tol': self.tol,
             'is_fitted': self.is_fitted,
-            'implementation': 'cca-zoo PMD'
+            'implementation': 'cca-zoo SCCA_IPLS'
         }
 
 
