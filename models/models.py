@@ -17,6 +17,19 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+_PMD = None
+_cca_zoo_import_error = None
+
+try:
+    from cca_zoo.linear import PMD as _PMD  # type: ignore
+except ImportError as e_linear:
+    try:
+        from cca_zoo.models import PMD as _PMD  # type: ignore
+    except ImportError as e_models:
+        _PMD = None
+        _cca_zoo_import_error = (e_linear, e_models)
+
+
 class BaseBrainBehaviorModel(ABC):
     """
     脑-行为关联模型的基类
@@ -353,11 +366,22 @@ class SparseCCAModel(BaseBrainBehaviorModel):
         self.sparsity_Y = sparsity_Y
         self.max_iter = max_iter
         self.tol = tol
-        
-        # TODO: 实现 Sparse-CCA 算法
-        # 这里可以使用 sklearn.cross_decomposition.CCA 作为基础
-        # 或者集成其他稀疏CCA实现
-        logger.warning("Sparse-CCA model is not fully implemented yet")
+
+        if _PMD is None:
+            raise ImportError(
+                "SparseCCAModel requires the 'cca-zoo' library with PMD implementation. "
+                "Please install it with: pip install cca-zoo"
+            )
+
+        self.scaler_X = StandardScaler()
+        self.scaler_Y = StandardScaler()
+
+        self.model = _PMD(
+            latent_dims=self.n_components,
+            c=[self.sparsity_X, self.sparsity_Y],
+            max_iter=self.max_iter,
+            tol=self.tol,
+        )
     
     def fit(self, X: Union[np.ndarray, pd.DataFrame], 
             Y: Union[np.ndarray, pd.DataFrame]) -> 'SparseCCAModel':
@@ -371,12 +395,6 @@ class SparseCCAModel(BaseBrainBehaviorModel):
         Returns:
             self
         """
-        logger.warning("Sparse-CCA fitting not implemented yet, falling back to standard CCA")
-        
-        # 临时使用标准CCA作为回退
-        from sklearn.cross_decomposition import CCA
-        self.model = CCA(n_components=self.n_components)
-        
         # 转换数据格式
         if isinstance(X, pd.DataFrame):
             X_values = X.values
@@ -387,8 +405,11 @@ class SparseCCAModel(BaseBrainBehaviorModel):
             Y_values = Y.values
         else:
             Y_values = Y
-        
-        self.model.fit(X_values, Y_values)
+
+        X_scaled = self.scaler_X.fit_transform(X_values)
+        Y_scaled = self.scaler_Y.fit_transform(Y_values)
+
+        self.model.fit([X_scaled, Y_scaled])
         self.is_fitted = True
         
         return self
@@ -408,7 +429,6 @@ class SparseCCAModel(BaseBrainBehaviorModel):
         if not self.is_fitted:
             raise ValueError("Model must be fitted before transformation")
         
-        # 转换数据格式
         if isinstance(X, pd.DataFrame):
             X_values = X.values
         else:
@@ -418,8 +438,12 @@ class SparseCCAModel(BaseBrainBehaviorModel):
             Y_values = Y.values
         else:
             Y_values = Y
-        
-        return self.model.transform(X_values, Y_values)
+
+        X_scaled = self.scaler_X.transform(X_values)
+        Y_scaled = self.scaler_Y.transform(Y_values)
+
+        X_scores, Y_scores = self.model.transform([X_scaled, Y_scaled])
+        return X_scores, Y_scores
     
     def get_loadings(self) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -430,9 +454,12 @@ class SparseCCAModel(BaseBrainBehaviorModel):
         """
         if not self.is_fitted:
             raise ValueError("Model must be fitted before getting loadings")
-        
-        # 对于CCA，载荷矩阵就是成分向量
-        return self.model.x_rotations_, self.model.y_rotations_
+
+        if not hasattr(self.model, "weights_"):
+            raise AttributeError("Underlying PMD model does not have 'weights_' attribute")
+
+        X_loadings, Y_loadings = self.model.weights_
+        return X_loadings, Y_loadings
     
     def get_model_info(self) -> Dict[str, Union[int, float, str]]:
         """
@@ -449,7 +476,7 @@ class SparseCCAModel(BaseBrainBehaviorModel):
             'max_iter': self.max_iter,
             'tol': self.tol,
             'is_fitted': self.is_fitted,
-            'implementation': 'Fallback to standard CCA'
+            'implementation': 'cca-zoo PMD'
         }
 
 
