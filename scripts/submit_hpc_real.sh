@@ -13,7 +13,7 @@ project_dir="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF"
 MODEL_TYPE="scca"
 N_COMPONENTS=3
 RANDOM_STATE_BASE=42
-ATLAS="schaefer100"
+ATLAS="schaefer400"
 
 TASK_TYPE="real"
 
