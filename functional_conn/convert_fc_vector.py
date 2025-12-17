@@ -57,7 +57,7 @@ class FisherZMatrixToVectorConverter:
     def load_subject_list(self) -> List[str]:
         """Load subject list from file."""
         try:
-            with open(self.sublist_file, 'r') as f:
+            with open(self.sublist_file, 'r', encoding='utf-8') as f:
                 subjects = [line.strip() for line in f if line.strip()]
             logger.info(f"Loaded {len(subjects)} subjects from {self.sublist_file}")
             return subjects
@@ -166,7 +166,7 @@ class FisherZMatrixToVectorConverter:
         
         # Save valid subjects list
         valid_subjects_file = output_dir / f"valid_subjects_Schaefer{self.n_rois}.txt"
-        with open(valid_subjects_file, 'w') as f:
+        with open(valid_subjects_file, 'w', encoding='utf-8') as f:
             for subject_id in valid_subjects:
                 f.write(f"{subject_id}\n")
         logger.info(f"Saved valid subjects list to {valid_subjects_file}")
@@ -174,7 +174,7 @@ class FisherZMatrixToVectorConverter:
         # Save missing subjects list
         if missing_subjects:
             missing_subjects_file = output_dir / f"missing_subjects_Schaefer{self.n_rois}.txt"
-            with open(missing_subjects_file, 'w') as f:
+            with open(missing_subjects_file, 'w', encoding='utf-8') as f:
                 for subject_id in missing_subjects:
                     f.write(f"{subject_id}\n")
             logger.info(f"Saved missing subjects list to {missing_subjects_file}")
@@ -202,7 +202,7 @@ class FisherZMatrixToVectorConverter:
             
             # Save vector dimensions info
             info_file = output_dir / f"vector_info_Schaefer{self.n_rois}.txt"
-            with open(info_file, 'w') as f:
+            with open(info_file, 'w', encoding='utf-8') as f:
                 f.write(f"Dataset: {self.dataset_name}\n")
                 f.write(f"Number of ROIs: {self.n_rois}\n")
                 f.write(f"Total subjects: {len(valid_subjects) + len(missing_subjects)}\n")

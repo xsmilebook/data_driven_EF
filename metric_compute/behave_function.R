@@ -354,7 +354,7 @@ analyze_flanker_stroop <- function(df, cfg, subject_id, task_name) {
     df <- add_flanker_condition(df, item_var = item_var)
   } else if (task_name == "ColorStroop") {
     df <- add_colorstroop_condition(df, item_var = item_var)
-  } else if (task_name == "EmotionStoop") {
+  } else if (task_name == "EmotionStroop") {
     df <- add_emotionstroop_condition(df, item_var = item_var)
   }
   

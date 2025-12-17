@@ -59,7 +59,7 @@ class EFNYPLSAnalyzer:
         logger.info("Loading EFNY data from files")
         
         # Load subject list to ensure proper ordering
-        with open(sublist_path, 'r') as f:
+        with open(sublist_path, 'r', encoding='utf-8') as f:
             subjects = [line.strip() for line in f if line.strip()]
         logger.info(f"Loaded {len(subjects)} subjects from sublist")
         
@@ -68,7 +68,7 @@ class EFNYPLSAnalyzer:
         logger.info(f"Loaded brain data with shape: {X_brain.shape}")
         
         # Load behavioral data
-        behavioral_df = pd.read_csv(behavioral_data_path)
+        behavioral_df = pd.read_csv(behavioral_data_path, encoding='utf-8')
         logger.info(f"Loaded behavioral data with shape: {behavioral_df.shape}")
         
         # Define behavioral metrics of interest
@@ -463,14 +463,14 @@ class EFNYPLSAnalyzer:
         # 1. Save main results table
         results_df = self.create_results_table()
         main_file = os.path.join(output_dir, f"{prefix}_results_{timestamp}.csv")
-        results_df.to_csv(main_file, index=False)
+        results_df.to_csv(main_file, index=False, encoding="utf-8")
         saved_files['main_results'] = main_file
         logger.info(f"Main results saved to: {main_file}")
         
         # 2. Save CV results if available (store as instance variable first)
         if hasattr(self, 'cv_results') and self.cv_results is not None:
             cv_summary_file = os.path.join(output_dir, f"{prefix}_cv_summary_{timestamp}.csv")
-            self.cv_results['comparison_table'].to_csv(cv_summary_file, index=False)
+            self.cv_results['comparison_table'].to_csv(cv_summary_file, index=False, encoding="utf-8")
             saved_files['cv_summary'] = cv_summary_file
             logger.info(f"CV summary saved to: {cv_summary_file}")
             
@@ -487,7 +487,7 @@ class EFNYPLSAnalyzer:
                         'Test_Size': fold_result['test_size']
                     })
             fold_df = pd.DataFrame(fold_data)
-            fold_df.to_csv(cv_folds_file, index=False)
+            fold_df.to_csv(cv_folds_file, index=False, encoding="utf-8")
             saved_files['cv_folds'] = cv_folds_file
             logger.info(f"CV fold details saved to: {cv_folds_file}")
         
@@ -701,7 +701,7 @@ class EFNYPLSAnalyzer:
                 'R2_Brain_Variance_Pct': self.results['variance_explained_X'],
                 'R2_Behavior_Variance_Pct': self.results['variance_explained_Y']
             })
-            summary_df.to_csv(summary_file, index=False)
+            summary_df.to_csv(summary_file, index=False, encoding="utf-8")
             saved_files['summary_csv'] = summary_file
             logger.info(f"Summary results saved to: {summary_file}")
             
@@ -723,7 +723,7 @@ class EFNYPLSAnalyzer:
                     'Feature_Index': range(self.results['X_loadings'].shape[0]),
                     'Weight': self.results['X_loadings'][:, i]
                 })
-                x_weights_df.to_csv(x_weights_file, index=False)
+                x_weights_df.to_csv(x_weights_file, index=False, encoding="utf-8")
                 saved_files[f'X_weights_comp{comp_id}'] = x_weights_file
                 
                 # Y loadings (behavior weights)
@@ -732,7 +732,7 @@ class EFNYPLSAnalyzer:
                     'Behavioral_Measure': self.behavioral_metrics if hasattr(self, 'behavioral_metrics') else [f'Measure_{j}' for j in range(self.results['Y_loadings'].shape[0])],
                     'Weight': self.results['Y_loadings'][:, i]
                 })
-                y_weights_df.to_csv(y_weights_file, index=False)
+                y_weights_df.to_csv(y_weights_file, index=False, encoding="utf-8")
                 saved_files[f'Y_weights_comp{comp_id}'] = y_weights_file
                 
                 logger.info(f"Component {comp_id} weights saved separately")

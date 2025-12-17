@@ -67,7 +67,7 @@ def merge_with_rsfmri_qc(demo_df, qc_file, output_file):
     
     # Read the QC data
     try:
-        qc_df = pd.read_csv(qc_file)
+        qc_df = pd.read_csv(qc_file, encoding="utf-8")
         logging.info(f"Successfully loaded {len(qc_df)} rows from {qc_file}")
     except Exception as e:
         logging.error(f"Failed to read QC file: {e}")
@@ -117,7 +117,7 @@ def merge_with_rsfmri_qc(demo_df, qc_file, output_file):
     
     # Save merged data
     try:
-        merged_df.to_csv(output_file, index=False)
+        merged_df.to_csv(output_file, index=False, encoding="utf-8")
         logging.info(f"Successfully saved merged data to {output_file}")
         
         # Print merge summary
@@ -147,7 +147,7 @@ def preprocess_efny_data(input_file, output_file, qc_file=None, merged_output_fi
     
     # Read the input CSV file
     try:
-        df = pd.read_csv(input_file)
+        df = pd.read_csv(input_file, encoding="utf-8")
         logging.info(f"Successfully loaded {len(df)} rows from {input_file}")
     except Exception as e:
         logging.error(f"Failed to read input file: {e}")
@@ -215,7 +215,7 @@ def preprocess_efny_data(input_file, output_file, qc_file=None, merged_output_fi
     
     # Save the processed data
     try:
-        output_df.to_csv(output_file, index=False)
+        output_df.to_csv(output_file, index=False, encoding="utf-8")
         logging.info(f"Successfully saved {len(output_df)} rows to {output_file}")
         
         # Print summary statistics

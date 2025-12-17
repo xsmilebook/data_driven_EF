@@ -56,5 +56,4 @@ def run(data_dir, task_csv, out_csv):
     for fp in files:
         rows.append(process_file(fp, tasks))
     out = pd.DataFrame(rows)
-    out.to_csv(out_csv, index=False, encoding='utf-8-sig')
-
+    out.to_csv(out_csv, index=False, encoding='utf-8')

@@ -180,7 +180,7 @@ def extract_covariates_from_behavioral_data(behavioral_data, subject_ids, covari
     if covariates_path:
         # 从指定文件加载协变量
         logger.info(f"Loading covariates from: {covariates_path}")
-        covariates = pd.read_csv(covariates_path)
+        covariates = pd.read_csv(covariates_path, encoding='utf-8')
         
         # 确保被试数量匹配
         if len(covariates) != len(subject_ids):

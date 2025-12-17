@@ -6,7 +6,7 @@ library(stringr)
 library(tidyr)
 library(tibble)
 
-source("/Users/tanlirou/Documents/EFNY/data/code/behave_function.R") 
+source("D:/code/data_driven_EF/src/metric_compute/behave_function.R") 
 
 ################define task################
 task_config <- list(
@@ -59,7 +59,7 @@ task_config <- list(
     item_var = "正式阶段刺激图片/Item名",
     filter_rt = TRUE
   ),
-  EmotionStoop = list(
+  EmotionStroop = list(
     fun      = analyze_flanker_stroop,
     rt_var   = "相对时间(秒)",
     rt_max   = 2.5,
@@ -237,7 +237,7 @@ make_sub_id <- function(raw_subject) {
 
 ######################## For all subjects ####################################
 # data path
-data_dir <- "/Users/tanlirou/Documents/EFNY/data/Behave/cibr_app_data"
+data_dir <- "D:/code/data_driven_EF/data/EFNY/behavior_data/cibr_app_data"
 files <- list.files(
   data_dir,
   pattern   = "GameData\\.xlsx$",
@@ -305,7 +305,7 @@ wide_res <- purrr::reduce(wide_list, dplyr::full_join, by = "subject")
 dplyr::glimpse(wide_res)
 
 # save
-out_path <- "/Users/tanlirou/Documents/EFNY/data/Behave/results/THU_app_results.csv"
+out_path <- "D:/code/data_driven_EF/data/EFNY/table/metrics/THU_app_results.csv"
 dir.create(dirname(out_path), showWarnings = FALSE, recursive = TRUE)
 write.csv(wide_res, out_path, row.names = FALSE)
 

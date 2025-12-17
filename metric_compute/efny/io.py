@@ -7,9 +7,16 @@ from .registry import KNOWN_METRICS
 
 def read_task_config(path):
     try:
-        df = pd.read_csv(path, dtype=str, keep_default_na=False)
+        df = pd.read_csv(path, dtype=str, keep_default_na=False, encoding='utf-8')
     except Exception:
-        df = pd.read_csv(path, dtype=str, keep_default_na=False, engine='python', on_bad_lines='warn')
+        df = pd.read_csv(
+            path,
+            dtype=str,
+            keep_default_na=False,
+            encoding='utf-8',
+            engine='python',
+            on_bad_lines='warn'
+        )
     df.columns = [c.strip() for c in df.columns]
     df = df[[c for c in df.columns if c]]
     rows = []
@@ -50,4 +57,3 @@ def first_col(df, candidates):
 def subject_code_from_filename(name):
     base = os.path.basename(name)
     return base.replace('_GameData.xlsx', '')
-

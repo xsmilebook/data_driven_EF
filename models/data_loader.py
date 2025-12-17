@@ -68,7 +68,7 @@ class EFNYDataLoader:
             raise FileNotFoundError(f"Behavioral data file not found: {self.behavioral_data_path}")
             
         try:
-            behavioral_data = pd.read_csv(self.behavioral_data_path)
+            behavioral_data = pd.read_csv(self.behavioral_data_path, encoding="utf-8")
             logger.info(f"Behavioral data loaded successfully: shape {behavioral_data.shape}")
             logger.info(f"Available behavioral measures: {list(behavioral_data.columns)}")
             return behavioral_data
@@ -91,7 +91,8 @@ class EFNYDataLoader:
             raise FileNotFoundError(f"Subject list file not found: {self.sublist_path}")
             
         try:
-            subject_ids = np.loadtxt(self.sublist_path, dtype=str)
+            with open(self.sublist_path, "r", encoding="utf-8") as f:
+                subject_ids = np.loadtxt(f, dtype=str)
             logger.info(f"Subject list loaded successfully: {len(subject_ids)} subjects")
             return subject_ids
         except Exception as e:
