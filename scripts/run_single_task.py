@@ -42,7 +42,22 @@ def _infer_atlas_tag(brain_file: str) -> str:
 
 def _build_behavioral_matrix(df: pd.DataFrame) -> tuple[pd.DataFrame, list]:
     exclude = {"subject_code", "file_name", "subid", "id"}
-    candidate_cols = [c for c in df.columns if c not in exclude]
+    selected_measures = config.get('behavioral.selected_measures', [])
+
+    if isinstance(selected_measures, list) and len(selected_measures) > 0:
+        candidate_cols = [c for c in selected_measures if c in df.columns and c not in exclude]
+        missing = [c for c in selected_measures if c not in df.columns]
+        if missing:
+            logging.getLogger(__name__).warning(
+                f"Some selected_measures are missing in behavioral table and will be ignored: {missing}"
+            )
+        if len(candidate_cols) == 0:
+            raise ValueError(
+                "No selected_measures found in behavioral table. "
+                "Please update config.json: behavioral.selected_measures to match EFNY_beh_metrics.csv column names."
+            )
+    else:
+        candidate_cols = [c for c in df.columns if c not in exclude]
 
     # 强制转数值（宽表中可能存在 object dtype）
     Y = df[candidate_cols].apply(pd.to_numeric, errors='coerce')
@@ -260,7 +275,13 @@ def load_data(args):
             missing = [m for m in selected_measures if m not in behavioral_data.columns]
             if missing:
                 logger.warning(f"Behavioral measures missing in synthetic data and will be skipped: {missing}")
-            behavioral_data = behavioral_data[existing]
+            if existing:
+                behavioral_data = behavioral_data[existing]
+            else:
+                raise ValueError(
+                    "No selected_measures found in synthetic behavioral data. "
+                    "Please update config.json behavioral.selected_measures or disable selection (set to [])."
+                )
     else:
         logger.info("Loading real EFNY data using config paths")
 
@@ -297,7 +318,11 @@ def load_data(args):
             raise ValueError("Behavioral data must be a pandas DataFrame")
 
         behavioral_data, metric_columns = _build_behavioral_matrix(behavioral_raw)
-        logger.info(f"Using ALL behavioral metrics: n_metrics={len(metric_columns)}")
+        selected_measures = config.get('behavioral.selected_measures', [])
+        if isinstance(selected_measures, list) and len(selected_measures) > 0:
+            logger.info(f"Using SELECTED behavioral metrics: n_metrics={len(metric_columns)}")
+        else:
+            logger.info(f"Using ALL behavioral metrics: n_metrics={len(metric_columns)}")
     
     logger.info(f"Data loaded successfully:")
     logger.info(f"  Brain data shape: {brain_data.shape}")
@@ -643,6 +668,7 @@ def main():
 
         behavioral_metric_columns = behavioral_data.columns.tolist() if isinstance(behavioral_data, pd.DataFrame) else None
         covariate_columns = covariates.columns.tolist() if isinstance(covariates, pd.DataFrame) else None
+        requested_behavioral_measures = config.get('behavioral.selected_measures', [])
         
         # 步骤2: 预处理
         logger.info("Step 2: Preprocessing data...")
@@ -662,6 +688,7 @@ def main():
         result.setdefault('metadata', {})
         result['metadata']['runtime_seconds'] = float(time.time() - t0)
         result['metadata']['behavioral_metric_columns'] = behavioral_metric_columns
+        result['metadata']['requested_behavioral_measures'] = requested_behavioral_measures
         result['metadata']['covariate_columns'] = covariate_columns
         
         # 步骤5: 保存结果
