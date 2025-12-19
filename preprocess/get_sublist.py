@@ -2,7 +2,7 @@ import pandas
 
 def get_sublist_from_csv(csv_path: str) -> pandas.DataFrame:
     """Extract subid column from CSV file"""
-    df = pandas.read_csv(csv_path)
+    df = pandas.read_csv(csv_path, encoding="utf-8")
     return df[['subid']]
 
 

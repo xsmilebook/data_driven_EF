@@ -9,6 +9,7 @@ import sys
 import os
 from pathlib import Path
 from typing import Dict, Any, Optional
+import time
 import numpy as np
 import pandas as pd
 import logging
@@ -27,6 +28,51 @@ from src.models.utils import (
     save_results, validate_data_shapes, check_data_quality,
     ConfigManager, config, load_results
 )
+
+
+def _infer_atlas_tag(brain_file: str) -> str:
+    s = "" if brain_file is None else str(brain_file)
+    s_low = s.lower()
+    if "schaefer400" in s_low:
+        return "schaefer400"
+    if "schaefer100" in s_low:
+        return "schaefer100"
+    return "unknown_atlas"
+
+
+def _build_behavioral_matrix(df: pd.DataFrame) -> tuple[pd.DataFrame, list]:
+    exclude = {"subject_code", "file_name", "subid", "id"}
+    selected_measures = config.get('behavioral.selected_measures', [])
+
+    if isinstance(selected_measures, list) and len(selected_measures) > 0:
+        candidate_cols = [c for c in selected_measures if c in df.columns and c not in exclude]
+        missing = [c for c in selected_measures if c not in df.columns]
+        if missing:
+            logging.getLogger(__name__).warning(
+                f"Some selected_measures are missing in behavioral table and will be ignored: {missing}"
+            )
+        if len(candidate_cols) == 0:
+            raise ValueError(
+                "No selected_measures found in behavioral table. "
+                "Please update config.json: behavioral.selected_measures to match EFNY_beh_metrics.csv column names."
+            )
+    else:
+        candidate_cols = [c for c in df.columns if c not in exclude]
+
+    # 强制转数值（宽表中可能存在 object dtype）
+    Y = df[candidate_cols].apply(pd.to_numeric, errors='coerce')
+    metric_cols = list(Y.columns)
+    return Y, metric_cols
+
+
+def _impute_with_mean(arr: np.ndarray) -> np.ndarray:
+    out = arr.copy()
+    means = np.nanmean(out, axis=0)
+    means = np.where(np.isfinite(means), means, 0.0)
+    mask = np.isnan(out)
+    if mask.any():
+        out[mask] = np.take(means, np.where(mask)[1])
+    return out
 
 
 def parse_arguments():
@@ -180,7 +226,7 @@ def extract_covariates_from_behavioral_data(behavioral_data, subject_ids, covari
     if covariates_path:
         # 从指定文件加载协变量
         logger.info(f"Loading covariates from: {covariates_path}")
-        covariates = pd.read_csv(covariates_path)
+        covariates = pd.read_csv(covariates_path, encoding='utf-8')
         
         # 确保被试数量匹配
         if len(covariates) != len(subject_ids):
@@ -202,45 +248,10 @@ def extract_covariates_from_behavioral_data(behavioral_data, subject_ids, covari
             logger.warning("No standard covariates found in external file, using all columns")
             return covariates
     else:
-        # 从行为数据中提取协变量（EFNY标准）
-        logger.info("Extracting EFNY standard covariates from behavioral data")
-        covariates = pd.DataFrame(index=range(len(subject_ids)))
-        
-        # 查找并提取协变量（不区分大小写）
-        behavioral_cols_lower = {col.lower(): col for col in behavioral_data.columns}
-        found_covs = []
-        
-        for cov_name in standard_covariates:
-            cov_name_lower = cov_name.lower()
-            
-            if cov_name_lower in behavioral_cols_lower:
-                # 找到匹配的列
-                original_col = behavioral_cols_lower[cov_name_lower]
-                covariates[cov_name] = behavioral_data[original_col].values
-                found_covs.append(cov_name)
-                logger.info(f"  Extracted {cov_name} from behavioral data")
-            else:
-                # 没有找到，创建占位符数据
-                logger.warning(f"  {cov_name} not found in behavioral data, creating placeholder")
-                if cov_name_lower == 'sex':
-                    covariates[cov_name] = np.random.choice([0, 1], size=len(subject_ids))
-                elif cov_name_lower == 'age':
-                    covariates[cov_name] = np.random.normal(25, 5, size=len(subject_ids))
-                elif cov_name_lower == 'meanfd':
-                    covariates[cov_name] = np.random.normal(0.15, 0.05, size=len(subject_ids))
-        
-        # 如果至少找到一个协变量，返回提取的协变量
-        if found_covs:
-            logger.info(f"Successfully extracted EFNY covariates: {found_covs}")
-            return covariates[found_covs]
-        else:
-            # 如果没有找到任何协变量，创建基本EFNY协变量集
-            logger.warning("No EFNY standard covariates found, creating basic set")
-            return pd.DataFrame({
-                'age': np.random.normal(25, 5, size=len(subject_ids)),
-                'sex': np.random.choice([0, 1], size=len(subject_ids)),
-                'meanFD': np.random.normal(0.15, 0.05, size=len(subject_ids))
-            })
+        raise ValueError(
+            "Covariates not found in behavioral table. "
+            "Please pass --covariates_path or set data.covariates_file in config.json."
+        )
 
 
 def load_data(args):
@@ -264,27 +275,54 @@ def load_data(args):
             missing = [m for m in selected_measures if m not in behavioral_data.columns]
             if missing:
                 logger.warning(f"Behavioral measures missing in synthetic data and will be skipped: {missing}")
-            behavioral_data = behavioral_data[existing]
+            if existing:
+                behavioral_data = behavioral_data[existing]
+            else:
+                raise ValueError(
+                    "No selected_measures found in synthetic behavioral data. "
+                    "Please update config.json behavioral.selected_measures or disable selection (set to [])."
+                )
     else:
-        logger.info("Loading real EFNY data using default paths")
-        
-        # 使用默认EFNY数据加载器
-        data_loader = EFNYDataLoader()
-        brain_data, behavioral_data, subject_ids = data_loader.load_all_data()
-        
-        # 处理协变量（EFNY标准：age, sex, meanFD）
-        covariates = extract_covariates_from_behavioral_data(
-            behavioral_data, subject_ids, args.covariates_path, logger
+        logger.info("Loading real EFNY data using config paths")
+
+        data_root = config.get('data.root_dir')
+        brain_file = config.get('data.brain_file')
+        behavioral_file = config.get('data.behavioral_file')
+        sublist_file = config.get('data.sublist_file')
+
+        data_loader = EFNYDataLoader(
+            data_root=data_root,
+            brain_file=brain_file,
+            behavioral_file=behavioral_file,
+            sublist_file=sublist_file,
         )
-        
-        # 选择用于分析的行为指标（通过配置）
+
+        brain_data, behavioral_raw, subject_ids = data_loader.load_all_data()
+
+        # 协变量优先顺序：命令行 --covariates_path > config.data.covariates_file
+        covariates_file = args.covariates_path or config.get('data.covariates_file')
+        covariate_columns = config.get('preprocessing.confound_variables', ['sex', 'age', 'meanFD'])
+
+        try:
+            covariates = data_loader.load_covariates_for_subjects(
+                subject_ids,
+                covariates_file=covariates_file,
+                covariate_columns=covariate_columns,
+            )
+        except Exception as e:
+            logger.error(f"Failed to load covariates aligned to sublist: {e}")
+            raise
+
+        # 使用 EFNY_beh_metrics.csv 的所有指标（排除 id 列，强制转数值）
+        if not isinstance(behavioral_raw, pd.DataFrame):
+            raise ValueError("Behavioral data must be a pandas DataFrame")
+
+        behavioral_data, metric_columns = _build_behavioral_matrix(behavioral_raw)
         selected_measures = config.get('behavioral.selected_measures', [])
-        if isinstance(behavioral_data, pd.DataFrame) and selected_measures:
-            existing = [m for m in selected_measures if m in behavioral_data.columns]
-            missing = [m for m in selected_measures if m not in behavioral_data.columns]
-            if missing:
-                logger.warning(f"Behavioral measures missing and will be skipped: {missing}")
-            behavioral_data = behavioral_data[existing]
+        if isinstance(selected_measures, list) and len(selected_measures) > 0:
+            logger.info(f"Using SELECTED behavioral metrics: n_metrics={len(metric_columns)}")
+        else:
+            logger.info(f"Using ALL behavioral metrics: n_metrics={len(metric_columns)}")
     
     logger.info(f"Data loaded successfully:")
     logger.info(f"  Brain data shape: {brain_data.shape}")
@@ -316,14 +354,21 @@ def preprocess_data(brain_data, behavioral_data, covariates, args):
     if args.regress_confounds:
         logger.info("Regressing out confounds")
         
-        # 创建混杂变量回归器
-        confound_regressor = ConfoundRegressor(standardize=True)
-        
-        # 回归脑数据
-        brain_clean = confound_regressor.fit_transform(brain_data, confounds=covariates)
-        
-        # 回归行为数据（所有列，假定均为数值）
-        behavioral_clean = confound_regressor.fit_transform(behavioral_data, confounds=covariates)
+        # NaN 插补（避免回归/PLS 直接失败）
+        X_arr = brain_data.values if isinstance(brain_data, pd.DataFrame) else brain_data
+        Y_arr = behavioral_data.values if isinstance(behavioral_data, pd.DataFrame) else behavioral_data
+        C_arr = covariates.values if isinstance(covariates, pd.DataFrame) else covariates
+
+        X_arr = _impute_with_mean(X_arr)
+        Y_arr = _impute_with_mean(Y_arr)
+        C_arr = _impute_with_mean(C_arr)
+
+        # 创建混杂变量回归器（X/Y 分开，避免覆盖）
+        confound_regressor_X = ConfoundRegressor(standardize=True)
+        confound_regressor_Y = ConfoundRegressor(standardize=True)
+
+        brain_clean = confound_regressor_X.fit_transform(X_arr, confounds=C_arr)
+        behavioral_clean = confound_regressor_Y.fit_transform(Y_arr, confounds=C_arr)
         
         logger.info("Confound regression completed")
     else:
@@ -376,7 +421,7 @@ def create_model_instance(args):
     return model
 
 
-def run_analysis(model, brain_data, behavioral_data, args):
+def run_analysis(model, brain_data, behavioral_data, covariates, args):
     """运行分析"""
     logger = logging.getLogger(__name__)
     
@@ -413,7 +458,7 @@ def run_analysis(model, brain_data, behavioral_data, args):
         # 运行置换检验
         perm_tester = PermutationTester(n_permutations=1, random_state=permutation_seed)
         result = perm_tester.run_permutation_test(
-            base_model, brain_data, behavioral_data, 
+            base_model, brain_data, behavioral_data, confounds=covariates,
             permutation_seed=permutation_seed
         )
         
@@ -461,7 +506,7 @@ def run_analysis(model, brain_data, behavioral_data, args):
                 random_state=args.random_state
             )
             
-            cv_results = cv_evaluator.run_cv_evaluation(model, brain_data, behavioral_data)
+            cv_results = cv_evaluator.run_cv_evaluation(model, brain_data, behavioral_data, confounds=covariates)
             result['cv_results'] = cv_results
             if 'all_canonical_correlations' in cv_results:
                 result['cv_all_canonical_correlations'] = cv_results['all_canonical_correlations']
@@ -476,10 +521,24 @@ def run_analysis(model, brain_data, behavioral_data, args):
 def save_results_with_metadata(result, args):
     """保存结果和元数据"""
     logger = logging.getLogger(__name__)
+
+    results_root = Path(config.get('output.results_dir', str(get_results_dir())))
+    brain_file = config.get('data.brain_file', '')
+    atlas_tag = _infer_atlas_tag(brain_file)
+    analysis_type = 'perm' if args.task_id > 0 else 'real'
+    seed = (args.random_state + args.task_id) if args.task_id > 0 else args.random_state
     
     # 确定输出目录
     if args.output_dir is None:
-        output_dir = Path(get_results_dir()) / f"task_{args.task_id}_{args.model_type}"
+        output_dir = (
+            results_root
+            / analysis_type
+            / atlas_tag
+            / args.model_type
+            / f"ncomp_{args.n_components}"
+            / f"seed_{seed}"
+            / f"task_{args.task_id}"
+        )
     else:
         output_dir = Path(args.output_dir)
     
@@ -487,19 +546,20 @@ def save_results_with_metadata(result, args):
     
     # 创建时间戳
     timestamp = create_timestamp()
+
+    # 每次运行独立子目录，便于对比
+    output_dir = output_dir / timestamp
+    output_dir.mkdir(parents=True, exist_ok=True)
     
     # 构建输出文件名
-    if args.task_id > 0:
-        # 置换检验结果
-        output_prefix = f"{args.output_prefix}_perm_{args.task_id}_{timestamp}"
-    else:
-        # 真实数据结果
-        output_prefix = f"{args.output_prefix}_real_{args.model_type}_{timestamp}"
+    output_path = output_dir / "result"
     
-    output_path = output_dir / output_prefix
-    
+    meta = result.get('metadata')
+    if not isinstance(meta, dict):
+        meta = {}
+
     # 添加元数据
-    result['metadata'] = {
+    meta.update({
         'timestamp': timestamp,
         'task_id': args.task_id,
         'model_type': args.model_type,
@@ -509,8 +569,22 @@ def save_results_with_metadata(result, args):
         'run_cv': args.run_cv,
         'cv_n_splits': args.cv_n_splits if args.run_cv else None,
         'random_state': args.random_state,
-        'output_file': str(output_path)
-    }
+        'permutation_seed': seed if args.task_id > 0 else None,
+        'output_root': str(results_root),
+        'output_dir': str(output_dir),
+        'output_file': str(output_path),
+        'data_root': config.get('data.root_dir'),
+        'brain_file': config.get('data.brain_file'),
+        'behavioral_file': config.get('data.behavioral_file'),
+        'covariates_file': args.covariates_path or config.get('data.covariates_file'),
+        'atlas_tag': atlas_tag,
+        'slurm_job_id': os.environ.get('SLURM_JOB_ID'),
+        'slurm_array_task_id': os.environ.get('SLURM_ARRAY_TASK_ID'),
+        'slurm_job_name': os.environ.get('SLURM_JOB_NAME'),
+        'config_snapshot': config.config
+    })
+
+    result['metadata'] = meta
     
     # 保存结果
     saved_files = save_results(result, output_path, format="both")
@@ -525,7 +599,8 @@ def save_results_with_metadata(result, args):
         if model_info.get('model_type') == 'Adaptive-PLS':
             optimal_n_components = model_info.get('optimal_n_components')
             if optimal_n_components is not None:
-                summary_dir = get_results_dir()
+                summary_dir = results_root / "summary" / atlas_tag
+                summary_dir.mkdir(parents=True, exist_ok=True)
                 summary_path = summary_dir / f"best_n_components_{args.model_type}.json"
                 summary_data = {
                     'model_type': args.model_type,
@@ -543,8 +618,10 @@ def save_results_with_metadata(result, args):
 
 def load_best_n_components(model_type: str) -> int:
     """从汇总文件中加载真实数据选出的最佳成分数量"""
-    summary_dir = get_results_dir()
-    summary_path = summary_dir / f"best_n_components_{model_type}.json"
+    results_root = Path(config.get('output.results_dir', str(get_results_dir())))
+    brain_file = config.get('data.brain_file', '')
+    atlas_tag = _infer_atlas_tag(brain_file)
+    summary_path = results_root / "summary" / atlas_tag / f"best_n_components_{model_type}.json"
     if not summary_path.exists():
         raise FileNotFoundError(
             f"Best n_components summary not found: {summary_path}. "
@@ -579,6 +656,7 @@ def main():
     logger.info(f"Synthetic Data: {args.use_synthetic}")
     
     try:
+        t0 = time.time()
         # 加载配置（如果提供）
         if args.config_file:
             config.load_config(args.config_file)
@@ -587,6 +665,10 @@ def main():
         # 步骤1: 加载数据
         logger.info("Step 1: Loading data...")
         brain_data, behavioral_data, covariates, subject_ids = load_data(args)
+
+        behavioral_metric_columns = behavioral_data.columns.tolist() if isinstance(behavioral_data, pd.DataFrame) else None
+        covariate_columns = covariates.columns.tolist() if isinstance(covariates, pd.DataFrame) else None
+        requested_behavioral_measures = config.get('behavioral.selected_measures', [])
         
         # 步骤2: 预处理
         logger.info("Step 2: Preprocessing data...")
@@ -601,7 +683,13 @@ def main():
         
         # 步骤4: 运行分析
         logger.info("Step 4: Running analysis...")
-        result = run_analysis(model, brain_clean, behavioral_clean, args)
+        result = run_analysis(model, brain_clean, behavioral_clean, covariates, args)
+
+        result.setdefault('metadata', {})
+        result['metadata']['runtime_seconds'] = float(time.time() - t0)
+        result['metadata']['behavioral_metric_columns'] = behavioral_metric_columns
+        result['metadata']['requested_behavioral_measures'] = requested_behavioral_measures
+        result['metadata']['covariate_columns'] = covariate_columns
         
         # 步骤5: 保存结果
         logger.info("Step 5: Saving results...")

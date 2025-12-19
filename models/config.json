@@ -1,8 +1,9 @@
 {
   "data": {
     "root_dir": "/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/data/EFNY",
-    "brain_file": "fc_vector/Schaefer100/EFNY_Schaefer100_FC_matrix.npy",
-    "behavioral_file": "table/demo/EFNY_behavioral_data.csv",
+    "brain_file": "fc_vector/Schaefer400/EFNY_Schaefer400_FC_matrix.npy",
+    "behavioral_file": "table/metrics/EFNY_beh_metrics.csv",
+    "covariates_file": "table/demo/EFNY_behavioral_data.csv",
     "sublist_file": "table/sublist/sublist.txt",
     "max_missing_rate": 0.1,
     "quality_check_enabled": true
@@ -37,16 +38,71 @@
   },
   "behavioral": {
     "selected_measures": [
-      "SST_SSRT", "CPT_d_prime", "CPT_ACC", "CPT_Reaction_Time",
-      "FLANKER_Contrast_ACC", "FLANKER_Contrast_RT", "ColorStroop_Contrast_ACC",
-      "ColorStroop_Contrast_RT", "EmotionStroop_Contrast_ACC", "EmotionStroop_Contrast_RT",
-      "Number1Back_ACC", "Number1Back_Reaction_Time", "Number2Back_ACC",
-      "Number2Back_Reaction_Time", "Spatial1Back_ACC", "Spatial1Back_Reaction_Time",
-      "Spatial2Back_ACC", "Spatial2Back_Reaction_Time", "Emotion1Back_ACC",
-      "Emotion1Back_Reaction_Time", "Emotion2Back_ACC", "Emotion2Back_Reaction_Time",
-      "KT_ACC", "DCCS_ACC", "DCCS_Reaction_Time", "DCCS_Switch_Cost",
-      "EmotionSwitch_ACC", "EmotionSwitch_Reaction_Time", "DT_ACC",
-      "DT_Reaction_Time", "DT_Switch_Cost"
+      "FLANKER_ACC", "FLANKER_RT_Mean", "FLANKER_RT_SD",
+      "FLANKER_Congruent_ACC", "FLANKER_Congruent_RT",
+      "FLANKER_Incongruent_ACC", "FLANKER_Incongruent_RT",
+      "FLANKER_Contrast_RT", "FLANKER_Contrast_ACC",
+      "SST_ACC", "SST_RT_Mean", "SST_RT_SD",
+      "SST_SSRT", "SST_Mean_SSD",
+      "SST_Stop_ACC", "SST_Go_RT_Mean", "SST_Go_RT_SD",
+      "FZSS_ACC", "FZSS_RT_Mean", "FZSS_RT_SD",
+      "FZSS_Overall_ACC", "FZSS_Miss_Rate",
+      "FZSS_FA_Rate", "FZSS_Correct_RT_Mean", "FZSS_Correct_RT_SD",
+      "DT_ACC", "DT_RT_Mean", "DT_RT_SD",
+      "DT_Repeat_ACC", "DT_Repeat_RT",
+      "DT_Switch_ACC", "DT_Switch_RT",
+      "DT_Switch_Cost_RT", "DT_Switch_Cost_ACC",
+      "ColorStroop_ACC", "ColorStroop_RT_Mean", "ColorStroop_RT_SD",
+      "ColorStroop_Congruent_ACC", "ColorStroop_Congruent_RT",
+      "ColorStroop_Incongruent_ACC", "ColorStroop_Incongruent_RT",
+      "ColorStroop_Contrast_RT", "ColorStroop_Contrast_ACC",
+      "EmotionStroop_ACC", "EmotionStroop_RT_Mean", "EmotionStroop_RT_SD",
+      "EmotionStroop_Congruent_ACC", "EmotionStroop_Congruent_RT",
+      "EmotionStroop_Incongruent_ACC", "EmotionStroop_Incongruent_RT",
+      "EmotionStroop_Contrast_RT", "EmotionStroop_Contrast_ACC",
+      "CPT_ACC", "CPT_RT_Mean", "CPT_RT_SD",
+      "CPT_Go_ACC", "CPT_NoGo_ACC",
+      "CPT_Go_RT_Mean", "CPT_Go_RT_SD",
+      "CPT_dprime",
+      "EmotionSwitch_ACC", "EmotionSwitch_RT_Mean",
+      "EmotionSwitch_RT_SD", "EmotionSwitch_Repeat_ACC",
+      "EmotionSwitch_Repeat_RT",
+      "EmotionSwitch_Switch_ACC", "EmotionSwitch_Switch_RT",
+      "EmotionSwitch_Switch_Cost_RT", "EmotionSwitch_Switch_Cost_ACC",
+      "oneback_number_ACC", "oneback_number_RT_Mean",
+      "oneback_number_RT_SD", "oneback_number_Hit_Rate",
+      "oneback_number_FA_Rate", "oneback_number_dprime",
+      "twoback_number_ACC", "twoback_number_RT_Mean",
+      "twoback_number_RT_SD", "twoback_number_Hit_Rate",
+      "twoback_number_FA_Rate", "twoback_number_dprime",
+      "oneback_spatial_ACC", "oneback_spatial_RT_Mean",
+      "oneback_spatial_RT_SD", "oneback_spatial_Hit_Rate",
+      "oneback_spatial_FA_Rate", "oneback_spatial_dprime",
+      "twoback_spatial_ACC", "twoback_spatial_RT_Mean",
+      "twoback_spatial_RT_SD", "twoback_spatial_Hit_Rate",
+      "twoback_spatial_FA_Rate", "twoback_spatial_dprime",
+      "KT_ACC", "KT_RT_Mean",
+      "KT_RT_SD", "KT_Overall_ACC",
+      "KT_Mean_RT",
+      "ZYST_ACC", "ZYST_RT_Mean",
+      "ZYST_RT_SD", "ZYST_T0_ACC",
+      "ZYST_T1_ACC", "ZYST_T1_given_T0_ACC",
+      "ZYST_T0_RT", "ZYST_T1_RT",
+      "DCCS_ACC", "DCCS_RT_Mean",
+      "DCCS_RT_SD", "DCCS_Repeat_ACC",
+      "DCCS_Repeat_RT", "DCCS_Switch_ACC",
+      "DCCS_Switch_RT", "DCCS_Switch_Cost_RT",
+      "DCCS_Switch_Cost_ACC",
+      "GNG_ACC", "GNG_RT_Mean",
+      "GNG_RT_SD", "GNG_Go_ACC",
+      "GNG_NoGo_ACC", "GNG_Go_RT_Mean",
+      "GNG_Go_RT_SD", "GNG_dprime",
+      "oneback_emotion_ACC", "oneback_emotion_RT_Mean",
+      "oneback_emotion_RT_SD", "oneback_emotion_Hit_Rate",
+      "oneback_emotion_FA_Rate", "oneback_emotion_dprime",
+      "twoback_emotion_ACC", "twoback_emotion_RT_Mean",
+      "twoback_emotion_RT_SD", "twoback_emotion_Hit_Rate",
+      "twoback_emotion_FA_Rate", "twoback_emotion_dprime"
     ]
   },
   
@@ -71,7 +127,7 @@
   },
   
   "output": {
-    "results_dir": "d:/code/data_driven_EF/results/models",
+    "results_dir": "/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/data/EFNY/results",
     "create_timestamp_subdirs": true,
     "save_formats": ["json", "npz"],
     "compression": {
@@ -91,7 +147,7 @@
     "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     "file_logging": {
       "enabled": true,
-      "log_dir": "d:/code/data_driven_EF/results/logs",
+      "log_dir": "data/EFNY/results/logs",
       "max_file_size_mb": 100,
       "backup_count": 5
     },
@@ -114,7 +170,7 @@
     "checkpointing": {
       "enabled": true,
       "interval": 100,
-      "dir": "d:/code/data_driven_EF/results/checkpoints"
+      "dir": "data/EFNY/results/checkpoints"
     }
   },
   

@@ -62,7 +62,7 @@ def build_behavioral_data(metrics_file, demo_file, output_file, keep_complete_on
     
     # Read metrics data
     try:
-        metrics_df = pd.read_csv(metrics_file)
+        metrics_df = pd.read_csv(metrics_file, encoding="utf-8")
         logging.info(f"Successfully loaded {len(metrics_df)} rows from metrics file")
         logging.info(f"Metrics columns: {list(metrics_df.columns)}")
     except Exception as e:
@@ -71,7 +71,7 @@ def build_behavioral_data(metrics_file, demo_file, output_file, keep_complete_on
     
     # Read demo data
     try:
-        demo_df = pd.read_csv(demo_file)
+        demo_df = pd.read_csv(demo_file, encoding="utf-8")
         logging.info(f"Successfully loaded {len(demo_df)} rows from demo file")
         logging.info(f"Demo columns: {list(demo_df.columns)}")
     except Exception as e:
@@ -166,7 +166,7 @@ def build_behavioral_data(metrics_file, demo_file, output_file, keep_complete_on
     
     # Save the merged data
     try:
-        merged_df.to_csv(output_file, index=False)
+        merged_df.to_csv(output_file, index=False, encoding="utf-8")
         logging.info(f"Successfully saved merged behavioral data to {output_file}")
         
         # Print summary statistics

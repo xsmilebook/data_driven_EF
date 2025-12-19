@@ -16,7 +16,13 @@ logger = logging.getLogger(__name__)
 class EFNYDataLoader:
     """EFNY 数据集加载器"""
     
-    def __init__(self, data_root: Union[str, Path] = "/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/data/EFNY"):
+    def __init__(
+        self,
+        data_root: Union[str, Path] = "/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/data/EFNY",
+        brain_file: Optional[Union[str, Path]] = None,
+        behavioral_file: Optional[Union[str, Path]] = None,
+        sublist_file: Optional[Union[str, Path]] = None,
+    ):
         """
         初始化数据加载器
         
@@ -24,9 +30,46 @@ class EFNYDataLoader:
             data_root: EFNY 数据根目录
         """
         self.data_root = Path(data_root)
-        self.brain_data_path = self.data_root / "fc_vector" / "Schaefer100" / "EFNY_Schaefer100_FC_matrix.npy"
-        self.behavioral_data_path = self.data_root / "table" / "demo" / "EFNY_behavioral_data.csv"
-        self.sublist_path = self.data_root / "table" / "sublist" / "sublist.txt"
+        self.brain_data_path = self._resolve_path(
+            brain_file,
+            default_rel=Path("fc_vector") / "Schaefer100" / "EFNY_Schaefer100_FC_matrix.npy",
+        )
+        self.behavioral_data_path = self._resolve_path(
+            behavioral_file,
+            default_rel=Path("table") / "demo" / "EFNY_behavioral_data.csv",
+        )
+        self.sublist_path = self._resolve_path(
+            sublist_file,
+            default_rel=Path("table") / "sublist" / "sublist.txt",
+        )
+
+    def _resolve_path(self, maybe_path: Optional[Union[str, Path]], default_rel: Path) -> Path:
+        if maybe_path is None:
+            return self.data_root / default_rel
+
+        maybe_path = Path(maybe_path)
+        if maybe_path.is_absolute():
+            return maybe_path
+        return self.data_root / maybe_path
+
+    @staticmethod
+    def _subject_code_to_subid(subject_code: str) -> str:
+        """将 EFNY_beh_metrics.csv 里的 subject_code 映射到 sublist 使用的 subid 格式。
+
+        示例：
+        - THU_20231119_141_SYQ_沈煜晴 -> sub-THU20231119141SYQ
+        """
+        s = "" if subject_code is None else str(subject_code)
+        s = s.strip()
+        if s.startswith("sub-"):
+            return s
+
+        parts = s.split("_")
+        if len(parts) >= 4 and parts[0].upper() == "THU":
+            core = "".join(parts[:4])
+        else:
+            core = s.replace("_", "")
+        return f"sub-{core}"
         
     def load_brain_data(self) -> np.ndarray:
         """
@@ -68,12 +111,38 @@ class EFNYDataLoader:
             raise FileNotFoundError(f"Behavioral data file not found: {self.behavioral_data_path}")
             
         try:
-            behavioral_data = pd.read_csv(self.behavioral_data_path)
+            behavioral_data = pd.read_csv(self.behavioral_data_path, encoding="utf-8")
             logger.info(f"Behavioral data loaded successfully: shape {behavioral_data.shape}")
-            logger.info(f"Available behavioral measures: {list(behavioral_data.columns)}")
+
+            # 支持 EFNY_beh_metrics.csv（subject_code/file_name + 大量指标）
+            if 'subid' not in behavioral_data.columns:
+                if 'subject_code' in behavioral_data.columns:
+                    behavioral_data['subid'] = behavioral_data['subject_code'].map(self._subject_code_to_subid)
+                elif 'id' in behavioral_data.columns:
+                    behavioral_data['subid'] = behavioral_data['id'].astype(str)
+
+            logger.info(f"Available behavioral columns: {list(behavioral_data.columns)}")
             return behavioral_data
         except Exception as e:
             raise ValueError(f"Error loading behavioral data: {e}")
+    
+    def load_covariates_data(self, covariates_file: Optional[Union[str, Path]] = None) -> pd.DataFrame:
+        """加载协变量表（通常来自 demo/EFNY_behavioral_data.csv）。"""
+        cov_path = self._resolve_path(
+            covariates_file,
+            default_rel=Path("table") / "demo" / "EFNY_behavioral_data.csv",
+        )
+
+        logger.info(f"Loading covariates data from: {cov_path}")
+        if not cov_path.exists():
+            raise FileNotFoundError(f"Covariates data file not found: {cov_path}")
+
+        cov_df = pd.read_csv(cov_path, encoding="utf-8")
+        if 'subid' in cov_df.columns:
+            cov_df['subid'] = cov_df['subid'].astype(str)
+        else:
+            raise ValueError(f"Covariates file must contain 'subid' column: {cov_path}")
+        return cov_df
     
     def load_subject_list(self) -> np.ndarray:
         """
@@ -91,7 +160,8 @@ class EFNYDataLoader:
             raise FileNotFoundError(f"Subject list file not found: {self.sublist_path}")
             
         try:
-            subject_ids = np.loadtxt(self.sublist_path, dtype=str)
+            with open(self.sublist_path, "r", encoding="utf-8") as f:
+                subject_ids = np.loadtxt(f, dtype=str)
             logger.info(f"Subject list loaded successfully: {len(subject_ids)} subjects")
             return subject_ids
         except Exception as e:
@@ -118,16 +188,46 @@ class EFNYDataLoader:
         n_subjects_behavior = len(behavioral_data)
         n_subjects_list = len(subject_ids)
         
-        if not (n_subjects_brain == n_subjects_behavior == n_subjects_list):
+        if n_subjects_brain != n_subjects_list:
             raise ValueError(
-                f"Data dimension mismatch: "
-                f"brain={n_subjects_brain}, "
-                f"behavior={n_subjects_behavior}, "
-                f"subjects={n_subjects_list}"
+                f"Data dimension mismatch: brain={n_subjects_brain}, subjects={n_subjects_list}"
             )
-        
+
+        # 行为表可能不是按 sublist 顺序排列（尤其是 EFNY_beh_metrics.csv），这里按 subid 对齐
+        if isinstance(behavioral_data, pd.DataFrame) and 'subid' in behavioral_data.columns:
+            behavioral_data = behavioral_data.copy()
+            behavioral_data['subid'] = behavioral_data['subid'].astype(str)
+            behavioral_data = behavioral_data.set_index('subid', drop=False)
+            behavioral_data = behavioral_data.reindex(subject_ids)
+        else:
+            # 若没有 subid，只能退化为“按行数一致”假设
+            if n_subjects_behavior != n_subjects_list:
+                raise ValueError(
+                    f"Behavioral data cannot be aligned: behavioral rows={n_subjects_behavior}, subjects={n_subjects_list}"
+                )
+
         logger.info(f"All data loaded successfully. Total subjects: {n_subjects_brain}")
         return brain_data, behavioral_data, subject_ids
+
+    def load_covariates_for_subjects(
+        self,
+        subject_ids: np.ndarray,
+        covariates_file: Optional[Union[str, Path]] = None,
+        covariate_columns: Optional[list] = None,
+    ) -> pd.DataFrame:
+        """按 subject_ids 顺序返回协变量 DataFrame。"""
+        cov_df = self.load_covariates_data(covariates_file=covariates_file)
+        cov_df = cov_df.copy()
+        cov_df['subid'] = cov_df['subid'].astype(str)
+        cov_df = cov_df.set_index('subid', drop=False).reindex(subject_ids)
+
+        if covariate_columns is not None:
+            missing = [c for c in covariate_columns if c not in cov_df.columns]
+            if missing:
+                raise ValueError(f"Missing covariate columns in covariates file: {missing}")
+            return cov_df[covariate_columns]
+
+        return cov_df
     
     def get_available_behavioral_measures(self) -> list:
         """
