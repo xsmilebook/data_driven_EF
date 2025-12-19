@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pandas as pd
 
 from .registry import KNOWN_METRICS
@@ -57,3 +58,20 @@ def first_col(df, candidates):
 def subject_code_from_filename(name):
     base = os.path.basename(name)
     return base.replace('_GameData.xlsx', '')
+
+
+def zscore_behavioral_df(df, exclude_columns=None):
+    if df is None or len(df) == 0:
+        return df
+    exclude_columns = exclude_columns or {'subject_code', 'file_name'}
+    out = df.copy()
+    cols = [c for c in out.columns if c not in exclude_columns]
+    for c in cols:
+        s = pd.to_numeric(out[c], errors='coerce')
+        m = s.mean(skipna=True)
+        sd = s.std(skipna=True, ddof=1)
+        if pd.isna(sd) or sd == 0:
+            out[c] = np.nan
+        else:
+            out[c] = (s - m) / sd
+    return out
