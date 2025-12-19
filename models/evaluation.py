@@ -123,6 +123,19 @@ class CrossValidator:
         # 初始化结果存储
         fold_results = []
         all_predictions = []
+
+        def _impute_with_train_mean(train_arr: np.ndarray, test_arr: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+            train_out = train_arr.copy()
+            test_out = test_arr.copy()
+            means = np.nanmean(train_out, axis=0)
+            means = np.where(np.isfinite(means), means, 0.0)
+            train_mask = np.isnan(train_out)
+            if train_mask.any():
+                train_out[train_mask] = np.take(means, np.where(train_mask)[1])
+            test_mask = np.isnan(test_out)
+            if test_mask.any():
+                test_out[test_mask] = np.take(means, np.where(test_mask)[1])
+            return train_out, test_out
         
         # 交叉验证循环
         for fold_idx, (train_idx, test_idx) in enumerate(split_iterator):
@@ -136,16 +149,23 @@ class CrossValidator:
                 confounds_train, confounds_test = confounds_values[train_idx], confounds_values[test_idx]
             else:
                 confounds_train, confounds_test = None, None
+
+            if confounds_train is not None:
+                confounds_train, confounds_test = _impute_with_train_mean(confounds_train, confounds_test)
+
+            X_train, X_test = _impute_with_train_mean(X_train, X_test)
+            Y_train, Y_test = _impute_with_train_mean(Y_train, Y_test)
             
             # 步骤1: 在训练集上拟合混杂变量回归
             if confounds_values is not None:
-                confound_regressor = ConfoundRegressor(standardize=True)
-                X_train_clean = confound_regressor.fit_transform(X_train, confounds=confounds_train)
-                Y_train_clean = confound_regressor.fit_transform(Y_train, confounds=confounds_train)
-                
+                confound_regressor_X = ConfoundRegressor(standardize=True)
+                confound_regressor_Y = ConfoundRegressor(standardize=True)
+                X_train_clean = confound_regressor_X.fit_transform(X_train, confounds=confounds_train)
+                Y_train_clean = confound_regressor_Y.fit_transform(Y_train, confounds=confounds_train)
+
                 # 应用到测试集
-                X_test_clean = confound_regressor.transform(X_test, confounds=confounds_test)
-                Y_test_clean = confound_regressor.transform(Y_test, confounds=confounds_test)
+                X_test_clean = confound_regressor_X.transform(X_test, confounds=confounds_test)
+                Y_test_clean = confound_regressor_Y.transform(Y_test, confounds=confounds_test)
             else:
                 X_train_clean, Y_train_clean = X_train, Y_train
                 X_test_clean, Y_test_clean = X_test, Y_test
@@ -296,7 +316,10 @@ class CrossValidator:
         Returns:
             汇总表 DataFrame
         """
-        n_components = cv_results['n_components']
+        n_components = cv_results.get('max_n_components')
+        if n_components is None:
+            mean_corrs = cv_results.get('mean_canonical_correlations')
+            n_components = len(mean_corrs) if mean_corrs is not None else 0
         
         summary_data = {
             'Component': np.arange(1, n_components + 1),
@@ -379,9 +402,24 @@ class PermutationTester:
         
         # 处理混杂变量
         if confounds is not None:
-            confound_regressor = ConfoundRegressor(standardize=True)
-            X_clean = confound_regressor.fit_transform(X_values, confounds=confounds)
-            Y_clean = confound_regressor.fit_transform(Y_permuted, confounds=confounds)
+            def _impute(arr: np.ndarray) -> np.ndarray:
+                out = arr.copy()
+                means = np.nanmean(out, axis=0)
+                means = np.where(np.isfinite(means), means, 0.0)
+                mask = np.isnan(out)
+                if mask.any():
+                    out[mask] = np.take(means, np.where(mask)[1])
+                return out
+
+            confounds_values = confounds.values if isinstance(confounds, pd.DataFrame) else confounds
+            X_values = _impute(X_values)
+            Y_permuted = _impute(Y_permuted)
+            confounds_values = _impute(confounds_values)
+
+            confound_regressor_X = ConfoundRegressor(standardize=True)
+            confound_regressor_Y = ConfoundRegressor(standardize=True)
+            X_clean = confound_regressor_X.fit_transform(X_values, confounds=confounds_values)
+            Y_clean = confound_regressor_Y.fit_transform(Y_permuted, confounds=confounds_values)
         else:
             X_clean, Y_clean = X_values, Y_permuted
         

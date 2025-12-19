@@ -1,8 +1,9 @@
 {
   "data": {
     "root_dir": "/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/data/EFNY",
-    "brain_file": "fc_vector/Schaefer100/EFNY_Schaefer100_FC_matrix.npy",
-    "behavioral_file": "table/demo/EFNY_behavioral_data.csv",
+    "brain_file": "fc_vector/Schaefer400/EFNY_Schaefer400_FC_matrix.npy",
+    "behavioral_file": "table/metrics/EFNY_beh_metrics.csv",
+    "covariates_file": "table/demo/EFNY_behavioral_data.csv",
     "sublist_file": "table/sublist/sublist.txt",
     "max_missing_rate": 0.1,
     "quality_check_enabled": true
@@ -71,7 +72,7 @@
   },
   
   "output": {
-    "results_dir": "d:/code/data_driven_EF/results/models",
+    "results_dir": "/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/data/EFNY/results",
     "create_timestamp_subdirs": true,
     "save_formats": ["json", "npz"],
     "compression": {
@@ -91,7 +92,7 @@
     "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     "file_logging": {
       "enabled": true,
-      "log_dir": "d:/code/data_driven_EF/results/logs",
+      "log_dir": "data/EFNY/results/logs",
       "max_file_size_mb": 100,
       "backup_count": 5
     },
@@ -114,7 +115,7 @@
     "checkpointing": {
       "enabled": true,
       "interval": 100,
-      "dir": "d:/code/data_driven_EF/results/checkpoints"
+      "dir": "data/EFNY/results/checkpoints"
     }
   },
   

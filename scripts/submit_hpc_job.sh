@@ -9,6 +9,7 @@
 source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
 conda activate ML
 project_dir="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF"
+config_file="${project_dir}/src/models/config.json"
 
 # 基础参数 - Adaptive-PLS配置
 MODEL_TYPE="adaptive_pls"                 # 自适应PLS模型
@@ -26,8 +27,7 @@ else
     OUTPUT_PREFIX="efny_perm_${MODEL_TYPE}"
 fi
 
-# 创建输出目录
-mkdir -p ${project_dir}/results/models/task_${SLURM_ARRAY_TASK_ID}_${MODEL_TYPE}
+# 创建输出目录（日志）
 mkdir -p ${project_dir}/log/task_${MODEL_TYPE}
 
 # 运行分析
@@ -42,9 +42,9 @@ python ${project_dir}/src/scripts/run_single_task.py \
     --task_id $SLURM_ARRAY_TASK_ID \
     --model_type $MODEL_TYPE \
     --n_components $N_COMPONENTS \
-    --output_dir ${project_dir}/results/models/task_${SLURM_ARRAY_TASK_ID}_${MODEL_TYPE} \
     --output_prefix $OUTPUT_PREFIX \
     --random_state $RANDOM_STATE \
+    --config_file ${config_file} \
     --log_level INFO \
     --log_file ${project_dir}/log/task_${MODEL_TYPE}/task_${SLURM_ARRAY_TASK_ID}.log
 
