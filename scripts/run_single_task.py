@@ -350,33 +350,15 @@ def preprocess_data(brain_data, behavioral_data, covariates, args):
     if not quality_report['quality_passed']:
         logger.warning("Data quality check failed, but continuing with analysis")
     
-    # 回归混杂变量
     if args.regress_confounds:
-        logger.info("Regressing out confounds")
-        
-        # NaN 插补（避免回归/PLS 直接失败）
-        X_arr = brain_data.values if isinstance(brain_data, pd.DataFrame) else brain_data
-        Y_arr = behavioral_data.values if isinstance(behavioral_data, pd.DataFrame) else behavioral_data
-        C_arr = covariates.values if isinstance(covariates, pd.DataFrame) else covariates
-
-        X_arr = _impute_with_mean(X_arr)
-        Y_arr = _impute_with_mean(Y_arr)
-        C_arr = _impute_with_mean(C_arr)
-
-        # 创建混杂变量回归器（X/Y 分开，避免覆盖）
-        confound_regressor_X = ConfoundRegressor(standardize=True)
-        confound_regressor_Y = ConfoundRegressor(standardize=True)
-
-        brain_clean = confound_regressor_X.fit_transform(X_arr, confounds=C_arr)
-        behavioral_clean = confound_regressor_Y.fit_transform(Y_arr, confounds=C_arr)
-        
-        logger.info("Confound regression completed")
+        logger.info(
+            "Strict mode: confounds will be regressed within CV folds (train-fit/test-apply). "
+            "Skipping global confound regression in preprocess_data."
+        )
     else:
-        brain_clean = brain_data
-        behavioral_clean = behavioral_data
-        logger.info("Skipping confound regression")
-    
-    return brain_clean, behavioral_clean
+        logger.info("Confound regression disabled")
+
+    return brain_data, behavioral_data
 
 
 def create_model_instance(args):
@@ -389,6 +371,7 @@ def create_model_instance(args):
             'n_components_range': list(range(1, args.n_components + 1)),  # 搜索范围
             'cv_folds': 5,
             'criterion': 'canonical_correlation',
+            'random_state': args.random_state,
             'scale': True,
             'max_iter': 5000,
             'tol': 1e-06
@@ -402,6 +385,7 @@ def create_model_instance(args):
             'sparsity_Y_range': [0.1, 0.2, 0.3],  # 行为数据稀疏度（特征少，用大值）
             'cv_folds': 5,
             'criterion': 'canonical_correlation',
+            'random_state': args.random_state,
             'max_iter': 10000,
             'tol': 1e-06
         }
@@ -417,6 +401,7 @@ def create_model_instance(args):
             'c_Y_range': [0.0, 0.1, 0.3, 0.5],
             'cv_folds': 5,
             'criterion': 'canonical_correlation',
+            'random_state': args.random_state,
             'pca': True,
             'eps': 1e-06
         }
@@ -469,70 +454,52 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
         # 设置置换种子
         permutation_seed = args.random_state + args.task_id
 
-        # 做法B：如果使用adaptive模型，则在置换检验中固定超参数，
-        # 使用真实数据分析选出的最佳超参数，改用标准模型
-        if args.model_type == 'adaptive_pls':
-            try:
-                best_k = load_best_n_components(args.model_type)
-                logger.info(f"Using fixed n_components={best_k} for permutation test (approach B)")
-                from src.models.models import create_model
-                base_model = create_model(
-                    'pls',
-                    n_components=best_k,
-                    scale=True,
-                    max_iter=5000,
-                    tol=1e-06
-                )
-            except Exception as e:
-                logger.error(
-                    f"Failed to load best_n_components for permutation test, "
-                    f"falling back to current model. Error: {e}"
-                )
-                base_model = model
-        elif args.model_type == 'adaptive_scca':
-            try:
-                best_hyperparams = load_best_hyperparameters(args.model_type)
-                logger.info(f"Using fixed hyperparameters for permutation test:")
-                logger.info(f"  n_components={best_hyperparams['n_components']}")
-                logger.info(f"  sparsity_X={best_hyperparams['sparsity_X']}")
-                logger.info(f"  sparsity_Y={best_hyperparams['sparsity_Y']}")
-                from src.models.models import create_model
-                base_model = create_model(
-                    'scca',
-                    n_components=best_hyperparams['n_components'],
-                    sparsity_X=best_hyperparams['sparsity_X'],
-                    sparsity_Y=best_hyperparams['sparsity_Y'],
-                    max_iter=10000,
-                    tol=1e-06
-                )
-            except Exception as e:
-                logger.error(
-                    f"Failed to load best hyperparameters for permutation test, "
-                    f"falling back to current model. Error: {e}"
-                )
-                base_model = model
-        elif args.model_type == 'adaptive_rcca':
-            try:
-                best_hyperparams = load_best_hyperparameters(args.model_type)
-                logger.info(f"Using fixed hyperparameters for permutation test:")
-                logger.info(f"  n_components={best_hyperparams['n_components']}")
-                logger.info(f"  c_X={best_hyperparams['c_X']}")
-                logger.info(f"  c_Y={best_hyperparams['c_Y']}")
-                from src.models.models import create_model
-                base_model = create_model(
-                    'rcca',
-                    n_components=best_hyperparams['n_components'],
-                    c_X=best_hyperparams['c_X'],
-                    c_Y=best_hyperparams['c_Y'],
-                    pca=True,
-                    eps=1e-06
-                )
-            except Exception as e:
-                logger.error(
-                    f"Failed to load best hyperparameters for permutation test, "
-                    f"falling back to current model. Error: {e}"
-                )
-                base_model = model
+        if args.model_type in ('adaptive_pls', 'adaptive_scca', 'adaptive_rcca'):
+            from src.models.models import create_model
+
+            min_n_components = load_max_optimal_n_components_from_real_runs(args.model_type)
+            upper_n_components = max(int(args.n_components), int(min_n_components))
+            perm_n_components_range = list(range(int(min_n_components), int(upper_n_components) + 1))
+
+            if args.model_type == 'adaptive_pls':
+                model_params = {
+                    'n_components_range': perm_n_components_range,
+                    'cv_folds': 5,
+                    'criterion': 'canonical_correlation',
+                    'random_state': permutation_seed,
+                    'scale': True,
+                    'max_iter': 5000,
+                    'tol': 1e-06,
+                }
+            elif args.model_type == 'adaptive_scca':
+                model_params = {
+                    'n_components_range': perm_n_components_range,
+                    'sparsity_X_range': [0.001, 0.005, 0.01, 0.05],
+                    'sparsity_Y_range': [0.1, 0.2, 0.3],
+                    'cv_folds': 5,
+                    'criterion': 'canonical_correlation',
+                    'random_state': permutation_seed,
+                    'max_iter': 10000,
+                    'tol': 1e-06,
+                }
+            else:
+                model_params = {
+                    'n_components_range': perm_n_components_range,
+                    'c_X_range': [0.0, 0.1, 0.3, 0.5],
+                    'c_Y_range': [0.0, 0.1, 0.3, 0.5],
+                    'cv_folds': 5,
+                    'criterion': 'canonical_correlation',
+                    'random_state': permutation_seed,
+                    'pca': True,
+                    'eps': 1e-06,
+                }
+
+            logger.info(
+                f"Permutation adaptive search: model={args.model_type}, "
+                f"min_n_components(from real max)={min_n_components}, "
+                f"search_range={perm_n_components_range}"
+            )
+            base_model = create_model(args.model_type, **model_params)
         else:
             base_model = model
         
@@ -540,33 +507,67 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
         perm_tester = PermutationTester(n_permutations=1, random_state=permutation_seed)
         result = perm_tester.run_permutation_test(
             base_model, brain_data, behavioral_data, confounds=covariates,
-            permutation_seed=permutation_seed
+            permutation_seed=permutation_seed,
+            cv_n_splits=args.cv_n_splits,
+            cv_shuffle=args.cv_shuffle,
+            cv_random_state=permutation_seed,
+            return_cv_results=True,
         )
         
         result['task_type'] = 'permutation'
         result['task_id'] = args.task_id
         result['permutation_seed'] = permutation_seed
         
-        logger.info(f"Permutation test completed. Max canonical correlation: {np.max(result['canonical_correlations']):.4f}")
+        logger.info(
+            "Permutation test completed. "
+            f"vector3(stat)={result.get('cv_statistic_vector3', float('nan')):.6f}; "
+            f"Max CV mean canonical correlation={np.max(result['canonical_correlations']):.4f}"
+        )
         
     else:
         # 真实数据分析
         logger.info("Running real data analysis")
-        
-        # 拟合模型
-        model.fit(brain_data, behavioral_data)
-        
-        # 获取结果
-        X_scores, Y_scores = model.transform(brain_data, behavioral_data)
-        canonical_corrs = model.calculate_canonical_correlations(X_scores, Y_scores)
-        variance_explained = model.calculate_variance_explained(brain_data, behavioral_data, X_scores, Y_scores)
+
+        X_full = brain_data.values if isinstance(brain_data, pd.DataFrame) else brain_data
+        Y_full = behavioral_data.values if isinstance(behavioral_data, pd.DataFrame) else behavioral_data
+        C_full = covariates.values if isinstance(covariates, pd.DataFrame) else covariates
+
+        X_full = _impute_with_mean(X_full)
+        Y_full = _impute_with_mean(Y_full)
+        if C_full is not None:
+            C_full = _impute_with_mean(C_full)
+
+        if args.regress_confounds and C_full is not None:
+            confound_regressor_X = ConfoundRegressor(standardize=True)
+            confound_regressor_Y = ConfoundRegressor(standardize=True)
+            X_fit = confound_regressor_X.fit_transform(X_full, confounds=C_full)
+            Y_fit = confound_regressor_Y.fit_transform(Y_full, confounds=C_full)
+        else:
+            X_fit, Y_fit = X_full, Y_full
+
+        model.fit(X_fit, Y_fit)
+        X_scores, Y_scores = model.transform(X_fit, Y_fit)
+        in_sample_canonical_corrs = model.calculate_canonical_correlations(X_scores, Y_scores)
+        variance_explained = model.calculate_variance_explained(X_fit, Y_fit, X_scores, Y_scores)
         X_loadings, Y_loadings = model.get_loadings()
+
+        cv_evaluator = CrossValidator(
+            n_splits=args.cv_n_splits,
+            shuffle=args.cv_shuffle,
+            random_state=args.random_state,
+        )
+        cv_results = cv_evaluator.run_cv_evaluation(model, brain_data, behavioral_data, confounds=covariates)
+        cv_mean_corrs = np.asarray(cv_results.get('mean_canonical_correlations', []), dtype=float)
+        cv_vector3_stat = float(np.linalg.norm(cv_mean_corrs)) if cv_mean_corrs.size else float('nan')
         
         result = {
             'task_type': 'real_data',
             'task_id': 0,
             'model_info': model.get_model_info(),
-            'canonical_correlations': canonical_corrs,
+            'canonical_correlations': cv_mean_corrs,
+            'mean_canonical_correlations': cv_mean_corrs,
+            'cv_statistic_vector3': cv_vector3_stat,
+            'in_sample_canonical_correlations': in_sample_canonical_corrs,
             'variance_explained_X': variance_explained['variance_explained_X'],
             'variance_explained_Y': variance_explained['variance_explained_Y'],
             'X_scores': X_scores,
@@ -577,25 +578,18 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
             'n_features_X': brain_data.shape[1],
             'n_features_Y': behavioral_data.shape[1]
         }
-        
-        # 运行交叉验证（可选）
-        if args.run_cv:
-            logger.info("Running cross-validation")
-            cv_evaluator = CrossValidator(
-                n_splits=args.cv_n_splits,
-                shuffle=args.cv_shuffle,
-                random_state=args.random_state
-            )
-            
-            cv_results = cv_evaluator.run_cv_evaluation(model, brain_data, behavioral_data, confounds=covariates)
-            result['cv_results'] = cv_results
-            if 'all_canonical_correlations' in cv_results:
-                result['cv_all_canonical_correlations'] = cv_results['all_canonical_correlations']
-            
-            logger.info("Cross-validation completed")
-        
-        logger.info(f"Real data analysis completed. Max canonical correlation: {np.max(canonical_corrs):.4f}")
-    
+
+        # 严格A版总是保存 CV 结果（用于复核/复用）
+        result['cv_results'] = cv_results
+        if 'all_canonical_correlations' in cv_results:
+            result['cv_all_canonical_correlations'] = cv_results['all_canonical_correlations']
+
+        logger.info(
+            "Real data analysis completed. "
+            f"vector3(stat)={cv_vector3_stat:.6f}; "
+            f"Max CV mean canonical correlation={np.max(cv_mean_corrs):.4f}"
+        )
+
     return result
 
 
@@ -797,6 +791,59 @@ def load_best_hyperparameters(model_type: str) -> dict:
         }
     else:
         raise ValueError(f"Unsupported model type for hyperparameter loading: {model_type}")
+
+
+def load_max_optimal_n_components_from_real_runs(model_type: str) -> int:
+    """扫描 real 结果目录，提取多次 real run 的 optimal_n_components 最大值。
+
+    该函数用于置换检验（严格版）：置换时 n_components 搜索下限不得低于 real 的最大最优成分数。
+    """
+    results_root = Path(config.get('output.results_dir', str(get_results_dir())))
+    brain_file = config.get('data.brain_file', '')
+    atlas_tag = _infer_atlas_tag(brain_file)
+    real_root = results_root / 'real' / atlas_tag / model_type
+    if not real_root.exists():
+        raise FileNotFoundError(
+            f"Real results directory not found for model={model_type}: {real_root}. "
+            "请先运行多次 task_id=0 的真实数据分析以生成 seed_* 目录。"
+        )
+
+    def _find_result_file(seed_dir: Path) -> Path | None:
+        json_path = seed_dir / 'result.json'
+        if json_path.exists():
+            return json_path
+        npz_path = seed_dir / 'result.npz'
+        if npz_path.exists():
+            return npz_path
+        return None
+
+    values: list[int] = []
+    for seed_dir in sorted(real_root.glob('seed_*')):
+        res_path = _find_result_file(seed_dir)
+        if res_path is None:
+            continue
+        try:
+            res = load_results(res_path)
+        except Exception:
+            continue
+        model_info = res.get('model_info', {}) if isinstance(res, dict) else {}
+        opt = None
+        if isinstance(model_info, dict):
+            opt = model_info.get('optimal_n_components')
+        if opt is None:
+            continue
+        try:
+            values.append(int(opt))
+        except Exception:
+            continue
+
+    if not values:
+        raise RuntimeError(
+            f"No valid optimal_n_components found under {real_root}. "
+            "Ensure real-data results contain model_info.optimal_n_components."
+        )
+
+    return int(max(values))
 
 
 def main():

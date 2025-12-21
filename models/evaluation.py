@@ -365,7 +365,11 @@ class PermutationTester:
                            X: Union[np.ndarray, pd.DataFrame],
                            Y: Union[np.ndarray, pd.DataFrame],
                            confounds: Optional[Union[np.ndarray, pd.DataFrame]] = None,
-                           permutation_seed: Optional[int] = None) -> Dict[str, Any]:
+                           permutation_seed: Optional[int] = None,
+                           cv_n_splits: int = 5,
+                           cv_shuffle: bool = True,
+                           cv_random_state: Optional[int] = None,
+                           return_cv_results: bool = False) -> Dict[str, Any]:
         """
         运行单次置换检验
         
@@ -400,44 +404,36 @@ class PermutationTester:
         permuted_indices = np.random.permutation(len(Y_values))
         Y_permuted = Y_values[permuted_indices]
         
-        # 处理混杂变量
-        if confounds is not None:
-            def _impute(arr: np.ndarray) -> np.ndarray:
-                out = arr.copy()
-                means = np.nanmean(out, axis=0)
-                means = np.where(np.isfinite(means), means, 0.0)
-                mask = np.isnan(out)
-                if mask.any():
-                    out[mask] = np.take(means, np.where(mask)[1])
-                return out
+        cv_seed = permutation_seed if cv_random_state is None else cv_random_state
+        cv_evaluator = CrossValidator(
+            n_splits=cv_n_splits,
+            shuffle=cv_shuffle,
+            random_state=cv_seed,
+        )
 
-            confounds_values = confounds.values if isinstance(confounds, pd.DataFrame) else confounds
-            X_values = _impute(X_values)
-            Y_permuted = _impute(Y_permuted)
-            confounds_values = _impute(confounds_values)
+        cv_results = cv_evaluator.run_cv_evaluation(
+            model,
+            X_values,
+            Y_permuted,
+            confounds=confounds,
+        )
 
-            confound_regressor_X = ConfoundRegressor(standardize=True)
-            confound_regressor_Y = ConfoundRegressor(standardize=True)
-            X_clean = confound_regressor_X.fit_transform(X_values, confounds=confounds_values)
-            Y_clean = confound_regressor_Y.fit_transform(Y_permuted, confounds=confounds_values)
-        else:
-            X_clean, Y_clean = X_values, Y_permuted
-        
-        # 拟合模型
-        model_permuted = model.__class__(**model.get_params())
-        model_permuted.fit(X_clean, Y_clean)
-        
-        # 获取结果
-        X_scores, Y_scores = model_permuted.transform(X_clean, Y_clean)
-        canonical_corrs = model_permuted.calculate_canonical_correlations(X_scores, Y_scores)
-        
+        mean_corrs = np.asarray(cv_results.get('mean_canonical_correlations', []), dtype=float)
+        vector3_stat = float(np.linalg.norm(mean_corrs)) if mean_corrs.size else float('nan')
+
         result = {
             'permutation_seed': permutation_seed,
-            'canonical_correlations': canonical_corrs,
-            'n_components': len(canonical_corrs),
-            'n_samples': len(X_values)
+            'canonical_correlations': mean_corrs,
+            'mean_canonical_correlations': mean_corrs,
+            'cv_statistic_vector3': vector3_stat,
+            'n_components': int(mean_corrs.size),
+            'n_samples': int(len(X_values)),
+            'cv_n_splits': int(cv_n_splits),
         }
-        
+
+        if return_cv_results:
+            result['cv_results'] = cv_results
+
         return result
     
     def calculate_p_values(self, observed_correlations: np.ndarray,
@@ -462,6 +458,14 @@ class PermutationTester:
             p_values[i] = (n_greater + 1) / (len(permuted_values) + 1)  # +1 用于避免零p值
         
         return p_values
+
+    def calculate_p_value_scalar(self, observed_statistic: float,
+                                 permuted_statistics: np.ndarray) -> float:
+        permuted_values = np.asarray(permuted_statistics, dtype=float)
+        if permuted_values.ndim != 1:
+            permuted_values = permuted_values.reshape(-1)
+        n_greater = np.sum(np.abs(permuted_values) >= np.abs(observed_statistic))
+        return float((n_greater + 1) / (len(permuted_values) + 1))
 
 
 def run_nested_cv_evaluation(model: BaseBrainBehaviorModel,

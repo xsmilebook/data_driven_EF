@@ -675,6 +675,7 @@ class AdaptiveRCCAModel(BaseBrainBehaviorModel):
         kf = KFold(n_splits=self.cv_folds, shuffle=True, random_state=self.random_state)
 
         canonical_corrs = []
+        last_component_corrs = []
         var_exp_X_list = []
         var_exp_Y_list = []
 
@@ -711,14 +712,19 @@ class AdaptiveRCCAModel(BaseBrainBehaviorModel):
                 X_val_scores, Y_val_scores = rcca_model.transform([X_val_scaled, Y_val_scaled])
 
                 corrs = []
+                last_corr = np.nan
                 for i in range(n_components):
                     if X_val_scores.shape[1] > i and Y_val_scores.shape[1] > i:
                         corr, _ = pearsonr(X_val_scores[:, i], Y_val_scores[:, i])
                         if not np.isnan(corr):
                             corrs.append(corr)
+                        if i == (n_components - 1):
+                            last_corr = corr
 
                 if corrs:
                     canonical_corrs.append(np.mean(corrs))
+                    if np.isfinite(last_corr):
+                        last_component_corrs.append(float(last_corr))
                     var_exp_X = np.var(X_val_scores, axis=0).sum() / np.var(X_val_scaled, axis=0).sum() * 100
                     var_exp_Y = np.var(Y_val_scores, axis=0).sum() / np.var(Y_val_scaled, axis=0).sum() * 100
                     var_exp_X_list.append(var_exp_X)
@@ -730,6 +736,7 @@ class AdaptiveRCCAModel(BaseBrainBehaviorModel):
         if not canonical_corrs:
             return {
                 'canonical_correlation': -np.inf,
+                'last_component_correlation': -np.inf,
                 'variance_explained_X': 0.0,
                 'variance_explained_Y': 0.0,
                 'canonical_correlation_std': np.inf,
@@ -737,6 +744,7 @@ class AdaptiveRCCAModel(BaseBrainBehaviorModel):
 
         return {
             'canonical_correlation': np.mean(canonical_corrs),
+            'last_component_correlation': (float(np.mean(last_component_corrs)) if last_component_corrs else -np.inf),
             'variance_explained_X': np.mean(var_exp_X_list) if var_exp_X_list else 0.0,
             'variance_explained_Y': np.mean(var_exp_Y_list) if var_exp_Y_list else 0.0,
             'canonical_correlation_std': np.std(canonical_corrs),
@@ -759,9 +767,12 @@ class AdaptiveRCCAModel(BaseBrainBehaviorModel):
 
         cv_results = {}
         best_score = -np.inf
+        best_score_any = -np.inf
         best_n_components = self.n_components_range[0]
         best_c_X = self.c_X_range[0]
         best_c_Y = self.c_Y_range[0]
+
+        threshold = 0.05
 
         for n_comp in self.n_components_range:
             for c_X in self.c_X_range:
@@ -769,11 +780,23 @@ class AdaptiveRCCAModel(BaseBrainBehaviorModel):
                     metrics = self._evaluate_hyperparameter_combo(X_values, Y_values, n_comp, c_X, c_Y)
                     cv_results[(n_comp, c_X, c_Y)] = metrics
                     score = metrics[self.criterion]
-                    if score > best_score:
-                        best_score = score
-                        best_n_components = n_comp
-                        best_c_X = c_X
-                        best_c_Y = c_Y
+                    if score > best_score_any:
+                        best_score_any = score
+                    if float(metrics.get('last_component_correlation', -np.inf)) >= threshold:
+                        if score > best_score:
+                            best_score = score
+                            best_n_components = n_comp
+                            best_c_X = c_X
+                            best_c_Y = c_Y
+
+        if best_score == -np.inf:
+            for (n_comp, c_X, c_Y), metrics in cv_results.items():
+                score = metrics[self.criterion]
+                if score > best_score:
+                    best_score = score
+                    best_n_components = n_comp
+                    best_c_X = c_X
+                    best_c_Y = c_Y
 
         self.optimal_n_components = best_n_components
         self.optimal_c_X = best_c_X
@@ -961,6 +984,7 @@ class AdaptivePLSModel(BaseBrainBehaviorModel):
                   random_state=self.random_state)
         
         canonical_corrs = []
+        last_component_corrs = []
         var_exp_X_list = []
         var_exp_Y_list = []
         stability_scores = []
@@ -989,6 +1013,10 @@ class AdaptivePLSModel(BaseBrainBehaviorModel):
                 corr, _ = pearsonr(X_val_scores[:, i], Y_val_scores[:, i])
                 corrs.append(corr)
             canonical_corrs.append(np.mean(corrs))
+
+            last_corr = corrs[-1] if corrs else np.nan
+            if np.isfinite(last_corr):
+                last_component_corrs.append(float(last_corr))
             
             # 计算方差解释（简化版）
             var_exp_X_list.append(np.var(X_val_scores, axis=0).sum() / 
@@ -1005,6 +1033,7 @@ class AdaptivePLSModel(BaseBrainBehaviorModel):
         
         return {
             'canonical_correlation': np.mean(canonical_corrs),
+            'last_component_correlation': (float(np.mean(last_component_corrs)) if last_component_corrs else -np.inf),
             'variance_explained_X': np.mean(var_exp_X_list),
             'variance_explained_Y': np.mean(var_exp_Y_list),
             'stability': np.mean(stability_scores) if stability_scores else 0.0,
@@ -1039,19 +1068,22 @@ class AdaptivePLSModel(BaseBrainBehaviorModel):
         
         # 评估每个成分数量
         cv_results = {}
-        best_score = -np.inf
-        best_n_components = 1
+        best_n_components = self.n_components_range[0] if self.n_components_range else 1
+        threshold = 0.05
         
         for n_comp in self.n_components_range:
             logger.info(f"Evaluating n_components = {n_comp}")
             metrics = self._evaluate_n_components(X_values, Y_values, n_comp)
             cv_results[n_comp] = metrics
-            
-            # 根据选择标准选择最优成分数量
-            score = metrics[self.criterion]
-            if score > best_score:
-                best_score = score
-                best_n_components = n_comp
+
+        valid_n = [
+            n for n, m in cv_results.items()
+            if float(m.get('last_component_correlation', -np.inf)) >= threshold
+        ]
+        if valid_n:
+            best_n_components = int(max(valid_n))
+        else:
+            best_n_components = int(self.n_components_range[0])
         
         self.optimal_n_components = best_n_components
         self.cv_results_ = cv_results
@@ -1147,6 +1179,7 @@ class AdaptivePLSModel(BaseBrainBehaviorModel):
             'n_components_range': self.n_components_range,
             'cv_folds': self.cv_folds,
             'criterion': self.criterion,
+            'random_state': self.random_state,
             'scale': self.scale,
             'max_iter': self.max_iter,
             'tol': self.tol
@@ -1235,6 +1268,7 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
                   random_state=self.random_state)
         
         canonical_corrs = []
+        last_component_corrs = []
         var_exp_X_list = []
         var_exp_Y_list = []
         
@@ -1276,14 +1310,19 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
                 
                 # 计算典型相关系数
                 corrs = []
+                last_corr = np.nan
                 for i in range(n_components):
                     if X_val_scores.shape[1] > i and Y_val_scores.shape[1] > i:
                         corr, _ = pearsonr(X_val_scores[:, i], Y_val_scores[:, i])
                         if not np.isnan(corr):
                             corrs.append(corr)
+                        if i == (n_components - 1):
+                            last_corr = corr
                 
                 if corrs:
                     canonical_corrs.append(np.mean(corrs))
+                    if np.isfinite(last_corr):
+                        last_component_corrs.append(float(last_corr))
                     
                     # 计算方差解释
                     var_exp_X = np.var(X_val_scores, axis=0).sum() / np.var(X_val_scaled, axis=0).sum() * 100
@@ -1298,6 +1337,7 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
         if not canonical_corrs:
             return {
                 'canonical_correlation': -np.inf,
+                'last_component_correlation': -np.inf,
                 'variance_explained_X': 0.0,
                 'variance_explained_Y': 0.0,
                 'canonical_correlation_std': np.inf
@@ -1305,6 +1345,7 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
         
         return {
             'canonical_correlation': np.mean(canonical_corrs),
+            'last_component_correlation': (float(np.mean(last_component_corrs)) if last_component_corrs else -np.inf),
             'variance_explained_X': np.mean(var_exp_X_list) if var_exp_X_list else 0.0,
             'variance_explained_Y': np.mean(var_exp_Y_list) if var_exp_Y_list else 0.0,
             'canonical_correlation_std': np.std(canonical_corrs)
@@ -1342,9 +1383,12 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
         # 网格搜索最优超参数组合
         cv_results = {}
         best_score = -np.inf
+        best_score_any = -np.inf
         best_n_components = self.n_components_range[0]
         best_sparsity_X = self.sparsity_X_range[0]
         best_sparsity_Y = self.sparsity_Y_range[0]
+
+        threshold = 0.05
         
         for n_comp in self.n_components_range:
             for sparsity_X in self.sparsity_X_range:
@@ -1355,11 +1399,23 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
                     
                     # 根据选择标准选择最优参数
                     score = metrics[self.criterion]
-                    if score > best_score:
-                        best_score = score
-                        best_n_components = n_comp
-                        best_sparsity_X = sparsity_X
-                        best_sparsity_Y = sparsity_Y
+                    if score > best_score_any:
+                        best_score_any = score
+                    if float(metrics.get('last_component_correlation', -np.inf)) >= threshold:
+                        if score > best_score:
+                            best_score = score
+                            best_n_components = n_comp
+                            best_sparsity_X = sparsity_X
+                            best_sparsity_Y = sparsity_Y
+
+        if best_score == -np.inf:
+            for (n_comp, sparsity_X, sparsity_Y), metrics in cv_results.items():
+                score = metrics[self.criterion]
+                if score > best_score:
+                    best_score = score
+                    best_n_components = n_comp
+                    best_sparsity_X = sparsity_X
+                    best_sparsity_Y = sparsity_Y
         
         self.optimal_n_components = best_n_components
         self.optimal_sparsity_X = best_sparsity_X

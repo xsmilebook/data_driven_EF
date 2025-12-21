@@ -61,6 +61,16 @@ def load_canonical_correlations(path: Path) -> np.ndarray:
     raise KeyError(f"canonical_correlations not found in {path}")
 
 
+def load_vector3_statistic(path: Path) -> float:
+    res = load_results(path)
+    if "cv_statistic_vector3" in res:
+        return float(res["cv_statistic_vector3"])
+    if "canonical_correlations" in res:
+        corrs = np.asarray(res["canonical_correlations"], dtype=float)
+        return float(np.linalg.norm(corrs))
+    raise KeyError(f"Neither cv_statistic_vector3 nor canonical_correlations found in {path}")
+
+
 def main():
     args = parse_args()
     results_root = Path(args.results_root)
@@ -76,8 +86,10 @@ def main():
         raise FileNotFoundError(f"no result file found in {real_dir}")
 
     observed_corrs = load_canonical_correlations(real_file)
+    observed_vector3 = load_vector3_statistic(real_file)
 
     perm_corrs = []
+    perm_vector3 = []
     used_task_ids = []
     for task_id in range(1, args.max_task_id + 1):
         task_dir = results_root / f"task_{task_id}_{args.model_type}"
@@ -88,20 +100,24 @@ def main():
             continue
         try:
             cc = load_canonical_correlations(perm_file)
+            v3 = load_vector3_statistic(perm_file)
         except Exception:
             continue
         if cc.shape != observed_corrs.shape:
             continue
         perm_corrs.append(cc)
+        perm_vector3.append(v3)
         used_task_ids.append(task_id)
 
     if not perm_corrs:
         raise RuntimeError("no valid permutation results found")
 
     permuted_array = np.vstack(perm_corrs)
+    permuted_vector3 = np.asarray(perm_vector3, dtype=float)
 
     tester = PermutationTester(n_permutations=len(perm_corrs), random_state=None)
     p_values = tester.calculate_p_values(observed_corrs, permuted_array)
+    p_value_vector3 = tester.calculate_p_value_scalar(observed_vector3, permuted_vector3)
 
     perm_mean = permuted_array.mean(axis=0)
     perm_std = permuted_array.std(axis=0)
@@ -135,6 +151,18 @@ def main():
     with summary_path.open("w", encoding="utf-8") as f:
         for line in lines:
             f.write(line + "\n")
+
+    vector3_path = results_root / f"{output_prefix}_vector3.csv"
+    with vector3_path.open("w", encoding="utf-8") as f:
+        f.write("Statistic,Observed,Perm_Mean,Perm_Std,p_value,n_permutations\n")
+        f.write(
+            "vector3,"
+            f"{observed_vector3:.6f},"
+            f"{float(np.mean(permuted_vector3)):.6f},"
+            f"{float(np.std(permuted_vector3)):.6f},"
+            f"{p_value_vector3:.6f},"
+            f"{len(permuted_vector3)}\n"
+        )
 
     try:
         import matplotlib.pyplot as plt
