@@ -4,7 +4,7 @@
 #SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/log/real_adaptive_pls/efny_real_%A_%a.err
 #SBATCH --partition=q_fat
 #SBATCH --cpus-per-task=1
-#SBATCH --array=0-10                    # 101 runs of real-data analysis
+#SBATCH --array=0-10                    # 11 runs of real-data analysis
 
 source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
 conda activate ML
@@ -15,7 +15,7 @@ MODEL_TYPE="adaptive_pls"
 N_COMPONENTS=10
 RANDOM_STATE_BASE=42
 ATLAS="schaefer400"
-DATASET="EFNT"
+DATASET="EFNY"
 
 TASK_TYPE="real"
 

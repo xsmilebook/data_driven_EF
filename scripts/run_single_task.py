@@ -395,18 +395,20 @@ def create_model_instance(args):
         }
         logger.info(f"Creating Adaptive-PLS model with component search range: 1-{args.n_components}")
     elif args.model_type == 'adaptive_scca':
-        # 自适应SCCA模型 - 自动选择稀疏度参数
+        # 自适应SCCA模型 - 自动选择成分数和稀疏度参数
         model_params = {
-            'n_components': args.n_components,  # 成分数固定
-            'sparsity_X_range': [0.001, 0.005, 0.01, 0.05, 0.1],  # 脑数据稀疏度（特征多，用小值）
-            'sparsity_Y_range': [0.1, 0.2, 0.3, 0.5],  # 行为数据稀疏度（特征少，用大值）
+            'n_components_range': list(range(2, args.n_components + 1)),  # 搜索范围 [2, 3, ..., n_components]
+            'sparsity_X_range': [0.001, 0.005, 0.01, 0.05],  # 脑数据稀疏度（特征多，用小值）
+            'sparsity_Y_range': [0.1, 0.2, 0.3],  # 行为数据稀疏度（特征少，用大值）
             'cv_folds': 5,
             'criterion': 'canonical_correlation',
             'max_iter': 10000,
             'tol': 1e-06
         }
-        logger.info(f"Creating Adaptive-SCCA model with sparsity_X range: {model_params['sparsity_X_range']}")
+        logger.info(f"Creating Adaptive-SCCA model with n_components range: {model_params['n_components_range']}")
+        logger.info(f"sparsity_X range: {model_params['sparsity_X_range']}")
         logger.info(f"sparsity_Y range: {model_params['sparsity_Y_range']}")
+        logger.info(f"Total combinations: {len(model_params['n_components_range']) * len(model_params['sparsity_X_range']) * len(model_params['sparsity_Y_range'])}")
     else:
         # 标准模型
         model_params = {
@@ -468,12 +470,14 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
         elif args.model_type == 'adaptive_scca':
             try:
                 best_hyperparams = load_best_hyperparameters(args.model_type)
-                logger.info(f"Using fixed sparsity_X={best_hyperparams['sparsity_X']}, "
-                           f"sparsity_Y={best_hyperparams['sparsity_Y']} for permutation test")
+                logger.info(f"Using fixed hyperparameters for permutation test:")
+                logger.info(f"  n_components={best_hyperparams['n_components']}")
+                logger.info(f"  sparsity_X={best_hyperparams['sparsity_X']}")
+                logger.info(f"  sparsity_Y={best_hyperparams['sparsity_Y']}")
                 from src.models.models import create_model
                 base_model = create_model(
                     'scca',
-                    n_components=args.n_components,
+                    n_components=best_hyperparams['n_components'],
                     sparsity_X=best_hyperparams['sparsity_X'],
                     sparsity_Y=best_hyperparams['sparsity_Y'],
                     max_iter=10000,
@@ -653,14 +657,15 @@ def save_results_with_metadata(result, args):
                 logger.info(f"Saved best n_components summary to {summary_path}")
         
         elif args.model_type == 'adaptive_scca':
+            optimal_n_components = model_info.get('optimal_n_components')
             optimal_sparsity_X = model_info.get('optimal_sparsity_X')
             optimal_sparsity_Y = model_info.get('optimal_sparsity_Y')
-            if optimal_sparsity_X is not None and optimal_sparsity_Y is not None:
+            if optimal_n_components is not None and optimal_sparsity_X is not None and optimal_sparsity_Y is not None:
                 summary_path = summary_dir / f"best_hyperparameters_{args.model_type}.json"
                 summary_data = {
+                    'optimal_n_components': optimal_n_components,
                     'optimal_sparsity_X': optimal_sparsity_X,
                     'optimal_sparsity_Y': optimal_sparsity_Y,
-                    'n_components': model_info.get('n_components'),
                     'model_type': args.model_type,
                     'atlas': atlas_tag,
                     'timestamp': metadata.get('timestamp', create_timestamp())
@@ -704,13 +709,18 @@ def load_best_hyperparameters(model_type: str) -> dict:
         )
     summary = load_results(summary_path)
     if model_type == 'adaptive_scca':
+        n_components = summary.get('optimal_n_components')
         sparsity_X = summary.get('optimal_sparsity_X')
         sparsity_Y = summary.get('optimal_sparsity_Y')
-        if sparsity_X is None or sparsity_Y is None:
+        if n_components is None or sparsity_X is None or sparsity_Y is None:
             raise ValueError(
-                f"No optimal sparsity parameters found in summary file: {summary_path}"
+                f"No optimal hyperparameters found in summary file: {summary_path}"
             )
-        return {'sparsity_X': float(sparsity_X), 'sparsity_Y': float(sparsity_Y)}
+        return {
+            'n_components': int(n_components),
+            'sparsity_X': float(sparsity_X), 
+            'sparsity_Y': float(sparsity_Y)
+        }
     else:
         raise ValueError(f"Unsupported model type for hyperparameter loading: {model_type}")
 

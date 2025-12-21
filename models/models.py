@@ -773,10 +773,10 @@ class AdaptivePLSModel(BaseBrainBehaviorModel):
 
 class AdaptiveSCCAModel(BaseBrainBehaviorModel):
     """
-    自适应 Sparse-CCA 模型 - 使用内部交叉验证确定最优稀疏度参数
+    自适应 Sparse-CCA 模型 - 使用内部交叉验证同时确定最优成分数和稀疏度参数
     """
     
-    def __init__(self, n_components: int = 5,
+    def __init__(self, n_components_range: list = None,
                  sparsity_X_range: list = None, 
                  sparsity_Y_range: list = None,
                  cv_folds: int = 5, 
@@ -788,23 +788,27 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
         初始化自适应 Sparse-CCA 模型
         
         Args:
-            n_components: 成分数量（固定）
-            sparsity_X_range: 脑数据稀疏度搜索范围，默认 [0.001, 0.005, 0.01, 0.05, 0.1]
-            sparsity_Y_range: 行为数据稀疏度搜索范围，默认 [0.1, 0.2, 0.3, 0.5]
+            n_components_range: 成分数量搜索范围，默认 [2, 3, 4, 5]
+            sparsity_X_range: 脑数据稀疏度搜索范围，默认 [0.001, 0.005, 0.01, 0.05]
+            sparsity_Y_range: 行为数据稀疏度搜索范围，默认 [0.1, 0.2, 0.3]
             cv_folds: 内部交叉验证折数
             criterion: 选择标准 ('canonical_correlation', 'variance_explained')
             random_state: 随机种子
             max_iter: 最大迭代次数
             tol: 收敛容差
         """
-        super().__init__(n_components, random_state)
-        
-        # 默认搜索范围：X 用更小值（特征多），Y 用较大值（特征少）
+        # 默认搜索范围
+        if n_components_range is None:
+            n_components_range = [2, 3, 4, 5]
         if sparsity_X_range is None:
-            sparsity_X_range = [0.001, 0.005, 0.01, 0.05, 0.1]
+            sparsity_X_range = [0.001, 0.005, 0.01, 0.05]  # 减少搜索点以控制计算量
         if sparsity_Y_range is None:
-            sparsity_Y_range = [0.1, 0.2, 0.3, 0.5]
+            sparsity_Y_range = [0.1, 0.2, 0.3]  # 减少搜索点以控制计算量
         
+        # 初始化基类（使用最大成分数）
+        super().__init__(max(n_components_range), random_state)
+        
+        self.n_components_range = n_components_range
         self.sparsity_X_range = sparsity_X_range
         self.sparsity_Y_range = sparsity_Y_range
         self.cv_folds = cv_folds
@@ -812,6 +816,7 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
         self.max_iter = max_iter
         self.tol = tol
         
+        self.optimal_n_components = None
         self.optimal_sparsity_X = None
         self.optimal_sparsity_Y = None
         self.cv_results_ = None
@@ -828,14 +833,16 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
                 "implementation. Please install it with: pip install -U cca-zoo"
             )
     
-    def _evaluate_sparsity_pair(self, X: np.ndarray, Y: np.ndarray, 
-                                sparsity_X: float, sparsity_Y: float) -> Dict[str, float]:
+    def _evaluate_hyperparameter_combo(self, X: np.ndarray, Y: np.ndarray, 
+                                        n_components: int,
+                                        sparsity_X: float, sparsity_Y: float) -> Dict[str, float]:
         """
-        评估特定稀疏度参数对的性能
+        评估特定超参数组合的性能
         
         Args:
             X: 脑数据
             Y: 行为数据
+            n_components: 成分数量
             sparsity_X: 脑数据稀疏度
             sparsity_Y: 行为数据稀疏度
             
@@ -866,14 +873,14 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
             try:
                 if _scca_ipls_uses_latent_dimensions:
                     scca_model = _SCCA_IPLS(
-                        latent_dimensions=self.n_components,
+                        latent_dimensions=n_components,
                         random_state=self.random_state,
                         tol=self.tol,
                         epochs=self.max_iter,
                     )
                 else:
                     scca_model = _SCCA_IPLS(
-                        latent_dims=self.n_components,
+                        latent_dims=n_components,
                         random_state=self.random_state,
                         c=[sparsity_X, sparsity_Y],
                         max_iter=self.max_iter,
@@ -887,7 +894,7 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
                 
                 # 计算典型相关系数
                 corrs = []
-                for i in range(self.n_components):
+                for i in range(n_components):
                     if X_val_scores.shape[1] > i and Y_val_scores.shape[1] > i:
                         corr, _ = pearsonr(X_val_scores[:, i], Y_val_scores[:, i])
                         if not np.isnan(corr):
@@ -903,7 +910,7 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
                     var_exp_Y_list.append(var_exp_Y)
                     
             except Exception as e:
-                logger.warning(f"SCCA fitting failed for sparsity_X={sparsity_X}, sparsity_Y={sparsity_Y}: {e}")
+                logger.warning(f"SCCA fitting failed for n_comp={n_components}, sparsity_X={sparsity_X}, sparsity_Y={sparsity_Y}: {e}")
                 continue
         
         if not canonical_corrs:
@@ -924,7 +931,7 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
     def fit(self, X: Union[np.ndarray, pd.DataFrame], 
             Y: Union[np.ndarray, pd.DataFrame]) -> 'AdaptiveSCCAModel':
         """
-        拟合自适应 Sparse-CCA 模型 - 自动选择最优稀疏度参数
+        拟合自适应 Sparse-CCA 模型 - 自动选择最优成分数和稀疏度参数
         
         Args:
             X: 脑数据 (n_samples, n_brain_features)
@@ -933,8 +940,10 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
         Returns:
             self
         """
-        logger.info(f"Starting adaptive SCCA fitting with sparsity_X range: {self.sparsity_X_range}")
+        logger.info(f"Starting adaptive SCCA fitting with n_components range: {self.n_components_range}")
+        logger.info(f"sparsity_X range: {self.sparsity_X_range}")
         logger.info(f"sparsity_Y range: {self.sparsity_Y_range}")
+        logger.info(f"Total combinations to evaluate: {len(self.n_components_range) * len(self.sparsity_X_range) * len(self.sparsity_Y_range)}")
         logger.info(f"X shape: {X.shape}, Y shape: {Y.shape}")
         
         # 转换数据格式
@@ -948,43 +957,51 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
         else:
             Y_values = Y
         
-        # 网格搜索最优稀疏度参数
+        # 网格搜索最优超参数组合
         cv_results = {}
         best_score = -np.inf
+        best_n_components = self.n_components_range[0]
         best_sparsity_X = self.sparsity_X_range[0]
         best_sparsity_Y = self.sparsity_Y_range[0]
         
-        for sparsity_X in self.sparsity_X_range:
-            for sparsity_Y in self.sparsity_Y_range:
-                logger.info(f"Evaluating sparsity_X={sparsity_X}, sparsity_Y={sparsity_Y}")
-                metrics = self._evaluate_sparsity_pair(X_values, Y_values, sparsity_X, sparsity_Y)
-                cv_results[(sparsity_X, sparsity_Y)] = metrics
-                
-                # 根据选择标准选择最优参数
-                score = metrics[self.criterion]
-                if score > best_score:
-                    best_score = score
-                    best_sparsity_X = sparsity_X
-                    best_sparsity_Y = sparsity_Y
+        for n_comp in self.n_components_range:
+            for sparsity_X in self.sparsity_X_range:
+                for sparsity_Y in self.sparsity_Y_range:
+                    logger.info(f"Evaluating n_comp={n_comp}, sparsity_X={sparsity_X}, sparsity_Y={sparsity_Y}")
+                    metrics = self._evaluate_hyperparameter_combo(X_values, Y_values, n_comp, sparsity_X, sparsity_Y)
+                    cv_results[(n_comp, sparsity_X, sparsity_Y)] = metrics
+                    
+                    # 根据选择标准选择最优参数
+                    score = metrics[self.criterion]
+                    if score > best_score:
+                        best_score = score
+                        best_n_components = n_comp
+                        best_sparsity_X = sparsity_X
+                        best_sparsity_Y = sparsity_Y
         
+        self.optimal_n_components = best_n_components
         self.optimal_sparsity_X = best_sparsity_X
         self.optimal_sparsity_Y = best_sparsity_Y
+        self.n_components = best_n_components  # 更新 n_components 用于兼容性
         self.cv_results_ = cv_results
         
-        logger.info(f"Optimal sparsity selected: X={self.optimal_sparsity_X}, Y={self.optimal_sparsity_Y}")
-        logger.info(f"Best {self.criterion}: {best_score:.4f}")
+        logger.info(f"Optimal hyperparameters selected:")
+        logger.info(f"  n_components={self.optimal_n_components}")
+        logger.info(f"  sparsity_X={self.optimal_sparsity_X}")
+        logger.info(f"  sparsity_Y={self.optimal_sparsity_Y}")
+        logger.info(f"  Best {self.criterion}: {best_score:.4f}")
         
-        # 使用最优稀疏度参数创建最终模型
+        # 使用最优超参数创建最终模型
         if _scca_ipls_uses_latent_dimensions:
             self.model = _SCCA_IPLS(
-                latent_dimensions=self.n_components,
+                latent_dimensions=self.optimal_n_components,
                 random_state=self.random_state,
                 tol=self.tol,
                 epochs=self.max_iter,
             )
         else:
             self.model = _SCCA_IPLS(
-                latent_dims=self.n_components,
+                latent_dims=self.optimal_n_components,
                 random_state=self.random_state,
                 c=[self.optimal_sparsity_X, self.optimal_sparsity_Y],
                 max_iter=self.max_iter,
@@ -1061,7 +1078,8 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
         """
         return {
             'model_type': 'Adaptive-SCCA',
-            'n_components': self.n_components,
+            'n_components_range': self.n_components_range,
+            'optimal_n_components': self.optimal_n_components,
             'sparsity_X_range': self.sparsity_X_range,
             'sparsity_Y_range': self.sparsity_Y_range,
             'optimal_sparsity_X': self.optimal_sparsity_X,
@@ -1073,12 +1091,12 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
             'is_fitted': self.is_fitted
         }
     
-    def get_cv_results(self) -> Dict[Tuple[float, float], Dict[str, float]]:
+    def get_cv_results(self) -> Dict[Tuple[int, float, float], Dict[str, float]]:
         """
         获取交叉验证结果
         
         Returns:
-            各稀疏度参数对的评估结果
+            各超参数组合的评估结果 (n_components, sparsity_X, sparsity_Y) -> metrics
         """
         return self.cv_results_
     
@@ -1093,7 +1111,7 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
             参数字典
         """
         return {
-            'n_components': self.n_components,
+            'n_components_range': self.n_components_range,
             'sparsity_X_range': self.sparsity_X_range,
             'sparsity_Y_range': self.sparsity_Y_range,
             'cv_folds': self.cv_folds,
