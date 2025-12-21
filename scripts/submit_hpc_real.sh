@@ -12,7 +12,7 @@ project_dir="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF"
 config_file="${project_dir}/src/models/config.json"
 
 MODEL_TYPE="adaptive_pls"
-N_COMPONENTS=10
+N_COMPONENTS=5
 RANDOM_STATE_BASE=42
 ATLAS="schaefer400"
 DATASET="EFNY"
