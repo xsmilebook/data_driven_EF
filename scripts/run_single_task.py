@@ -394,6 +394,19 @@ def create_model_instance(args):
             'tol': 1e-06
         }
         logger.info(f"Creating Adaptive-PLS model with component search range: 1-{args.n_components}")
+    elif args.model_type == 'adaptive_scca':
+        # 自适应SCCA模型 - 自动选择稀疏度参数
+        model_params = {
+            'n_components': args.n_components,  # 成分数固定
+            'sparsity_X_range': [0.001, 0.005, 0.01, 0.05, 0.1],  # 脑数据稀疏度（特征多，用小值）
+            'sparsity_Y_range': [0.1, 0.2, 0.3, 0.5],  # 行为数据稀疏度（特征少，用大值）
+            'cv_folds': 5,
+            'criterion': 'canonical_correlation',
+            'max_iter': 10000,
+            'tol': 1e-06
+        }
+        logger.info(f"Creating Adaptive-SCCA model with sparsity_X range: {model_params['sparsity_X_range']}")
+        logger.info(f"sparsity_Y range: {model_params['sparsity_Y_range']}")
     else:
         # 标准模型
         model_params = {
@@ -432,8 +445,8 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
         # 设置置换种子
         permutation_seed = args.random_state + args.task_id
 
-        # 做法B：如果使用adaptive_pls，则在置换检验中固定成分数量，
-        # 使用真实数据分析选出的最佳成分数，改用标准PLS模型
+        # 做法B：如果使用adaptive模型，则在置换检验中固定超参数，
+        # 使用真实数据分析选出的最佳超参数，改用标准模型
         if args.model_type == 'adaptive_pls':
             try:
                 best_k = load_best_n_components(args.model_type)
@@ -449,6 +462,26 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
             except Exception as e:
                 logger.error(
                     f"Failed to load best_n_components for permutation test, "
+                    f"falling back to current model. Error: {e}"
+                )
+                base_model = model
+        elif args.model_type == 'adaptive_scca':
+            try:
+                best_hyperparams = load_best_hyperparameters(args.model_type)
+                logger.info(f"Using fixed sparsity_X={best_hyperparams['sparsity_X']}, "
+                           f"sparsity_Y={best_hyperparams['sparsity_Y']} for permutation test")
+                from src.models.models import create_model
+                base_model = create_model(
+                    'scca',
+                    n_components=args.n_components,
+                    sparsity_X=best_hyperparams['sparsity_X'],
+                    sparsity_Y=best_hyperparams['sparsity_Y'],
+                    max_iter=10000,
+                    tol=1e-06
+                )
+            except Exception as e:
+                logger.error(
+                    f"Failed to load best hyperparameters for permutation test, "
                     f"falling back to current model. Error: {e}"
                 )
                 base_model = model
@@ -530,37 +563,44 @@ def save_results_with_metadata(result, args):
     
     # 确定输出目录
     if args.output_dir is None:
-        output_dir = (
-            results_root
-            / analysis_type
-            / atlas_tag
-            / args.model_type
-            / f"ncomp_{args.n_components}"
-            / f"seed_{seed}"
-            / f"task_{args.task_id}"
-        )
+        # 根据模型类型设置路径
+        if args.model_type == 'adaptive_scca':
+            # adaptive_scca 的路径不包含 ncomp，因为超参数是 sparsity
+            output_dir = (
+                results_root
+                / analysis_type
+                / atlas_tag
+                / args.model_type
+                / f"seed_{seed}"
+            )
+        else:
+            output_dir = (
+                results_root
+                / analysis_type
+                / atlas_tag
+                / args.model_type
+                / f"ncomp_{args.n_components}"
+                / f"seed_{seed}"
+            )
     else:
-        output_dir = Path(args.output_dir)
+        if args.model_type == 'adaptive_scca':
+            output_dir = Path(args.output_dir) / args.model_type / f"seed_{seed}"
+        else:
+            output_dir = Path(args.output_dir) / args.model_type / f"ncomp_{args.n_components}" / f"seed_{seed}"
+        logger.info(f"Using user-specified output directory: {output_dir}")
     
-    output_dir.mkdir(parents=True, exist_ok=True)
-    
-    # 创建时间戳
-    timestamp = create_timestamp()
-
-    # 每次运行独立子目录，便于对比
-    output_dir = output_dir / timestamp
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # 构建输出文件名
     output_path = output_dir / "result"
     
-    meta = result.get('metadata')
-    if not isinstance(meta, dict):
-        meta = {}
-
-    # 添加元数据
-    meta.update({
-        'timestamp': timestamp,
+    # 获取或创建元数据
+    metadata = result.get('metadata')
+    if not isinstance(metadata, dict):
+        metadata = {}
+    
+    # 添加运行元数据
+    metadata.update({
         'task_id': args.task_id,
         'model_type': args.model_type,
         'n_components': args.n_components,
@@ -583,36 +623,51 @@ def save_results_with_metadata(result, args):
         'slurm_job_name': os.environ.get('SLURM_JOB_NAME'),
         'config_snapshot': config.config
     })
-
-    result['metadata'] = meta
+    
+    result['metadata'] = metadata
     
     # 保存结果
     saved_files = save_results(result, output_path, format="both")
-
+    
     logger.info(f"Results saved to:")
     for format_type, file_path in saved_files.items():
         logger.info(f"  {format_type}: {file_path}")
-
-    # 如果是真实数据且使用自适应PLS，单独保存最佳成分数量，供置换检验使用
-    if result.get('task_type') == 'real_data':
+    
+    # 对于 Adaptive 模型的真实数据分析，保存最优超参数汇总
+    if args.task_id == 0:
         model_info = result.get('model_info', {})
-        if model_info.get('model_type') == 'Adaptive-PLS':
+        summary_dir = results_root / "summary" / atlas_tag
+        summary_dir.mkdir(parents=True, exist_ok=True)
+        
+        if args.model_type == 'adaptive_pls':
             optimal_n_components = model_info.get('optimal_n_components')
             if optimal_n_components is not None:
-                summary_dir = results_root / "summary" / atlas_tag
-                summary_dir.mkdir(parents=True, exist_ok=True)
                 summary_path = summary_dir / f"best_n_components_{args.model_type}.json"
                 summary_data = {
+                    'optimal_n_components': optimal_n_components,
                     'model_type': args.model_type,
-                    'optimal_n_components': int(optimal_n_components),
-                    'timestamp': timestamp,
-                    'source_result_json': str(saved_files.get('json', '')),
-                    'source_result_npz': str(saved_files.get('npz', ''))
+                    'atlas': atlas_tag,
+                    'timestamp': metadata.get('timestamp', create_timestamp())
                 }
-                with open(summary_path, 'w', encoding='utf-8') as f:
-                    json.dump(summary_data, f, indent=2, ensure_ascii=False)
-                logger.info(f"Best n_components summary saved to: {summary_path}")
-
+                save_results(summary_data, summary_path)
+                logger.info(f"Saved best n_components summary to {summary_path}")
+        
+        elif args.model_type == 'adaptive_scca':
+            optimal_sparsity_X = model_info.get('optimal_sparsity_X')
+            optimal_sparsity_Y = model_info.get('optimal_sparsity_Y')
+            if optimal_sparsity_X is not None and optimal_sparsity_Y is not None:
+                summary_path = summary_dir / f"best_hyperparameters_{args.model_type}.json"
+                summary_data = {
+                    'optimal_sparsity_X': optimal_sparsity_X,
+                    'optimal_sparsity_Y': optimal_sparsity_Y,
+                    'n_components': model_info.get('n_components'),
+                    'model_type': args.model_type,
+                    'atlas': atlas_tag,
+                    'timestamp': metadata.get('timestamp', create_timestamp())
+                }
+                save_results(summary_data, summary_path)
+                logger.info(f"Saved best hyperparameters summary to {summary_path}")
+    
     return saved_files
 
 
@@ -634,6 +689,30 @@ def load_best_n_components(model_type: str) -> int:
             f"No 'optimal_n_components' found in summary file: {summary_path}"
         )
     return int(optimal_n_components)
+
+
+def load_best_hyperparameters(model_type: str) -> dict:
+    """从汇总文件中加载真实数据选出的最佳超参数"""
+    results_root = Path(config.get('output.results_dir', str(get_results_dir())))
+    brain_file = config.get('data.brain_file', '')
+    atlas_tag = _infer_atlas_tag(brain_file)
+    summary_path = results_root / "summary" / atlas_tag / f"best_hyperparameters_{model_type}.json"
+    if not summary_path.exists():
+        raise FileNotFoundError(
+            f"Best hyperparameters summary not found: {summary_path}. "
+            f"请先运行 task_id=0 的真实数据分析以生成该文件。"
+        )
+    summary = load_results(summary_path)
+    if model_type == 'adaptive_scca':
+        sparsity_X = summary.get('optimal_sparsity_X')
+        sparsity_Y = summary.get('optimal_sparsity_Y')
+        if sparsity_X is None or sparsity_Y is None:
+            raise ValueError(
+                f"No optimal sparsity parameters found in summary file: {summary_path}"
+            )
+        return {'sparsity_X': float(sparsity_X), 'sparsity_Y': float(sparsity_Y)}
+    else:
+        raise ValueError(f"Unsupported model type for hyperparameter loading: {model_type}")
 
 
 def main():

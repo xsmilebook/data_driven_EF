@@ -501,7 +501,7 @@ def create_model(model_type: str, **kwargs) -> BaseBrainBehaviorModel:
     工厂函数 - 创建模型实例
     
     Args:
-        model_type: 模型类型 ('pls', 'scca', 'adaptive_pls')
+        model_type: 模型类型 ('pls', 'scca', 'adaptive_pls', 'adaptive_scca')
         **kwargs: 模型参数
         
     Returns:
@@ -518,8 +518,10 @@ def create_model(model_type: str, **kwargs) -> BaseBrainBehaviorModel:
         return SparseCCAModel(**kwargs)
     elif model_type == 'adaptive_pls':
         return AdaptivePLSModel(**kwargs)
+    elif model_type == 'adaptive_scca':
+        return AdaptiveSCCAModel(**kwargs)
     else:
-        raise ValueError(f"Unsupported model type: {model_type}. Supported: 'pls', 'scca', 'adaptive_pls'")
+        raise ValueError(f"Unsupported model type: {model_type}. Supported: 'pls', 'scca', 'adaptive_pls', 'adaptive_scca'")
 
 
 class AdaptivePLSModel(BaseBrainBehaviorModel):
@@ -769,6 +771,339 @@ class AdaptivePLSModel(BaseBrainBehaviorModel):
         }
 
 
+class AdaptiveSCCAModel(BaseBrainBehaviorModel):
+    """
+    自适应 Sparse-CCA 模型 - 使用内部交叉验证确定最优稀疏度参数
+    """
+    
+    def __init__(self, n_components: int = 5,
+                 sparsity_X_range: list = None, 
+                 sparsity_Y_range: list = None,
+                 cv_folds: int = 5, 
+                 criterion: str = 'canonical_correlation',
+                 random_state: Optional[int] = None,
+                 max_iter: int = 1000, 
+                 tol: float = 1e-06):
+        """
+        初始化自适应 Sparse-CCA 模型
+        
+        Args:
+            n_components: 成分数量（固定）
+            sparsity_X_range: 脑数据稀疏度搜索范围，默认 [0.001, 0.005, 0.01, 0.05, 0.1]
+            sparsity_Y_range: 行为数据稀疏度搜索范围，默认 [0.1, 0.2, 0.3, 0.5]
+            cv_folds: 内部交叉验证折数
+            criterion: 选择标准 ('canonical_correlation', 'variance_explained')
+            random_state: 随机种子
+            max_iter: 最大迭代次数
+            tol: 收敛容差
+        """
+        super().__init__(n_components, random_state)
+        
+        # 默认搜索范围：X 用更小值（特征多），Y 用较大值（特征少）
+        if sparsity_X_range is None:
+            sparsity_X_range = [0.001, 0.005, 0.01, 0.05, 0.1]
+        if sparsity_Y_range is None:
+            sparsity_Y_range = [0.1, 0.2, 0.3, 0.5]
+        
+        self.sparsity_X_range = sparsity_X_range
+        self.sparsity_Y_range = sparsity_Y_range
+        self.cv_folds = cv_folds
+        self.criterion = criterion
+        self.max_iter = max_iter
+        self.tol = tol
+        
+        self.optimal_sparsity_X = None
+        self.optimal_sparsity_Y = None
+        self.cv_results_ = None
+        self.model = None
+        self.is_fitted = False
+        
+        self.scaler_X = StandardScaler()
+        self.scaler_Y = StandardScaler()
+        
+        # 检查 cca-zoo 是否可用
+        if _SCCA_IPLS is None:
+            raise ImportError(
+                "AdaptiveSCCAModel requires the 'cca-zoo' library with the SCCA_IPLS "
+                "implementation. Please install it with: pip install -U cca-zoo"
+            )
+    
+    def _evaluate_sparsity_pair(self, X: np.ndarray, Y: np.ndarray, 
+                                sparsity_X: float, sparsity_Y: float) -> Dict[str, float]:
+        """
+        评估特定稀疏度参数对的性能
+        
+        Args:
+            X: 脑数据
+            Y: 行为数据
+            sparsity_X: 脑数据稀疏度
+            sparsity_Y: 行为数据稀疏度
+            
+        Returns:
+            评估指标字典
+        """
+        kf = KFold(n_splits=self.cv_folds, shuffle=True, 
+                  random_state=self.random_state)
+        
+        canonical_corrs = []
+        var_exp_X_list = []
+        var_exp_Y_list = []
+        
+        for train_idx, val_idx in kf.split(X):
+            # 分割数据
+            X_train, X_val = X[train_idx], X[val_idx]
+            Y_train, Y_val = Y[train_idx], Y[val_idx]
+            
+            # 标准化
+            scaler_X_fold = StandardScaler()
+            scaler_Y_fold = StandardScaler()
+            X_train_scaled = scaler_X_fold.fit_transform(X_train)
+            Y_train_scaled = scaler_Y_fold.fit_transform(Y_train)
+            X_val_scaled = scaler_X_fold.transform(X_val)
+            Y_val_scaled = scaler_Y_fold.transform(Y_val)
+            
+            # 创建并拟合 SCCA 模型
+            try:
+                if _scca_ipls_uses_latent_dimensions:
+                    scca_model = _SCCA_IPLS(
+                        latent_dimensions=self.n_components,
+                        random_state=self.random_state,
+                        tol=self.tol,
+                        epochs=self.max_iter,
+                    )
+                else:
+                    scca_model = _SCCA_IPLS(
+                        latent_dims=self.n_components,
+                        random_state=self.random_state,
+                        c=[sparsity_X, sparsity_Y],
+                        max_iter=self.max_iter,
+                        tol=self.tol,
+                    )
+                
+                scca_model.fit([X_train_scaled, Y_train_scaled])
+                
+                # 转换验证集
+                X_val_scores, Y_val_scores = scca_model.transform([X_val_scaled, Y_val_scaled])
+                
+                # 计算典型相关系数
+                corrs = []
+                for i in range(self.n_components):
+                    if X_val_scores.shape[1] > i and Y_val_scores.shape[1] > i:
+                        corr, _ = pearsonr(X_val_scores[:, i], Y_val_scores[:, i])
+                        if not np.isnan(corr):
+                            corrs.append(corr)
+                
+                if corrs:
+                    canonical_corrs.append(np.mean(corrs))
+                    
+                    # 计算方差解释
+                    var_exp_X = np.var(X_val_scores, axis=0).sum() / np.var(X_val_scaled, axis=0).sum() * 100
+                    var_exp_Y = np.var(Y_val_scores, axis=0).sum() / np.var(Y_val_scaled, axis=0).sum() * 100
+                    var_exp_X_list.append(var_exp_X)
+                    var_exp_Y_list.append(var_exp_Y)
+                    
+            except Exception as e:
+                logger.warning(f"SCCA fitting failed for sparsity_X={sparsity_X}, sparsity_Y={sparsity_Y}: {e}")
+                continue
+        
+        if not canonical_corrs:
+            return {
+                'canonical_correlation': -np.inf,
+                'variance_explained_X': 0.0,
+                'variance_explained_Y': 0.0,
+                'canonical_correlation_std': np.inf
+            }
+        
+        return {
+            'canonical_correlation': np.mean(canonical_corrs),
+            'variance_explained_X': np.mean(var_exp_X_list) if var_exp_X_list else 0.0,
+            'variance_explained_Y': np.mean(var_exp_Y_list) if var_exp_Y_list else 0.0,
+            'canonical_correlation_std': np.std(canonical_corrs)
+        }
+    
+    def fit(self, X: Union[np.ndarray, pd.DataFrame], 
+            Y: Union[np.ndarray, pd.DataFrame]) -> 'AdaptiveSCCAModel':
+        """
+        拟合自适应 Sparse-CCA 模型 - 自动选择最优稀疏度参数
+        
+        Args:
+            X: 脑数据 (n_samples, n_brain_features)
+            Y: 行为数据 (n_samples, n_behavioral_features)
+            
+        Returns:
+            self
+        """
+        logger.info(f"Starting adaptive SCCA fitting with sparsity_X range: {self.sparsity_X_range}")
+        logger.info(f"sparsity_Y range: {self.sparsity_Y_range}")
+        logger.info(f"X shape: {X.shape}, Y shape: {Y.shape}")
+        
+        # 转换数据格式
+        if isinstance(X, pd.DataFrame):
+            X_values = X.values
+        else:
+            X_values = X
+            
+        if isinstance(Y, pd.DataFrame):
+            Y_values = Y.values
+        else:
+            Y_values = Y
+        
+        # 网格搜索最优稀疏度参数
+        cv_results = {}
+        best_score = -np.inf
+        best_sparsity_X = self.sparsity_X_range[0]
+        best_sparsity_Y = self.sparsity_Y_range[0]
+        
+        for sparsity_X in self.sparsity_X_range:
+            for sparsity_Y in self.sparsity_Y_range:
+                logger.info(f"Evaluating sparsity_X={sparsity_X}, sparsity_Y={sparsity_Y}")
+                metrics = self._evaluate_sparsity_pair(X_values, Y_values, sparsity_X, sparsity_Y)
+                cv_results[(sparsity_X, sparsity_Y)] = metrics
+                
+                # 根据选择标准选择最优参数
+                score = metrics[self.criterion]
+                if score > best_score:
+                    best_score = score
+                    best_sparsity_X = sparsity_X
+                    best_sparsity_Y = sparsity_Y
+        
+        self.optimal_sparsity_X = best_sparsity_X
+        self.optimal_sparsity_Y = best_sparsity_Y
+        self.cv_results_ = cv_results
+        
+        logger.info(f"Optimal sparsity selected: X={self.optimal_sparsity_X}, Y={self.optimal_sparsity_Y}")
+        logger.info(f"Best {self.criterion}: {best_score:.4f}")
+        
+        # 使用最优稀疏度参数创建最终模型
+        if _scca_ipls_uses_latent_dimensions:
+            self.model = _SCCA_IPLS(
+                latent_dimensions=self.n_components,
+                random_state=self.random_state,
+                tol=self.tol,
+                epochs=self.max_iter,
+            )
+        else:
+            self.model = _SCCA_IPLS(
+                latent_dims=self.n_components,
+                random_state=self.random_state,
+                c=[self.optimal_sparsity_X, self.optimal_sparsity_Y],
+                max_iter=self.max_iter,
+                tol=self.tol,
+            )
+        
+        # 标准化并拟合最终模型
+        X_scaled = self.scaler_X.fit_transform(X_values)
+        Y_scaled = self.scaler_Y.fit_transform(Y_values)
+        self.model.fit([X_scaled, Y_scaled])
+        self.is_fitted = True
+        
+        logger.info("Adaptive SCCA model fitting completed")
+        return self
+    
+    def transform(self, X: Union[np.ndarray, pd.DataFrame], 
+                  Y: Union[np.ndarray, pd.DataFrame]) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        转换数据到潜变量空间
+        
+        Args:
+            X: 脑数据
+            Y: 行为数据
+            
+        Returns:
+            X_scores: 脑潜变量分数
+            Y_scores: 行为潜变量分数
+        """
+        if not self.is_fitted:
+            raise ValueError("Model must be fitted before transformation")
+        
+        if isinstance(X, pd.DataFrame):
+            X_values = X.values
+        else:
+            X_values = X
+            
+        if isinstance(Y, pd.DataFrame):
+            Y_values = Y.values
+        else:
+            Y_values = Y
+        
+        X_scaled = self.scaler_X.transform(X_values)
+        Y_scaled = self.scaler_Y.transform(Y_values)
+        
+        X_scores, Y_scores = self.model.transform([X_scaled, Y_scaled])
+        return X_scores, Y_scores
+    
+    def get_loadings(self) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        获取载荷矩阵
+        
+        Returns:
+            X_loadings: 脑载荷矩阵
+            Y_loadings: 行为载荷矩阵
+        """
+        if not self.is_fitted:
+            raise ValueError("Model must be fitted before getting loadings")
+        
+        if hasattr(self.model, "weights"):
+            X_loadings, Y_loadings = self.model.weights
+        elif hasattr(self.model, "weights_"):
+            X_loadings, Y_loadings = self.model.weights_
+        else:
+            raise AttributeError("Underlying SCCA_IPLS model does not expose weights")
+        
+        return X_loadings, Y_loadings
+    
+    def get_model_info(self) -> Dict[str, Union[int, bool, float, str, list]]:
+        """
+        获取模型信息
+        
+        Returns:
+            模型参数字典
+        """
+        return {
+            'model_type': 'Adaptive-SCCA',
+            'n_components': self.n_components,
+            'sparsity_X_range': self.sparsity_X_range,
+            'sparsity_Y_range': self.sparsity_Y_range,
+            'optimal_sparsity_X': self.optimal_sparsity_X,
+            'optimal_sparsity_Y': self.optimal_sparsity_Y,
+            'cv_folds': self.cv_folds,
+            'criterion': self.criterion,
+            'max_iter': self.max_iter,
+            'tol': self.tol,
+            'is_fitted': self.is_fitted
+        }
+    
+    def get_cv_results(self) -> Dict[Tuple[float, float], Dict[str, float]]:
+        """
+        获取交叉验证结果
+        
+        Returns:
+            各稀疏度参数对的评估结果
+        """
+        return self.cv_results_
+    
+    def get_params(self, deep: bool = True):
+        """
+        获取模型参数（用于交叉验证中的模型复制）
+        
+        Args:
+            deep: 是否深拷贝
+            
+        Returns:
+            参数字典
+        """
+        return {
+            'n_components': self.n_components,
+            'sparsity_X_range': self.sparsity_X_range,
+            'sparsity_Y_range': self.sparsity_Y_range,
+            'cv_folds': self.cv_folds,
+            'criterion': self.criterion,
+            'max_iter': self.max_iter,
+            'tol': self.tol,
+            'random_state': self.random_state
+        }
+
+
 def get_available_models() -> list:
     """
     获取可用的模型类型
@@ -776,4 +1111,4 @@ def get_available_models() -> list:
     Returns:
         可用模型类型列表
     """
-    return ['pls', 'scca', 'adaptive_pls']
+    return ['pls', 'scca', 'adaptive_pls', 'adaptive_scca']
