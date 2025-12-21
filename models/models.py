@@ -18,18 +18,25 @@ logger = logging.getLogger(__name__)
 
 
 _SCCA_IPLS = None
+_rCCA = None
 _scca_ipls_uses_latent_dimensions = False
+_rcca_uses_latent_dimensions = False
 _cca_zoo_import_error = None
 
 try:
     from cca_zoo.linear import SCCA_IPLS as _SCCA_IPLS  # type: ignore
+    from cca_zoo.linear import rCCA as _rCCA  # type: ignore
     _scca_ipls_uses_latent_dimensions = True
+    _rcca_uses_latent_dimensions = True
 except ImportError as e_linear:
     try:
         from cca_zoo.models import SCCA_IPLS as _SCCA_IPLS  # type: ignore
+        from cca_zoo.models import rCCA as _rCCA  # type: ignore
         _scca_ipls_uses_latent_dimensions = False
+        _rcca_uses_latent_dimensions = False
     except ImportError as e_models:
         _SCCA_IPLS = None
+        _rCCA = None
         _cca_zoo_import_error = (e_linear, e_models)
 
 
@@ -496,12 +503,381 @@ class SparseCCAModel(BaseBrainBehaviorModel):
         }
 
 
+class RCCAModel(BaseBrainBehaviorModel):
+    def __init__(
+        self,
+        n_components: int = 5,
+        c_X: float = 0.1,
+        c_Y: float = 0.1,
+        pca: bool = True,
+        eps: float = 1e-06,
+        random_state: Optional[int] = None,
+    ):
+        super().__init__(n_components, random_state)
+        self.c_X = c_X
+        self.c_Y = c_Y
+        self.pca = pca
+        self.eps = eps
+
+        if _rCCA is None:
+            raise ImportError(
+                "RCCAModel requires the 'cca-zoo' library with the rCCA implementation. "
+                "Please install or upgrade it with: pip install -U cca-zoo"
+            )
+
+        self.scaler_X = StandardScaler()
+        self.scaler_Y = StandardScaler()
+
+        if _rcca_uses_latent_dimensions:
+            self.model = _rCCA(
+                latent_dimensions=self.n_components,
+                c=[self.c_X, self.c_Y],
+                pca=self.pca,
+                eps=self.eps,
+                random_state=self.random_state,
+            )
+        else:
+            self.model = _rCCA(
+                latent_dims=self.n_components,
+                c=[self.c_X, self.c_Y],
+                pca=self.pca,
+                eps=self.eps,
+                random_state=self.random_state,
+            )
+
+    def fit(self, X: Union[np.ndarray, pd.DataFrame], Y: Union[np.ndarray, pd.DataFrame]) -> 'RCCAModel':
+        if isinstance(X, pd.DataFrame):
+            X_values = X.values
+        else:
+            X_values = X
+
+        if isinstance(Y, pd.DataFrame):
+            Y_values = Y.values
+        else:
+            Y_values = Y
+
+        X_scaled = self.scaler_X.fit_transform(X_values)
+        Y_scaled = self.scaler_Y.fit_transform(Y_values)
+
+        self.model.fit([X_scaled, Y_scaled])
+        self.is_fitted = True
+        return self
+
+    def transform(
+        self,
+        X: Union[np.ndarray, pd.DataFrame],
+        Y: Union[np.ndarray, pd.DataFrame],
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        if not self.is_fitted:
+            raise ValueError("Model must be fitted before transformation")
+
+        if isinstance(X, pd.DataFrame):
+            X_values = X.values
+        else:
+            X_values = X
+
+        if isinstance(Y, pd.DataFrame):
+            Y_values = Y.values
+        else:
+            Y_values = Y
+
+        X_scaled = self.scaler_X.transform(X_values)
+        Y_scaled = self.scaler_Y.transform(Y_values)
+        X_scores, Y_scores = self.model.transform([X_scaled, Y_scaled])
+        return X_scores, Y_scores
+
+    def get_loadings(self) -> Tuple[np.ndarray, np.ndarray]:
+        if not self.is_fitted:
+            raise ValueError("Model must be fitted before getting loadings")
+
+        if hasattr(self.model, "weights"):
+            X_loadings, Y_loadings = self.model.weights
+        elif hasattr(self.model, "weights_"):
+            X_loadings, Y_loadings = self.model.weights_
+        else:
+            raise AttributeError("Underlying rCCA model does not expose weights")
+
+        return X_loadings, Y_loadings
+
+    def get_model_info(self) -> Dict[str, Union[int, float, str, bool]]:
+        return {
+            'model_type': 'rCCA',
+            'n_components': self.n_components,
+            'c_X': self.c_X,
+            'c_Y': self.c_Y,
+            'pca': self.pca,
+            'eps': self.eps,
+            'is_fitted': self.is_fitted,
+            'implementation': 'cca-zoo rCCA',
+        }
+
+    def get_params(self, deep: bool = True):
+        return {
+            'n_components': self.n_components,
+            'c_X': self.c_X,
+            'c_Y': self.c_Y,
+            'pca': self.pca,
+            'eps': self.eps,
+            'random_state': self.random_state,
+        }
+
+
+class AdaptiveRCCAModel(BaseBrainBehaviorModel):
+    def __init__(
+        self,
+        n_components_range: list = None,
+        c_X_range: list = None,
+        c_Y_range: list = None,
+        cv_folds: int = 5,
+        criterion: str = 'canonical_correlation',
+        random_state: Optional[int] = None,
+        pca: bool = True,
+        eps: float = 1e-06,
+    ):
+        if n_components_range is None:
+            n_components_range = [2, 3, 4, 5]
+        if c_X_range is None:
+            c_X_range = [0.0, 0.1, 0.3, 0.5]
+        if c_Y_range is None:
+            c_Y_range = [0.0, 0.1, 0.3, 0.5]
+
+        super().__init__(max(n_components_range), random_state)
+        self.n_components_range = n_components_range
+        self.c_X_range = c_X_range
+        self.c_Y_range = c_Y_range
+        self.cv_folds = cv_folds
+        self.criterion = criterion
+        self.pca = pca
+        self.eps = eps
+
+        self.optimal_n_components = None
+        self.optimal_c_X = None
+        self.optimal_c_Y = None
+        self.cv_results_ = None
+
+        self.scaler_X = StandardScaler()
+        self.scaler_Y = StandardScaler()
+
+        if _rCCA is None:
+            raise ImportError(
+                "AdaptiveRCCAModel requires the 'cca-zoo' library with the rCCA implementation. "
+                "Please install or upgrade it with: pip install -U cca-zoo"
+            )
+
+    def _evaluate_hyperparameter_combo(
+        self,
+        X: np.ndarray,
+        Y: np.ndarray,
+        n_components: int,
+        c_X: float,
+        c_Y: float,
+    ) -> Dict[str, float]:
+        kf = KFold(n_splits=self.cv_folds, shuffle=True, random_state=self.random_state)
+
+        canonical_corrs = []
+        var_exp_X_list = []
+        var_exp_Y_list = []
+
+        for train_idx, val_idx in kf.split(X):
+            X_train, X_val = X[train_idx], X[val_idx]
+            Y_train, Y_val = Y[train_idx], Y[val_idx]
+
+            scaler_X_fold = StandardScaler()
+            scaler_Y_fold = StandardScaler()
+            X_train_scaled = scaler_X_fold.fit_transform(X_train)
+            Y_train_scaled = scaler_Y_fold.fit_transform(Y_train)
+            X_val_scaled = scaler_X_fold.transform(X_val)
+            Y_val_scaled = scaler_Y_fold.transform(Y_val)
+
+            try:
+                if _rcca_uses_latent_dimensions:
+                    rcca_model = _rCCA(
+                        latent_dimensions=n_components,
+                        c=[c_X, c_Y],
+                        pca=self.pca,
+                        eps=self.eps,
+                        random_state=self.random_state,
+                    )
+                else:
+                    rcca_model = _rCCA(
+                        latent_dims=n_components,
+                        c=[c_X, c_Y],
+                        pca=self.pca,
+                        eps=self.eps,
+                        random_state=self.random_state,
+                    )
+
+                rcca_model.fit([X_train_scaled, Y_train_scaled])
+                X_val_scores, Y_val_scores = rcca_model.transform([X_val_scaled, Y_val_scaled])
+
+                corrs = []
+                for i in range(n_components):
+                    if X_val_scores.shape[1] > i and Y_val_scores.shape[1] > i:
+                        corr, _ = pearsonr(X_val_scores[:, i], Y_val_scores[:, i])
+                        if not np.isnan(corr):
+                            corrs.append(corr)
+
+                if corrs:
+                    canonical_corrs.append(np.mean(corrs))
+                    var_exp_X = np.var(X_val_scores, axis=0).sum() / np.var(X_val_scaled, axis=0).sum() * 100
+                    var_exp_Y = np.var(Y_val_scores, axis=0).sum() / np.var(Y_val_scaled, axis=0).sum() * 100
+                    var_exp_X_list.append(var_exp_X)
+                    var_exp_Y_list.append(var_exp_Y)
+            except Exception as e:
+                logger.warning(f"rCCA fitting failed for n_comp={n_components}, c_X={c_X}, c_Y={c_Y}: {e}")
+                continue
+
+        if not canonical_corrs:
+            return {
+                'canonical_correlation': -np.inf,
+                'variance_explained_X': 0.0,
+                'variance_explained_Y': 0.0,
+                'canonical_correlation_std': np.inf,
+            }
+
+        return {
+            'canonical_correlation': np.mean(canonical_corrs),
+            'variance_explained_X': np.mean(var_exp_X_list) if var_exp_X_list else 0.0,
+            'variance_explained_Y': np.mean(var_exp_Y_list) if var_exp_Y_list else 0.0,
+            'canonical_correlation_std': np.std(canonical_corrs),
+        }
+
+    def fit(self, X: Union[np.ndarray, pd.DataFrame], Y: Union[np.ndarray, pd.DataFrame]) -> 'AdaptiveRCCAModel':
+        logger.info(f"Starting adaptive rCCA fitting with n_components range: {self.n_components_range}")
+        logger.info(f"c_X range: {self.c_X_range}")
+        logger.info(f"c_Y range: {self.c_Y_range}")
+
+        if isinstance(X, pd.DataFrame):
+            X_values = X.values
+        else:
+            X_values = X
+
+        if isinstance(Y, pd.DataFrame):
+            Y_values = Y.values
+        else:
+            Y_values = Y
+
+        cv_results = {}
+        best_score = -np.inf
+        best_n_components = self.n_components_range[0]
+        best_c_X = self.c_X_range[0]
+        best_c_Y = self.c_Y_range[0]
+
+        for n_comp in self.n_components_range:
+            for c_X in self.c_X_range:
+                for c_Y in self.c_Y_range:
+                    metrics = self._evaluate_hyperparameter_combo(X_values, Y_values, n_comp, c_X, c_Y)
+                    cv_results[(n_comp, c_X, c_Y)] = metrics
+                    score = metrics[self.criterion]
+                    if score > best_score:
+                        best_score = score
+                        best_n_components = n_comp
+                        best_c_X = c_X
+                        best_c_Y = c_Y
+
+        self.optimal_n_components = best_n_components
+        self.optimal_c_X = best_c_X
+        self.optimal_c_Y = best_c_Y
+        self.n_components = best_n_components
+        self.cv_results_ = cv_results
+
+        if _rcca_uses_latent_dimensions:
+            self.model = _rCCA(
+                latent_dimensions=self.optimal_n_components,
+                c=[self.optimal_c_X, self.optimal_c_Y],
+                pca=self.pca,
+                eps=self.eps,
+                random_state=self.random_state,
+            )
+        else:
+            self.model = _rCCA(
+                latent_dims=self.optimal_n_components,
+                c=[self.optimal_c_X, self.optimal_c_Y],
+                pca=self.pca,
+                eps=self.eps,
+                random_state=self.random_state,
+            )
+
+        X_scaled = self.scaler_X.fit_transform(X_values)
+        Y_scaled = self.scaler_Y.fit_transform(Y_values)
+        self.model.fit([X_scaled, Y_scaled])
+        self.is_fitted = True
+        return self
+
+    def transform(
+        self,
+        X: Union[np.ndarray, pd.DataFrame],
+        Y: Union[np.ndarray, pd.DataFrame],
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        if not self.is_fitted:
+            raise ValueError("Model must be fitted before transformation")
+
+        if isinstance(X, pd.DataFrame):
+            X_values = X.values
+        else:
+            X_values = X
+
+        if isinstance(Y, pd.DataFrame):
+            Y_values = Y.values
+        else:
+            Y_values = Y
+
+        X_scaled = self.scaler_X.transform(X_values)
+        Y_scaled = self.scaler_Y.transform(Y_values)
+        X_scores, Y_scores = self.model.transform([X_scaled, Y_scaled])
+        return X_scores, Y_scores
+
+    def get_loadings(self) -> Tuple[np.ndarray, np.ndarray]:
+        if not self.is_fitted:
+            raise ValueError("Model must be fitted before getting loadings")
+
+        if hasattr(self.model, "weights"):
+            X_loadings, Y_loadings = self.model.weights
+        elif hasattr(self.model, "weights_"):
+            X_loadings, Y_loadings = self.model.weights_
+        else:
+            raise AttributeError("Underlying rCCA model does not expose weights")
+
+        return X_loadings, Y_loadings
+
+    def get_model_info(self) -> Dict[str, Union[int, bool, float, str, list]]:
+        return {
+            'model_type': 'Adaptive-rCCA',
+            'n_components_range': self.n_components_range,
+            'optimal_n_components': self.optimal_n_components,
+            'c_X_range': self.c_X_range,
+            'c_Y_range': self.c_Y_range,
+            'optimal_c_X': self.optimal_c_X,
+            'optimal_c_Y': self.optimal_c_Y,
+            'cv_folds': self.cv_folds,
+            'criterion': self.criterion,
+            'pca': self.pca,
+            'eps': self.eps,
+            'is_fitted': self.is_fitted,
+        }
+
+    def get_cv_results(self) -> Dict[Tuple[int, float, float], Dict[str, float]]:
+        return self.cv_results_
+
+    def get_params(self, deep: bool = True):
+        return {
+            'n_components_range': self.n_components_range,
+            'c_X_range': self.c_X_range,
+            'c_Y_range': self.c_Y_range,
+            'cv_folds': self.cv_folds,
+            'criterion': self.criterion,
+            'pca': self.pca,
+            'eps': self.eps,
+            'random_state': self.random_state,
+        }
+
+
 def create_model(model_type: str, **kwargs) -> BaseBrainBehaviorModel:
     """
     工厂函数 - 创建模型实例
     
     Args:
-        model_type: 模型类型 ('pls', 'scca', 'adaptive_pls', 'adaptive_scca')
+        model_type: 模型类型 ('pls', 'scca', 'rcca', 'adaptive_pls', 'adaptive_scca', 'adaptive_rcca')
         **kwargs: 模型参数
         
     Returns:
@@ -516,12 +892,18 @@ def create_model(model_type: str, **kwargs) -> BaseBrainBehaviorModel:
         return PLSModel(**kwargs)
     elif model_type == 'scca':
         return SparseCCAModel(**kwargs)
+    elif model_type == 'rcca':
+        return RCCAModel(**kwargs)
     elif model_type == 'adaptive_pls':
         return AdaptivePLSModel(**kwargs)
     elif model_type == 'adaptive_scca':
         return AdaptiveSCCAModel(**kwargs)
+    elif model_type == 'adaptive_rcca':
+        return AdaptiveRCCAModel(**kwargs)
     else:
-        raise ValueError(f"Unsupported model type: {model_type}. Supported: 'pls', 'scca', 'adaptive_pls', 'adaptive_scca'")
+        raise ValueError(
+            f"Unsupported model type: {model_type}. Supported: 'pls', 'scca', 'rcca', 'adaptive_pls', 'adaptive_scca', 'adaptive_rcca'"
+        )
 
 
 class AdaptivePLSModel(BaseBrainBehaviorModel):
@@ -844,7 +1226,7 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
             Y: 行为数据
             n_components: 成分数量
             sparsity_X: 脑数据稀疏度
-            sparsity_Y: 行为数据稀疏度
+            sparsity_Y: 行为数据稀疯度
             
         Returns:
             评估指标字典
@@ -931,7 +1313,7 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
     def fit(self, X: Union[np.ndarray, pd.DataFrame], 
             Y: Union[np.ndarray, pd.DataFrame]) -> 'AdaptiveSCCAModel':
         """
-        拟合自适应 Sparse-CCA 模型 - 自动选择最优成分数和稀疏度参数
+        拟合自适应 Sparse-CCA 模型 - 自动选择最优成分数和稀疯度参数
         
         Args:
             X: 脑数据 (n_samples, n_brain_features)
@@ -1129,4 +1511,4 @@ def get_available_models() -> list:
     Returns:
         可用模型类型列表
     """
-    return ['pls', 'scca', 'adaptive_pls', 'adaptive_scca']
+    return ['pls', 'scca', 'rcca', 'adaptive_pls', 'adaptive_scca', 'adaptive_rcca']

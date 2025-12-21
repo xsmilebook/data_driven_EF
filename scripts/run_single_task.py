@@ -409,6 +409,21 @@ def create_model_instance(args):
         logger.info(f"sparsity_X range: {model_params['sparsity_X_range']}")
         logger.info(f"sparsity_Y range: {model_params['sparsity_Y_range']}")
         logger.info(f"Total combinations: {len(model_params['n_components_range']) * len(model_params['sparsity_X_range']) * len(model_params['sparsity_Y_range'])}")
+    elif args.model_type == 'adaptive_rcca':
+        # 自适应rCCA模型 - 自动选择成分数和正则化参数
+        model_params = {
+            'n_components_range': list(range(2, args.n_components + 1)),  # 搜索范围 [2, 3, ..., n_components]
+            'c_X_range': [0.0, 0.1, 0.3, 0.5],
+            'c_Y_range': [0.0, 0.1, 0.3, 0.5],
+            'cv_folds': 5,
+            'criterion': 'canonical_correlation',
+            'pca': True,
+            'eps': 1e-06
+        }
+        logger.info(f"Creating Adaptive-rCCA model with n_components range: {model_params['n_components_range']}")
+        logger.info(f"c_X range: {model_params['c_X_range']}")
+        logger.info(f"c_Y range: {model_params['c_Y_range']}")
+        logger.info(f"Total combinations: {len(model_params['n_components_range']) * len(model_params['c_X_range']) * len(model_params['c_Y_range'])}")
     else:
         # 标准模型
         model_params = {
@@ -427,6 +442,13 @@ def create_model_instance(args):
                 'sparsity_Y': 0.1,
                 'max_iter': 10000,
                 'tol': 1e-06
+            })
+        elif args.model_type == 'rcca':
+            model_params.update({
+                'c_X': 0.1,
+                'c_Y': 0.1,
+                'pca': True,
+                'eps': 1e-06
             })
         
         logger.info(f"Created {args.model_type.upper()} model with {args.n_components} components")
@@ -482,6 +504,28 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
                     sparsity_Y=best_hyperparams['sparsity_Y'],
                     max_iter=10000,
                     tol=1e-06
+                )
+            except Exception as e:
+                logger.error(
+                    f"Failed to load best hyperparameters for permutation test, "
+                    f"falling back to current model. Error: {e}"
+                )
+                base_model = model
+        elif args.model_type == 'adaptive_rcca':
+            try:
+                best_hyperparams = load_best_hyperparameters(args.model_type)
+                logger.info(f"Using fixed hyperparameters for permutation test:")
+                logger.info(f"  n_components={best_hyperparams['n_components']}")
+                logger.info(f"  c_X={best_hyperparams['c_X']}")
+                logger.info(f"  c_Y={best_hyperparams['c_Y']}")
+                from src.models.models import create_model
+                base_model = create_model(
+                    'rcca',
+                    n_components=best_hyperparams['n_components'],
+                    c_X=best_hyperparams['c_X'],
+                    c_Y=best_hyperparams['c_Y'],
+                    pca=True,
+                    eps=1e-06
                 )
             except Exception as e:
                 logger.error(
@@ -568,8 +612,8 @@ def save_results_with_metadata(result, args):
     # 确定输出目录
     if args.output_dir is None:
         # 根据模型类型设置路径
-        if args.model_type == 'adaptive_scca':
-            # adaptive_scca 的路径不包含 ncomp，因为超参数是 sparsity
+        if args.model_type in ('adaptive_scca', 'adaptive_rcca'):
+            # adaptive_* 的路径不包含 ncomp，因为实际超参数并不等于 args.n_components
             output_dir = (
                 results_root
                 / analysis_type
@@ -587,7 +631,7 @@ def save_results_with_metadata(result, args):
                 / f"seed_{seed}"
             )
     else:
-        if args.model_type == 'adaptive_scca':
+        if args.model_type in ('adaptive_scca', 'adaptive_rcca'):
             output_dir = Path(args.output_dir) / args.model_type / f"seed_{seed}"
         else:
             output_dir = Path(args.output_dir) / args.model_type / f"ncomp_{args.n_components}" / f"seed_{seed}"
@@ -672,6 +716,23 @@ def save_results_with_metadata(result, args):
                 }
                 save_results(summary_data, summary_path)
                 logger.info(f"Saved best hyperparameters summary to {summary_path}")
+        
+        elif args.model_type == 'adaptive_rcca':
+            optimal_n_components = model_info.get('optimal_n_components')
+            optimal_c_X = model_info.get('optimal_c_X')
+            optimal_c_Y = model_info.get('optimal_c_Y')
+            if optimal_n_components is not None and optimal_c_X is not None and optimal_c_Y is not None:
+                summary_path = summary_dir / f"best_hyperparameters_{args.model_type}.json"
+                summary_data = {
+                    'optimal_n_components': optimal_n_components,
+                    'optimal_c_X': optimal_c_X,
+                    'optimal_c_Y': optimal_c_Y,
+                    'model_type': args.model_type,
+                    'atlas': atlas_tag,
+                    'timestamp': metadata.get('timestamp', create_timestamp())
+                }
+                save_results(summary_data, summary_path)
+                logger.info(f"Saved best hyperparameters summary to {summary_path}")
     
     return saved_files
 
@@ -720,6 +781,19 @@ def load_best_hyperparameters(model_type: str) -> dict:
             'n_components': int(n_components),
             'sparsity_X': float(sparsity_X), 
             'sparsity_Y': float(sparsity_Y)
+        }
+    elif model_type == 'adaptive_rcca':
+        n_components = summary.get('optimal_n_components')
+        c_X = summary.get('optimal_c_X')
+        c_Y = summary.get('optimal_c_Y')
+        if n_components is None or c_X is None or c_Y is None:
+            raise ValueError(
+                f"No optimal hyperparameters found in summary file: {summary_path}"
+            )
+        return {
+            'n_components': int(n_components),
+            'c_X': float(c_X),
+            'c_Y': float(c_Y)
         }
     else:
         raise ValueError(f"Unsupported model type for hyperparameter loading: {model_type}")
