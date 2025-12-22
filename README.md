@@ -136,7 +136,7 @@ src/models/
 
 基础用法示例请参考 `src/models/example_usage.py` 中的函数，实现了从数据加载、混杂回归到PLS建模的完整流程。
 
-#### 自适应PLS模型（自动选择n_components）
+#### 自适应PLS模型
 
 自适应PLS的示例同样可在 `src/models/example_usage.py` 中查看，这里不再重复列出完整代码。
 
@@ -200,20 +200,12 @@ p_values = perm_tester.calculate_p_values(real_correlations, permuted_correlatio
 # 真实数据分析
 python src/scripts/run_single_task.py \
     --task_id 0 \
-    --model_type pls \
-    --n_components 5
-
-# 自适应PLS模型（自动选择n_components）
-python src/scripts/run_single_task.py \
-    --task_id 0 \
-    --model_type adaptive_pls \
-    --n_components 6  # 最大搜索范围
+    --model_type adaptive_pls
 
 # 置换检验（task_id = 1-1000 用于不同的置换）
 python src/scripts/run_single_task.py \
     --task_id 1 \
-    --model_type pls \
-    --n_components 5
+    --model_type adaptive_pls
 ```
 
 #### SLURM作业数组（推荐两步流程）
@@ -230,9 +222,7 @@ sbatch src/scripts/submit_hpc_perm.sh
 
 在当前实现中：
 - 真实数据脚本 `submit_hpc_real.sh` 会多次运行 `task_id=0` 的真实分析（通过改变随机种子），输出保存到 `results/real/...`。
-- 每次真实分析使用 `adaptive_pls` 在 1–N 个成分范围内进行内部交叉验证，自动选择最佳成分数，并在真实数据上拟合最终模型。
-- 真实数据分析完成后，会在 `results/models` 根目录自动生成（或更新）一个 `best_n_components_adaptive_pls.json` 文件，记录真实数据选出的最佳成分数。
-- 置换脚本 `submit_hpc_perm.sh` 会针对 `task_id=1..1000` 的任务，读取该文件，在置换检验中使用固定成分数的 PLS 模型（做法B），从而避免在每次置换中重新做超参数搜索。
+- 置换脚本 `submit_hpc_perm.sh` 会针对 `task_id=1..1000` 的任务运行置换检验，输出保存到 `results/perm/...`。
 
 #### 置换结果汇总与显著性分析
 
@@ -261,11 +251,9 @@ python src/scripts/run_single_task.py --help
 
 # 关键参数：
 # --task_id: 0 表示真实数据，1-N 表示置换
-# --model_type: pls, adaptive_pls 或 scca
-# --n_components: 成分数量（对于adaptive_pls是最大搜索范围）
+# --model_type: adaptive_pls / adaptive_scca / adaptive_rcca
 # --use_synthetic: 使用合成数据进行测试
 # --covariates_path: 协变量文件路径(.csv，可选)
-# --regress_confounds: 是否回归混杂因素(age, sex, meanFD)
 # --run_cv: 是否运行交叉验证
 # --cv_n_splits: CV折数
 # --output_dir: 输出目录
@@ -291,7 +279,6 @@ python -c "from src.models.example_usage import example_basic_analysis; example_
 python src/scripts/run_single_task.py \
     --task_id 0 \
     --model_type adaptive_pls \
-    --n_components 5 \
     --use_synthetic \
     --n_subjects 100 \
     --n_brain_features 200 \
@@ -332,9 +319,9 @@ python src/scripts/run_single_task.py \
 
 | 模型 | 描述 | 使用场景 | 实现状态 | 特点 |
 |-------|-------------|----------|---------------------|-------|
-| PLS | 偏最小二乘法 | 一般脑-行为关联 | ✅ 完整 | 固定n_components |
-| Adaptive-PLS | 自适应偏最小二乘法 | 自动选择最优成分数量 | ✅ 完整 | 内部CV确定n_components |
-| Sparse-CCA | 稀疏典型相关分析 | 特征选择和可解释性 | ⚠️ 回退到CCA | 稀疏正则化 |
+| Adaptive-PLS | 自适应偏最小二乘法 | 脑-行为关联 | ✅ 完整 | 内部CV调参（当前固定 n_components_range=[5]） |
+| Adaptive-SCCA | 自适应稀疏CCA | 特征选择和可解释性 | ✅ 完整 | 内部CV调参（当前固定 n_components_range=[5]） |
+| Adaptive-rCCA | 自适应rCCA | 正则化CCA | ✅ 完整 | 内部CV调参（当前固定 n_components_range=[5]） |
 
 ### ⚙️ 配置
 
@@ -358,9 +345,9 @@ python src/scripts/run_single_task.py \
 
 #### 模型
 - `BaseBrainBehaviorModel`: 所有模型的基类
-- `PLSModel`: 偏最小二乘法实现
-- `SparseCCAModel`: 稀疏CCA（带回退）
-- `AdaptivePLSModel`: 自适应PLS（自动选择n_components）
+- `AdaptivePLSModel`: 自适应PLS
+- `AdaptiveSCCAModel`: 自适应SCCA
+- `AdaptiveRCCAModel`: 自适应rCCA
 - `create_model`: 模型创建的工厂函数
 
 #### 评估
@@ -426,8 +413,7 @@ sbatch src/scripts/submit_hpc_job.sh
 # 使用合成数据测试脑-行为关联模型
 python src/scripts/run_single_task.py \
     --task_id 0 \
-    --model_type pls \
-    --n_components 3 \
+    --model_type adaptive_pls \
     --use_synthetic \
     --n_subjects 100 \
     --n_brain_features 200 \

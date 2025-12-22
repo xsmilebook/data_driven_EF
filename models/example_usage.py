@@ -30,22 +30,17 @@ def example_basic_analysis():
     
     print(f"数据形状 - 脑: {brain_data.shape}, 行为: {behavioral_data.shape}")
     
-    # 预处理：回归混杂变量
-    confound_regressor = ConfoundRegressor(standardize=True)
-    brain_clean = confound_regressor.fit_transform(brain_data, confounds=covariates)
-    behavioral_clean = confound_regressor.fit_transform(behavioral_data, confounds=covariates)
-    
-    # 创建 PLS 模型
-    pls_model = create_model('pls', n_components=3, random_state=42)
+    # 创建调参版本 PLS 模型（此处固定 n_components_range=[5]）
+    pls_model = create_model('adaptive_pls', n_components_range=[5], random_state=42)
     
     # 拟合模型
-    pls_model.fit(brain_clean, behavioral_clean)
+    pls_model.fit(brain_data, behavioral_data)
     
     # 获取结果
-    X_scores, Y_scores = pls_model.transform(brain_clean, behavioral_clean)
+    X_scores, Y_scores = pls_model.transform(brain_data, behavioral_data)
     canonical_corrs = pls_model.calculate_canonical_correlations(X_scores, Y_scores)
     variance_explained = pls_model.calculate_variance_explained(
-        brain_clean, behavioral_clean, X_scores, Y_scores
+        brain_data, behavioral_data, X_scores, Y_scores
     )
     
     # 显示结果
@@ -69,19 +64,14 @@ def example_cross_validation():
         n_subjects=200, n_brain_features=200, n_behavioral_measures=15
     )
     
-    # 预处理
-    confound_regressor = ConfoundRegressor(standardize=True)
-    brain_clean = confound_regressor.fit_transform(brain_data, confounds=covariates)
-    behavioral_clean = confound_regressor.fit_transform(behavioral_data, confounds=covariates)
-    
     # 创建模型
-    model = create_model('pls', n_components=5, random_state=42)
+    model = create_model('adaptive_pls', n_components_range=[5], random_state=42)
     
     # 创建交叉验证器
     cv = CrossValidator(n_splits=5, shuffle=True, random_state=42)
     
     # 运行交叉验证
-    cv_results = cv.run_cv_evaluation(model, brain_clean, behavioral_clean)
+    cv_results = cv.run_cv_evaluation(model, brain_data, behavioral_data, confounds=covariates)
     
     # 创建汇总表
     summary_df = cv.create_cv_summary_table(cv_results)
@@ -101,17 +91,12 @@ def example_permutation_test():
         n_subjects=150, n_brain_features=150, n_behavioral_measures=10
     )
     
-    # 预处理
-    confound_regressor = ConfoundRegressor(standardize=True)
-    brain_clean = confound_regressor.fit_transform(brain_data, confounds=covariates)
-    behavioral_clean = confound_regressor.fit_transform(behavioral_data, confounds=covariates)
-    
     # 创建模型
-    model = create_model('pls', n_components=3, random_state=42)
+    model = create_model('adaptive_pls', n_components_range=[5], random_state=42)
     
     # 运行真实数据分析
-    model.fit(brain_clean, behavioral_clean)
-    X_scores, Y_scores = model.transform(brain_clean, behavioral_clean)
+    model.fit(brain_data, behavioral_data)
+    X_scores, Y_scores = model.transform(brain_data, behavioral_data)
     real_correlations = model.calculate_canonical_correlations(X_scores, Y_scores)
     
     # 运行置换检验
@@ -120,7 +105,7 @@ def example_permutation_test():
     perm_correlations = []
     for i in range(100):
         perm_result = perm_tester.run_permutation_test(
-            model, brain_clean, behavioral_clean, permutation_seed=42+i
+            model, brain_data, behavioral_data, confounds=covariates, permutation_seed=42+i
         )
         perm_correlations.append(perm_result['canonical_correlations'])
     
@@ -147,7 +132,7 @@ def example_available_models():
     
     for model_type in available_models:
         print(f"\n{model_type.upper()} 模型参数:")
-        model = create_model(model_type, n_components=2)
+        model = create_model(model_type)
         model_info = model.get_model_info()
         for key, value in model_info.items():
             print(f"  {key}: {value}")

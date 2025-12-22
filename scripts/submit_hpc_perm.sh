@@ -12,20 +12,17 @@ project_dir="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF"
 config_file="${project_dir}/src/models/config.json"
 
 MODEL_TYPE="adaptive_pls"
-N_COMPONENTS=10
 RANDOM_STATE=42
 ATLAS="schaefer100"
 
 mkdir -p ${project_dir}/log/perm_adaptive_pls
 
 echo "Starting PERM task $SLURM_ARRAY_TASK_ID at $(date)"
-echo "Model: $MODEL_TYPE (Adaptive->PLS fixed n_components)"
-echo "Component search range (for real-data Adaptive-PLS): 1-${N_COMPONENTS}"
+echo "Model: $MODEL_TYPE"
 
 python ${project_dir}/src/scripts/run_single_task.py \
     --task_id $SLURM_ARRAY_TASK_ID \
     --model_type $MODEL_TYPE \
-    --n_components $N_COMPONENTS \
     --output_prefix efny_perm_${MODEL_TYPE} \
     --random_state $RANDOM_STATE \
     --config_file ${config_file} \

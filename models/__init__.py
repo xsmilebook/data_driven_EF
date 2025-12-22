@@ -7,7 +7,7 @@ using Partial Least Squares (PLS) and Sparse Canonical Correlation Analysis (Spa
 
 from .data_loader import EFNYDataLoader, create_synthetic_data
 from .preprocessing import ConfoundRegressor, DataQualityFilter, create_preprocessing_pipeline
-from .models import BaseBrainBehaviorModel, PLSModel, SparseCCAModel, RCCAModel, AdaptivePLSModel, AdaptiveSCCAModel, AdaptiveRCCAModel, create_model, get_available_models
+from .models import BaseBrainBehaviorModel, AdaptivePLSModel, AdaptiveSCCAModel, AdaptiveRCCAModel, create_model, get_available_models
 from .evaluation import CrossValidator, PermutationTester, run_nested_cv_evaluation
 from .utils import setup_logging, get_project_root, get_data_dir, get_results_dir, ConfigManager, save_results
 
@@ -26,9 +26,6 @@ __all__ = [
     
     # Models
     "BaseBrainBehaviorModel",
-    "PLSModel",
-    "SparseCCAModel",
-    "RCCAModel",
     "AdaptivePLSModel",
     "AdaptiveSCCAModel",
     "AdaptiveRCCAModel",

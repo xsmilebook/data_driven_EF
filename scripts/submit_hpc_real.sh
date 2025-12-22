@@ -12,7 +12,6 @@ project_dir="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF"
 config_file="${project_dir}/src/models/config.json"
 
 MODEL_TYPE="adaptive_pls"
-N_COMPONENTS=5
 RANDOM_STATE_BASE=42
 ATLAS="schaefer400"
 DATASET="EFNY"
@@ -23,12 +22,10 @@ mkdir -p ${project_dir}/log/real_${MODEL_TYPE}
 
 echo "Starting REAL run $SLURM_ARRAY_TASK_ID at $(date)"
 echo "Model: $MODEL_TYPE"
-echo "Number of components: ${N_COMPONENTS}"
 
 python ${project_dir}/src/scripts/run_single_task.py \
     --task_id 0 \
     --model_type $MODEL_TYPE \
-    --n_components $N_COMPONENTS \
     --output_prefix efny_real_${MODEL_TYPE}_run_${SLURM_ARRAY_TASK_ID} \
     --random_state $((RANDOM_STATE_BASE + SLURM_ARRAY_TASK_ID)) \
     --config_file ${config_file} \

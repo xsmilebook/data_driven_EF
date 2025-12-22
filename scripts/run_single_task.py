@@ -20,13 +20,12 @@ project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.models.data_loader import EFNYDataLoader, create_synthetic_data
-from src.models.preprocessing import ConfoundRegressor, create_preprocessing_pipeline
 from src.models.models import create_model, get_available_models
 from src.models.evaluation import CrossValidator, PermutationTester
 from src.models.utils import (
     setup_logging, get_results_dir, create_timestamp,
     save_results, validate_data_shapes, check_data_quality,
-    ConfigManager, config, load_results
+    config
 )
 
 
@@ -83,17 +82,18 @@ def parse_arguments():
         epilog="""
 Examples:
     # 运行真实数据分析
-    python run_single_task.py --task_id 0 --model_type pls --n_components 5
+    python run_single_task.py --task_id 0 --model_type adaptive_pls
     
     # 运行置换检验（task_id=1-1000 代表不同的置换种子）
-    python run_single_task.py --task_id 1 --model_type pls --n_components 5 --use_synthetic
+    python run_single_task.py --task_id 1 --model_type adaptive_pls --use_synthetic
     
-    # 运行 Sparse-CCA 分析
-    python run_single_task.py --task_id 0 --model_type scca --n_components 3
+    # 运行调参版本的 SCCA / rCCA 分析
+    python run_single_task.py --task_id 0 --model_type adaptive_scca
+    python run_single_task.py --task_id 0 --model_type adaptive_rcca
     
     # 批量运行（在 HPC 上使用数组作业）
     for i in {1..100}; do
-        sbatch --wrap "python run_single_task.py --task_id $i --model_type pls --n_perms 100"
+        sbatch --wrap "python run_single_task.py --task_id $i --model_type adaptive_pls"
     done
         """
     )
@@ -105,15 +105,10 @@ Examples:
     )
     
     parser.add_argument(
-        "--model_type", type=str, default="pls", choices=get_available_models(),
-        help="模型类型：pls=偏最小二乘，scca=稀疏典型相关分析"
+        "--model_type", type=str, default="adaptive_pls", choices=get_available_models(),
+        help="模型类型（仅支持调参版本）：adaptive_pls / adaptive_scca / adaptive_rcca"
     )
-    
-    parser.add_argument(
-        "--n_components", type=int, default=5,
-        help="成分数量"
-    )
-    
+
     # 数据参数
     parser.add_argument(
         "--use_synthetic", action="store_true",
@@ -146,11 +141,6 @@ Examples:
     )
     
     # 预处理参数
-    parser.add_argument(
-        "--regress_confounds", action="store_true", default=True,
-        help="是否回归混杂变量（年龄、性别、头动）"
-    )
-    
     parser.add_argument(
         "--max_missing_rate", type=float, default=0.1,
         help="最大允许缺失率"
@@ -350,14 +340,6 @@ def preprocess_data(brain_data, behavioral_data, covariates, args):
     if not quality_report['quality_passed']:
         logger.warning("Data quality check failed, but continuing with analysis")
     
-    if args.regress_confounds:
-        logger.info(
-            "Strict mode: confounds will be regressed within CV folds (train-fit/test-apply). "
-            "Skipping global confound regression in preprocess_data."
-        )
-    else:
-        logger.info("Confound regression disabled")
-
     return brain_data, behavioral_data
 
 
@@ -368,7 +350,7 @@ def create_model_instance(args):
     if args.model_type == 'adaptive_pls':
         # 自适应PLS模型 - 自动选择n_components
         model_params = {
-            'n_components_range': list(range(1, args.n_components + 1)),  # 搜索范围
+            'n_components_range': [5],
             'cv_folds': 5,
             'criterion': 'canonical_correlation',
             'random_state': args.random_state,
@@ -376,11 +358,11 @@ def create_model_instance(args):
             'max_iter': 5000,
             'tol': 1e-06
         }
-        logger.info(f"Creating Adaptive-PLS model with component search range: 1-{args.n_components}")
+        logger.info("Creating Adaptive-PLS model with fixed n_components_range=[5]")
     elif args.model_type == 'adaptive_scca':
         # 自适应SCCA模型 - 自动选择成分数和稀疏度参数
         model_params = {
-            'n_components_range': list(range(2, args.n_components + 1)),  # 搜索范围 [2, 3, ..., n_components]
+            'n_components_range': [5],
             'sparsity_X_range': [0.001, 0.005, 0.01, 0.05],  # 脑数据稀疏度（特征多，用小值）
             'sparsity_Y_range': [0.1, 0.2, 0.3],  # 行为数据稀疏度（特征少，用大值）
             'cv_folds': 5,
@@ -396,7 +378,7 @@ def create_model_instance(args):
     elif args.model_type == 'adaptive_rcca':
         # 自适应rCCA模型 - 自动选择成分数和正则化参数
         model_params = {
-            'n_components_range': list(range(2, args.n_components + 1)),  # 搜索范围 [2, 3, ..., n_components]
+            'n_components_range': [5],
             'c_X_range': [0.0, 0.1, 0.3, 0.5],
             'c_Y_range': [0.0, 0.1, 0.3, 0.5],
             'cv_folds': 5,
@@ -410,33 +392,7 @@ def create_model_instance(args):
         logger.info(f"c_Y range: {model_params['c_Y_range']}")
         logger.info(f"Total combinations: {len(model_params['n_components_range']) * len(model_params['c_X_range']) * len(model_params['c_Y_range'])}")
     else:
-        # 标准模型
-        model_params = {
-            'n_components': args.n_components
-        }
-        
-        if args.model_type == 'pls':
-            model_params.update({
-                'scale': True,
-                'max_iter': 5000,
-                'tol': 1e-06
-            })
-        elif args.model_type == 'scca':
-            model_params.update({
-                'sparsity_X': 0.1,
-                'sparsity_Y': 0.1,
-                'max_iter': 10000,
-                'tol': 1e-06
-            })
-        elif args.model_type == 'rcca':
-            model_params.update({
-                'c_X': 0.1,
-                'c_Y': 0.1,
-                'pca': True,
-                'eps': 1e-06
-            })
-        
-        logger.info(f"Created {args.model_type.upper()} model with {args.n_components} components")
+        raise ValueError(f"Unsupported model_type: {args.model_type}")
     
     model = create_model(args.model_type, **model_params)
     
@@ -457,9 +413,7 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
         if args.model_type in ('adaptive_pls', 'adaptive_scca', 'adaptive_rcca'):
             from src.models.models import create_model
 
-            min_n_components = load_max_optimal_n_components_from_real_runs(args.model_type)
-            upper_n_components = max(int(args.n_components), int(min_n_components))
-            perm_n_components_range = list(range(int(min_n_components), int(upper_n_components) + 1))
+            perm_n_components_range = [5]
 
             if args.model_type == 'adaptive_pls':
                 model_params = {
@@ -496,7 +450,6 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
 
             logger.info(
                 f"Permutation adaptive search: model={args.model_type}, "
-                f"min_n_components(from real max)={min_n_components}, "
                 f"search_range={perm_n_components_range}"
             )
             base_model = create_model(args.model_type, **model_params)
@@ -537,13 +490,7 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
         if C_full is not None:
             C_full = _impute_with_mean(C_full)
 
-        if args.regress_confounds and C_full is not None:
-            confound_regressor_X = ConfoundRegressor(standardize=True)
-            confound_regressor_Y = ConfoundRegressor(standardize=True)
-            X_fit = confound_regressor_X.fit_transform(X_full, confounds=C_full)
-            Y_fit = confound_regressor_Y.fit_transform(Y_full, confounds=C_full)
-        else:
-            X_fit, Y_fit = X_full, Y_full
+        X_fit, Y_fit = X_full, Y_full
 
         model.fit(X_fit, Y_fit)
         X_scores, Y_scores = model.transform(X_fit, Y_fit)
@@ -630,9 +577,7 @@ def save_results_with_metadata(result, args):
     metadata.update({
         'task_id': args.task_id,
         'model_type': args.model_type,
-        'n_components': args.n_components,
         'use_synthetic': args.use_synthetic,
-        'regress_confounds': args.regress_confounds,
         'run_cv': args.run_cv,
         'cv_n_splits': args.cv_n_splits if args.run_cv else None,
         'random_state': args.random_state,
@@ -716,149 +661,6 @@ def save_results_with_metadata(result, args):
     return saved_files
 
 
-def load_best_n_components(model_type: str) -> int:
-    """从汇总文件中加载真实数据选出的最佳成分数量"""
-    results_root = Path(config.get('output.results_dir', str(get_results_dir())))
-    brain_file = config.get('data.brain_file', '')
-    atlas_tag = _infer_atlas_tag(brain_file)
-    summary_path = results_root / "summary" / atlas_tag / f"best_n_components_{model_type}.json"
-    if not summary_path.exists():
-        raise FileNotFoundError(
-            f"Best n_components summary not found: {summary_path}. "
-            f"请先运行 task_id=0 的真实数据分析以生成该文件。"
-        )
-    summary = load_results(summary_path)
-    optimal_n_components = summary.get('optimal_n_components')
-    if optimal_n_components is None:
-        raise ValueError(
-            f"No 'optimal_n_components' found in summary file: {summary_path}"
-        )
-    return int(optimal_n_components)
-
-
-def load_best_hyperparameters(model_type: str) -> dict:
-    """从汇总文件中加载真实数据选出的最佳超参数"""
-    results_root = Path(config.get('output.results_dir', str(get_results_dir())))
-    brain_file = config.get('data.brain_file', '')
-    atlas_tag = _infer_atlas_tag(brain_file)
-    summary_path = results_root / "summary" / atlas_tag / f"best_hyperparameters_{model_type}.json"
-    if not summary_path.exists():
-        raise FileNotFoundError(
-            f"Best hyperparameters summary not found: {summary_path}. "
-            f"请先运行 task_id=0 的真实数据分析以生成该文件。"
-        )
-    summary = load_results(summary_path)
-    if model_type == 'adaptive_scca':
-        n_components = summary.get('optimal_n_components')
-        sparsity_X = summary.get('optimal_sparsity_X')
-        sparsity_Y = summary.get('optimal_sparsity_Y')
-        if n_components is None or sparsity_X is None or sparsity_Y is None:
-            raise ValueError(
-                f"No optimal hyperparameters found in summary file: {summary_path}"
-            )
-        return {
-            'n_components': int(n_components),
-            'sparsity_X': float(sparsity_X), 
-            'sparsity_Y': float(sparsity_Y)
-        }
-    elif model_type == 'adaptive_rcca':
-        n_components = summary.get('optimal_n_components')
-        c_X = summary.get('optimal_c_X')
-        c_Y = summary.get('optimal_c_Y')
-        if n_components is None or c_X is None or c_Y is None:
-            raise ValueError(
-                f"No optimal hyperparameters found in summary file: {summary_path}"
-            )
-        return {
-            'n_components': int(n_components),
-            'c_X': float(c_X),
-            'c_Y': float(c_Y)
-        }
-    else:
-        raise ValueError(f"Unsupported model type for hyperparameter loading: {model_type}")
-
-
-def _load_optimal_n_components_from_summary(model_type: str) -> int:
-    results_root = Path(config.get('output.results_dir', str(get_results_dir())))
-    brain_file = config.get('data.brain_file', '')
-    atlas_tag = _infer_atlas_tag(brain_file)
-
-    candidates = [
-        results_root / "summary" / atlas_tag / f"best_n_components_{model_type}.json",
-        results_root / "summary" / atlas_tag / f"best_hyperparameters_{model_type}.json",
-    ]
-
-    for p in candidates:
-        if not p.exists():
-            continue
-        summary = load_results(p)
-        if isinstance(summary, dict) and summary.get('optimal_n_components') is not None:
-            return int(summary['optimal_n_components'])
-
-    raise FileNotFoundError(
-        f"No summary file with optimal_n_components found for model={model_type} under "
-        f"{results_root / 'summary' / atlas_tag}"
-    )
-
-
-def load_max_optimal_n_components_from_real_runs(model_type: str) -> int:
-    """扫描 real 结果目录，提取多次 real run 的 optimal_n_components 最大值。
-
-    该函数用于置换检验（严格版）：置换时 n_components 搜索下限不得低于 real 的最大最优成分数。
-    """
-    results_root = Path(config.get('output.results_dir', str(get_results_dir())))
-    brain_file = config.get('data.brain_file', '')
-    atlas_tag = _infer_atlas_tag(brain_file)
-    real_root = results_root / 'real' / atlas_tag / model_type
-    if not real_root.exists():
-        raise FileNotFoundError(
-            f"Real results directory not found for model={model_type}: {real_root}. "
-            "请先运行多次 task_id=0 的真实数据分析以生成 seed_* 目录。"
-        )
-
-    def _find_result_file(seed_dir: Path) -> Path | None:
-        json_path = seed_dir / 'result.json'
-        if json_path.exists():
-            return json_path
-        npz_path = seed_dir / 'result.npz'
-        if npz_path.exists():
-            return npz_path
-        return None
-
-    seed_dirs = list(sorted(real_root.glob('seed_*')))
-    for ncomp_dir in sorted(real_root.glob('ncomp_*')):
-        seed_dirs.extend(list(sorted(ncomp_dir.glob('seed_*'))))
-
-    values: list[int] = []
-    for seed_dir in seed_dirs:
-        res_path = _find_result_file(seed_dir)
-        if res_path is None:
-            continue
-        try:
-            res = load_results(res_path)
-        except Exception:
-            continue
-        model_info = res.get('model_info', {}) if isinstance(res, dict) else {}
-        opt = None
-        if isinstance(model_info, dict):
-            opt = model_info.get('optimal_n_components')
-        if opt is None:
-            continue
-        try:
-            values.append(int(opt))
-        except Exception:
-            continue
-
-    if not values:
-        raise RuntimeError(
-            f"No valid optimal_n_components found under {real_root}. "
-            "Please run multiple real analyses (task_id=0) with different random_state "
-            "so results are saved under seed_* directories with model_info.optimal_n_components."
-        )
-
-    return int(max(values))
-
-
 def main():
     """主函数"""
     # 解析参数
@@ -875,7 +677,6 @@ def main():
     logger.info("="*80)
     logger.info(f"Task ID: {args.task_id}")
     logger.info(f"Model Type: {args.model_type.upper()}")
-    logger.info(f"Components: {args.n_components}")
     logger.info(f"Synthetic Data: {args.use_synthetic}")
     
     try:
