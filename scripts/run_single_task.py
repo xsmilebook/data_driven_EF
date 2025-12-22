@@ -605,30 +605,15 @@ def save_results_with_metadata(result, args):
     
     # 确定输出目录
     if args.output_dir is None:
-        # 根据模型类型设置路径
-        if args.model_type in ('adaptive_scca', 'adaptive_rcca'):
-            # adaptive_* 的路径不包含 ncomp，因为实际超参数并不等于 args.n_components
-            output_dir = (
-                results_root
-                / analysis_type
-                / atlas_tag
-                / args.model_type
-                / f"seed_{seed}"
-            )
-        else:
-            output_dir = (
-                results_root
-                / analysis_type
-                / atlas_tag
-                / args.model_type
-                / f"ncomp_{args.n_components}"
-                / f"seed_{seed}"
-            )
+        output_dir = (
+            results_root
+            / analysis_type
+            / atlas_tag
+            / args.model_type
+            / f"seed_{seed}"
+        )
     else:
-        if args.model_type in ('adaptive_scca', 'adaptive_rcca'):
-            output_dir = Path(args.output_dir) / args.model_type / f"seed_{seed}"
-        else:
-            output_dir = Path(args.output_dir) / args.model_type / f"ncomp_{args.n_components}" / f"seed_{seed}"
+        output_dir = Path(args.output_dir) / args.model_type / f"seed_{seed}"
         logger.info(f"Using user-specified output directory: {output_dir}")
     
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -793,6 +778,29 @@ def load_best_hyperparameters(model_type: str) -> dict:
         raise ValueError(f"Unsupported model type for hyperparameter loading: {model_type}")
 
 
+def _load_optimal_n_components_from_summary(model_type: str) -> int:
+    results_root = Path(config.get('output.results_dir', str(get_results_dir())))
+    brain_file = config.get('data.brain_file', '')
+    atlas_tag = _infer_atlas_tag(brain_file)
+
+    candidates = [
+        results_root / "summary" / atlas_tag / f"best_n_components_{model_type}.json",
+        results_root / "summary" / atlas_tag / f"best_hyperparameters_{model_type}.json",
+    ]
+
+    for p in candidates:
+        if not p.exists():
+            continue
+        summary = load_results(p)
+        if isinstance(summary, dict) and summary.get('optimal_n_components') is not None:
+            return int(summary['optimal_n_components'])
+
+    raise FileNotFoundError(
+        f"No summary file with optimal_n_components found for model={model_type} under "
+        f"{results_root / 'summary' / atlas_tag}"
+    )
+
+
 def load_max_optimal_n_components_from_real_runs(model_type: str) -> int:
     """扫描 real 结果目录，提取多次 real run 的 optimal_n_components 最大值。
 
@@ -817,8 +825,12 @@ def load_max_optimal_n_components_from_real_runs(model_type: str) -> int:
             return npz_path
         return None
 
+    seed_dirs = list(sorted(real_root.glob('seed_*')))
+    for ncomp_dir in sorted(real_root.glob('ncomp_*')):
+        seed_dirs.extend(list(sorted(ncomp_dir.glob('seed_*'))))
+
     values: list[int] = []
-    for seed_dir in sorted(real_root.glob('seed_*')):
+    for seed_dir in seed_dirs:
         res_path = _find_result_file(seed_dir)
         if res_path is None:
             continue
@@ -840,7 +852,8 @@ def load_max_optimal_n_components_from_real_runs(model_type: str) -> int:
     if not values:
         raise RuntimeError(
             f"No valid optimal_n_components found under {real_root}. "
-            "Ensure real-data results contain model_info.optimal_n_components."
+            "Please run multiple real analyses (task_id=0) with different random_state "
+            "so results are saved under seed_* directories with model_info.optimal_n_components."
         )
 
     return int(max(values))
