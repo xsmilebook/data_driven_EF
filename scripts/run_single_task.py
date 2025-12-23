@@ -21,7 +21,7 @@ sys.path.insert(0, str(project_root))
 
 from src.models.data_loader import EFNYDataLoader, create_synthetic_data
 from src.models.models import create_model, get_available_models
-from src.models.evaluation import CrossValidator, PermutationTester
+from src.models.evaluation import CrossValidator, PermutationTester, run_nested_cv_evaluation
 from src.models.utils import (
     setup_logging, get_results_dir, create_timestamp,
     save_results, validate_data_shapes, check_data_quality,
@@ -402,6 +402,29 @@ def create_model_instance(args):
 def run_analysis(model, brain_data, behavioral_data, covariates, args):
     """运行分析"""
     logger = logging.getLogger(__name__)
+
+    def _build_nested_param_candidates(model_for_grid):
+        params0 = model_for_grid.get_params()
+        model_type = str(params0.get('model_type', '')).lower()
+        if args.model_type == 'adaptive_scca':
+            candidates = []
+            for sx in params0.get('sparsity_X_range', []):
+                for sy in params0.get('sparsity_Y_range', []):
+                    p = dict(params0)
+                    p['sparsity_X_range'] = [sx]
+                    p['sparsity_Y_range'] = [sy]
+                    candidates.append(p)
+            return candidates or [params0]
+        if args.model_type == 'adaptive_rcca':
+            candidates = []
+            for cx in params0.get('c_X_range', []):
+                for cy in params0.get('c_Y_range', []):
+                    p = dict(params0)
+                    p['c_X_range'] = [cx]
+                    p['c_Y_range'] = [cy]
+                    candidates.append(p)
+            return candidates or [params0]
+        return [params0]
     
     # 置换检验模式
     if args.task_id > 0:
@@ -456,16 +479,46 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
         else:
             base_model = model
         
-        # 运行置换检验
-        perm_tester = PermutationTester(n_permutations=1, random_state=permutation_seed)
-        result = perm_tester.run_permutation_test(
-            base_model, brain_data, behavioral_data, confounds=covariates,
-            permutation_seed=permutation_seed,
-            cv_n_splits=args.cv_n_splits,
-            cv_shuffle=args.cv_shuffle,
-            cv_random_state=permutation_seed,
-            return_cv_results=True,
+        X_raw = brain_data.values if isinstance(brain_data, pd.DataFrame) else brain_data
+        Y_raw = behavioral_data.values if isinstance(behavioral_data, pd.DataFrame) else behavioral_data
+        C_raw = covariates.values if isinstance(covariates, pd.DataFrame) else covariates
+
+        np.random.seed(permutation_seed)
+        permuted_indices = np.random.permutation(len(Y_raw))
+        Y_perm = Y_raw[permuted_indices]
+
+        param_candidates = _build_nested_param_candidates(base_model)
+        nested_results = run_nested_cv_evaluation(
+            base_model,
+            X_raw,
+            Y_perm,
+            confounds=C_raw,
+            outer_cv_splits=args.cv_n_splits,
+            inner_cv_splits=3,
+            param_grid=param_candidates,
+            outer_shuffle=args.cv_shuffle,
+            inner_shuffle=True,
+            outer_random_state=permutation_seed,
+            inner_random_state=permutation_seed,
+            standardize_domains=False,
+            pca_components_X=None,
+            pca_components_Y=None,
         )
+
+        mean_corrs = np.asarray(nested_results.get('outer_mean_canonical_correlations', []), dtype=float)
+        vector3_stat = float(np.linalg.norm(mean_corrs)) if mean_corrs.size else float('nan')
+
+        result = {
+            'permutation_seed': permutation_seed,
+            'canonical_correlations': mean_corrs,
+            'mean_canonical_correlations': mean_corrs,
+            'cv_statistic_vector3': vector3_stat,
+            'n_components': int(mean_corrs.size),
+            'n_samples': int(len(X_raw)),
+            'cv_n_splits': int(args.cv_n_splits),
+            'cv_results': nested_results,
+            'cv_all_canonical_correlations': nested_results.get('outer_all_test_canonical_correlations'),
+        }
         
         result['task_type'] = 'permutation'
         result['task_id'] = args.task_id
@@ -481,30 +534,29 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
         # 真实数据分析
         logger.info("Running real data analysis")
 
-        X_full = brain_data.values if isinstance(brain_data, pd.DataFrame) else brain_data
-        Y_full = behavioral_data.values if isinstance(behavioral_data, pd.DataFrame) else behavioral_data
-        C_full = covariates.values if isinstance(covariates, pd.DataFrame) else covariates
+        X_raw = brain_data.values if isinstance(brain_data, pd.DataFrame) else brain_data
+        Y_raw = behavioral_data.values if isinstance(behavioral_data, pd.DataFrame) else behavioral_data
+        C_raw = covariates.values if isinstance(covariates, pd.DataFrame) else covariates
 
-        X_full = _impute_with_mean(X_full)
-        Y_full = _impute_with_mean(Y_full)
-        if C_full is not None:
-            C_full = _impute_with_mean(C_full)
-
-        X_fit, Y_fit = X_full, Y_full
-
-        model.fit(X_fit, Y_fit)
-        X_scores, Y_scores = model.transform(X_fit, Y_fit)
-        in_sample_canonical_corrs = model.calculate_canonical_correlations(X_scores, Y_scores)
-        variance_explained = model.calculate_variance_explained(X_fit, Y_fit, X_scores, Y_scores)
-        X_loadings, Y_loadings = model.get_loadings()
-
-        cv_evaluator = CrossValidator(
-            n_splits=args.cv_n_splits,
-            shuffle=args.cv_shuffle,
-            random_state=args.random_state,
+        param_candidates = _build_nested_param_candidates(model)
+        nested_results = run_nested_cv_evaluation(
+            model,
+            X_raw,
+            Y_raw,
+            confounds=C_raw,
+            outer_cv_splits=args.cv_n_splits,
+            inner_cv_splits=3,
+            param_grid=param_candidates,
+            outer_shuffle=args.cv_shuffle,
+            inner_shuffle=True,
+            outer_random_state=args.random_state,
+            inner_random_state=args.random_state,
+            standardize_domains=False,
+            pca_components_X=None,
+            pca_components_Y=None,
         )
-        cv_results = cv_evaluator.run_cv_evaluation(model, brain_data, behavioral_data, confounds=covariates)
-        cv_mean_corrs = np.asarray(cv_results.get('mean_canonical_correlations', []), dtype=float)
+
+        cv_mean_corrs = np.asarray(nested_results.get('outer_mean_canonical_correlations', []), dtype=float)
         cv_vector3_stat = float(np.linalg.norm(cv_mean_corrs)) if cv_mean_corrs.size else float('nan')
         
         result = {
@@ -514,22 +566,14 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
             'canonical_correlations': cv_mean_corrs,
             'mean_canonical_correlations': cv_mean_corrs,
             'cv_statistic_vector3': cv_vector3_stat,
-            'in_sample_canonical_correlations': in_sample_canonical_corrs,
-            'variance_explained_X': variance_explained['variance_explained_X'],
-            'variance_explained_Y': variance_explained['variance_explained_Y'],
-            'X_scores': X_scores,
-            'Y_scores': Y_scores,
-            'X_loadings': X_loadings,
-            'Y_loadings': Y_loadings,
             'n_samples': brain_data.shape[0],
             'n_features_X': brain_data.shape[1],
             'n_features_Y': behavioral_data.shape[1]
         }
 
-        # 严格A版总是保存 CV 结果（用于复核/复用）
-        result['cv_results'] = cv_results
-        if 'all_canonical_correlations' in cv_results:
-            result['cv_all_canonical_correlations'] = cv_results['all_canonical_correlations']
+        result['cv_results'] = nested_results
+        if 'outer_all_test_canonical_correlations' in nested_results:
+            result['cv_all_canonical_correlations'] = nested_results['outer_all_test_canonical_correlations']
 
         logger.info(
             "Real data analysis completed. "
@@ -608,11 +652,22 @@ def save_results_with_metadata(result, args):
     # 对于 Adaptive 模型的真实数据分析，保存最优超参数汇总
     if args.task_id == 0:
         model_info = result.get('model_info', {})
+        cv_results = result.get('cv_results', {})
         summary_dir = results_root / "summary" / atlas_tag
         summary_dir.mkdir(parents=True, exist_ok=True)
         
         if args.model_type == 'adaptive_pls':
             optimal_n_components = model_info.get('optimal_n_components')
+            if optimal_n_components is None and isinstance(cv_results, dict):
+                outer_folds = cv_results.get('outer_fold_results', [])
+                n_list = []
+                for fr in outer_folds:
+                    p = fr.get('best_params', {})
+                    n_range = p.get('n_components_range')
+                    if isinstance(n_range, list) and n_range:
+                        n_list.append(int(n_range[0]))
+                if n_list:
+                    optimal_n_components = int(max(set(n_list), key=n_list.count))
             if optimal_n_components is not None:
                 summary_path = summary_dir / f"best_n_components_{args.model_type}.json"
                 summary_data = {
@@ -628,6 +683,19 @@ def save_results_with_metadata(result, args):
             optimal_n_components = model_info.get('optimal_n_components')
             optimal_sparsity_X = model_info.get('optimal_sparsity_X')
             optimal_sparsity_Y = model_info.get('optimal_sparsity_Y')
+            if (optimal_n_components is None or optimal_sparsity_X is None or optimal_sparsity_Y is None) and isinstance(cv_results, dict):
+                outer_folds = cv_results.get('outer_fold_results', [])
+                combos = []
+                for fr in outer_folds:
+                    p = fr.get('best_params', {})
+                    n_range = p.get('n_components_range')
+                    sx_range = p.get('sparsity_X_range')
+                    sy_range = p.get('sparsity_Y_range')
+                    if isinstance(n_range, list) and n_range and isinstance(sx_range, list) and sx_range and isinstance(sy_range, list) and sy_range:
+                        combos.append((int(n_range[0]), float(sx_range[0]), float(sy_range[0])))
+                if combos:
+                    best_combo = max(set(combos), key=combos.count)
+                    optimal_n_components, optimal_sparsity_X, optimal_sparsity_Y = best_combo
             if optimal_n_components is not None and optimal_sparsity_X is not None and optimal_sparsity_Y is not None:
                 summary_path = summary_dir / f"best_hyperparameters_{args.model_type}.json"
                 summary_data = {
@@ -645,6 +713,19 @@ def save_results_with_metadata(result, args):
             optimal_n_components = model_info.get('optimal_n_components')
             optimal_c_X = model_info.get('optimal_c_X')
             optimal_c_Y = model_info.get('optimal_c_Y')
+            if (optimal_n_components is None or optimal_c_X is None or optimal_c_Y is None) and isinstance(cv_results, dict):
+                outer_folds = cv_results.get('outer_fold_results', [])
+                combos = []
+                for fr in outer_folds:
+                    p = fr.get('best_params', {})
+                    n_range = p.get('n_components_range')
+                    cx_range = p.get('c_X_range')
+                    cy_range = p.get('c_Y_range')
+                    if isinstance(n_range, list) and n_range and isinstance(cx_range, list) and cx_range and isinstance(cy_range, list) and cy_range:
+                        combos.append((int(n_range[0]), float(cx_range[0]), float(cy_range[0])))
+                if combos:
+                    best_combo = max(set(combos), key=combos.count)
+                    optimal_n_components, optimal_c_X, optimal_c_Y = best_combo
             if optimal_n_components is not None and optimal_c_X is not None and optimal_c_Y is not None:
                 summary_path = summary_dir / f"best_hyperparameters_{args.model_type}.json"
                 summary_data = {
