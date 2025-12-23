@@ -792,7 +792,7 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
         """
         # 默认搜索范围
         if n_components_range is None:
-            n_components_range = [2, 3, 4, 5]
+            n_components_range = [5]
         if sparsity_X_range is None:
             sparsity_X_range = [0.001, 0.005, 0.01, 0.05]  # 减少搜索点以控制计算量
         if sparsity_Y_range is None:
