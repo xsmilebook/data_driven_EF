@@ -1,442 +1,186 @@
-# 数据驱动执行功能研究代码库文档
+# data_driven_EF
 
-本代码库包含用于数据驱动执行功能（Executive Function, EF）研究的分析工具和脚本。主要分为四个功能模块：预处理、功能连接分析、行为指标计算和脑-行为关联分析。
+本仓库包含 EF（执行功能）研究的端到端流程：
+- 数据 QC / 被试列表
+- 功能连接（FC）计算与向量化
+- 行为指标计算
+- 脑-行为关联分析（仅保留自适应模型：`adaptive_pls` / `adaptive_scca` / `adaptive_rcca`）
 
-## 目录结构
+下面只保留**最常用脚本的执行方式与关键参数**。
+
+## 目录结构（核心）
 
 ```
 src/
-├── preprocess/          # 数据预处理模块
-├── functional_conn/     # 功能连接分析模块
-├── metric_compute/      # 行为指标计算模块
-├── models/              # 脑-行为关联分析模块（PLS/Sparse-CCA）
-└── scripts/             # 脚本和HPC任务提交
+  preprocess/        # QC、表格与被试列表
+  functional_conn/   # FC 计算、Z变换、向量化、可视化
+  metric_compute/    # 行为指标计算与可视化
+  models/            # 脑-行为关联（建模/评估/嵌套CV）
+  scripts/           # 入口脚本 + HPC 提交脚本
+  result_summary/    # 汇总脚本
 ```
 
-## 预处理模块 (preprocess/)
+## 快速开始（常用脚本）
 
-### 1. `get_mri_sublist.py`
-**功能**: 获取有效的MRI子列表
-- 筛选符合特定标准的被试数据
-- 生成用于后续分析的有效被试列表
-- 输出被试数量统计信息
+### 1) 预处理 / QC / 被试列表（`src/preprocess`）
 
-### 2. `screen_head_motion_efny.py`
-**功能**: 头动筛查
-- 检查MRI数据中的头动参数
-- 根据预设标准排除头动过大的被试
-- 确保数据质量符合分析要求
-
-### 3. `generate_valid_sublists.py`
-**功能**: 生成有效子列表
-- 基于多种标准创建数据子集
-- 为不同分析步骤准备相应的数据列表
-- 管理数据筛选流程
-
-### 4. `format_app_data.py`
-**功能**: 格式化应用数据
-- 将原始数据转换为标准格式
-- 统一数据结构和命名规范
-- 为后续分析准备输入数据
-
-### 5. `batch_run_xcpd.sh`
-**功能**: 批量运行XCP-D处理
-- 自动化批量处理fMRI数据
-- 调用XCP-D工具进行数据预处理
-- 提高处理效率的批处理脚本
-
-### 6. `xcpd_36p.sh`
-**功能**: XCP-D 36参数处理
-- 使用36参数模型处理fMRI数据
-- 进行详细的噪声回归处理
-- 生成高质量的时间序列数据
-
-## 功能连接分析模块 (functional_conn/)
-
-### 1. `compute_fc_schaefer.py`
-**功能**: 基于Schaefer图谱计算功能连接
-- 使用Schaefer脑图谱划分脑区
-- 计算脑区之间的功能连接强度
-- 生成功能连接矩阵
-
-### 2. `compute_group_avg_fc.py`
-**功能**: 计算组平均功能连接
-- 计算被试组的功能连接平均值
-- 生成组水平的连接矩阵
-- 用于组间比较和统计分析
-
-### 3. `fisher_z_fc.py`
-**功能**: Fisher Z变换功能连接
-- 对功能连接值进行Fisher Z变换
-- 使数据更符合正态分布假设
-- 提高统计分析的准确性
-
-### 4. `plot_fc_matrix.py`
-**功能**: 绘制功能连接矩阵
-- 可视化功能连接矩阵
-- 生成高质量的矩阵热图
-- 支持自定义配色和标注
-
-### 5. `submit_compute_fc.sh`
-**功能**: 提交功能连接计算任务
-- 在集群环境中提交计算作业
-- 管理计算资源和任务调度
-- 批量处理多个被试数据
-
-### 6. `submit_fisher_z.sh`
-**功能**: 提交Fisher Z变换任务
-- 提交Fisher Z变换作业到计算集群
-- 优化计算资源使用
-- 自动化批量处理流程
-
-## 行为指标计算模块 (metric_compute/)
-
-### 1. `compute_efny_metrics.py`
-**功能**: 计算EFNY行为指标
-- 处理执行功能任务的行为数据
-- 计算各项认知任务的性能指标
-- 生成标准化的行为测量结果
-
-### 2. `metrics_similarity_heatmap.py`
-**功能**: 生成指标相似性热图
-- 计算不同行为指标之间的相关性
-- 生成指标相似性矩阵热图
-- 可视化认知任务间的关联模式
-- **修复内容**: 修正了Flanker任务指标显示问题，现在包含所有32个有效指标
-
-## 脑-行为关联分析模块 (models/)
-
-### 🚀 功能特性
-
-- **模块化架构**: 数据加载、预处理、建模和评估的清晰分离
-- **HPC就绪**: 通过SLURM作业数组支持并行置换检验
-- **Sklearn兼容**: 遵循scikit-learn转换器模式，无缝集成
-- **多模型支持**: PLS和Sparse-CCA统一接口
-- **鲁棒预处理**: 支持交叉验证的混杂回归
-- **全面评估**: 交叉验证、置换检验和嵌套CV
-- **类型提示**: 完整的类型注解支持，更好的IDE集成
-
-### 📁 模块结构
-
-```
-src/models/
-├── __init__.py              # 包初始化
-├── data_loader.py           # 数据加载工具
-├── preprocessing.py         # 混杂回归和质量过滤
-├── models.py               # PLS和Sparse-CCA模型实现
-├── evaluation.py           # 交叉验证和置换检验
-├── utils.py                # 日志、配置和工具函数
-├── config.json             # 配置文件
-└── example_usage.py        # 使用示例和演示
-```
-
-### 📊 快速开始
-
-#### 基础分析
-
-基础用法示例请参考 `src/models/example_usage.py` 中的函数，实现了从数据加载、混杂回归到PLS建模的完整流程。
-
-#### 自适应PLS模型
-
-自适应PLS的示例同样可在 `src/models/example_usage.py` 中查看，这里不再重复列出完整代码。
-
-#### 协变量回归（混杂因素控制）
-
-```python
-# 系统会自动从行为数据中提取EFNY标准协变量：
-# age（年龄）、sex（性别）、meanFD（头动参数）
-
-# 如果行为数据中包含这些列，会自动使用真实数据
-# 如果缺失，会创建占位符数据并发出警告
-
-# 查看提取的协变量
-covariates = extract_covariates_from_behavioral_data(behavioral_data, subject_ids)
-print(f"协变量: {covariates.columns.tolist()}")
-print(f"协变量形状: {covariates.shape}")
-
-# 也可以从独立文件加载协变量
-covariates = pd.read_csv("path/to/covariates.csv")  # 需要包含age, sex, meanFD列
-```
-
-#### 交叉验证
-
-```python
-from src.models import CrossValidator
-
-# 创建交叉验证器
-cv = CrossValidator(n_splits=5, shuffle=True, random_state=42)
-
-# 运行交叉验证
-cv_results = cv.run_cv_evaluation(pls_model, brain_clean, behavioral_clean)
-
-# 获取汇总表
-summary_df = cv.create_cv_summary_table(cv_results)
-print(summary_df)
-```
-
-#### 置换检验
-
-```python
-from src.models import PermutationTester
-
-# 创建置换检验器
-perm_tester = PermutationTester(n_permutations=1000, random_state=42)
-
-# 运行单次置换检验（用于HPC）
-perm_result = perm_tester.run_permutation_test(
-    pls_model, brain_clean, behavioral_clean, 
-    permutation_seed=123
-)
-
-# 计算p值
-p_values = perm_tester.calculate_p_values(real_correlations, permuted_correlations)
-```
-
-### 🏭 HPC使用
-
-#### 单任务执行
-
+#### `get_mri_sublist.py`：从 fmriprep 输出目录列出被试
 ```bash
-# 真实数据分析
-python src/scripts/run_single_task.py \
-    --task_id 0 \
-    --model_type adaptive_pls
-
-# 置换检验（task_id = 1-1000 用于不同的置换）
-python src/scripts/run_single_task.py \
-    --task_id 1 \
-    --model_type adaptive_pls
+python src/preprocess/get_mri_sublist.py --dir <fmriprep_rest_dir> --out <mri_sublist.txt>
 ```
+关键参数：
+- `--dir`: fmriprep 目录（包含 `sub-*`）
+- `--out`: 输出 txt 路径
 
-#### SLURM作业数组（推荐两步流程）
-
+#### `screen_head_motion_efny.py`：统计 rest FD，并标注有效 run
 ```bash
-# 第一步：在真实数据上重复运行（例如101次），评估CV稳定性并选择最佳成分数
-sbatch src/scripts/submit_hpc_real.sh
-
-# 检查0号（或指定）真实任务的结果并确认best_n_components_adaptive_pls.json已生成
-
-# 第二步：提交置换检验阵列任务（task_id=1..1000）
-sbatch src/scripts/submit_hpc_perm.sh
+python src/preprocess/screen_head_motion_efny.py --fmriprep-dir <fmriprep_rest_dir> --out <rest_fd_summary.csv>
 ```
+关键参数：
+- `--fmriprep-dir`: fmriprep rest 目录
+- `--out`: 输出 CSV（含 `valid_subject` 与 `meanFD`）
 
-在当前实现中：
-- 真实数据脚本 `submit_hpc_real.sh` 会多次运行 `task_id=0` 的真实分析（通过改变随机种子），输出保存到 `results/real/...`。
-- 置换脚本 `submit_hpc_perm.sh` 会针对 `task_id=1..1000` 的任务运行置换检验，输出保存到 `results/perm/...`。
-
-#### 置换结果汇总与显著性分析
-
-为了方便在集群上对置换结果做统计检验，可以使用专门的汇总脚本 `temp/analyze_permutation_results.py`，该脚本会：
-- 自动扫描 `results/models` 下 `task_1..N` 对应的结果文件；
-- 提取每个置换的 `canonical_correlations`，形成置换分布；
-- 与真实数据的相关系数进行比较，计算每个成分的 p 值；
-- 输出一个包含观测相关、置换均值、置换标准差和 p 值的表格，并可选地生成简单图形。
-
-示例用法（在集群上）：
-
+#### `generate_valid_sublists.py`：从 QC 表生成有效被试列表
+无命令行参数，直接运行：
 ```bash
-python temp/analyze_permutation_results.py \
-  --results_root /ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/results/models \
-  --model_type adaptive_pls \
-  --max_task_id 1000 \
-  --output_prefix efny_perm_summary_adaptive_pls
+python src/preprocess/generate_valid_sublists.py
+```
+注意：数据根目录在脚本内常量 `DATA_ROOT`。
+
+#### `build_behavioral_data.py`：合并 demo 与 metrics，生成 `EFNY_behavioral_data.csv`
+```bash
+python src/preprocess/build_behavioral_data.py --metrics <EFNY_metrics.csv> --demo <EFNY_demo_with_rsfmri.csv> --output <EFNY_behavioral_data.csv>
+```
+关键参数：
+- `--metrics/-m`: 行为 metrics 表
+- `--demo/-d`: demo 表
+- `--output/-o`: 输出路径
+- `--log/-l`: log 路径
+
+### 2) 功能连接（FC）计算与向量化（`src/functional_conn`）
+
+#### `compute_fc_schaefer.py`：计算单被试 FC 矩阵（CSV）
+```bash
+python src/functional_conn/compute_fc_schaefer.py --subject <sub-xxx> --n-rois 100
+```
+关键参数：
+- `--xcpd-dir`: xcp-d 输出根目录
+- `--subject`: 被试 ID（如 `sub-xxx`）
+- `--n-rois`: Schaefer 分区数（100/200/400）
+- `--qc-file`: QC CSV（决定 valid runs）
+- `--valid-list`: 有效被试列表
+- `--out-dir`: 输出目录
+
+#### `fisher_z_fc.py`：FC 做 Fisher-Z 变换（CSV）
+```bash
+python src/functional_conn/fisher_z_fc.py --subject <sub-xxx> --n-rois 100
+```
+关键参数：
+- `--in-dir`: FC 输入目录
+- `--out-dir`: Z 后输出目录
+- `--subject`, `--n-rois`
+
+#### `convert_fc_vector.py`：将 FC_z 矩阵下三角向量化（npy）
+该脚本参数较多（输入/输出/被试列表/atlas 分辨率等），建议直接查看：
+```bash
+python src/functional_conn/convert_fc_vector.py --help
 ```
 
-运行后会在 `results_root` 下生成一个汇总文件（CSV）和可选的图像文件，便于快速查看每个成分的显著性。
+#### `compute_group_avg_fc.py`：组平均 FC（可选可视化）
+```bash
+python src/functional_conn/compute_group_avg_fc.py --in-dir <fc_dir> --sublist <rest_valid_sublist.txt> --visualize
+```
+关键参数：
+- `--in-dir`: 包含 `Schaefer*` 子目录
+- `--sublist`: 被试列表
+- `--atlas` / `--n-rois`: 指定 atlas
+- `--out-dir`: 输出目录
 
-#### 命令行选项
+#### `plot_fc_matrix.py`：矩阵可视化（支持 Yeo17 排序）
+```bash
+python src/functional_conn/plot_fc_matrix.py --file <matrix.csv> --out <out.png> --title "..." --yeo17 --n-rois 100
+```
+关键参数：
+- `--file`: 输入 CSV
+- `--out`: 输出 PNG
+- `--yeo17`: 以 Yeo17 网络排序并加边界线（需要 `--n-rois`）
 
+### 3) 行为指标（`src/metric_compute`）
+
+#### `compute_efny_metrics.py`：从 app data 计算行为指标
+该脚本没有命令行参数，路径在脚本顶部常量中定义（`DATA_DIR` / `TASK_CSV` / `OUT_CSV`）。
+```bash
+python src/metric_compute/compute_efny_metrics.py
+```
+
+#### `metrics_similarity_heatmap.py`：行为指标相关热图
+```bash
+python src/metric_compute/metrics_similarity_heatmap.py --csv <EFNY_metrics.csv> --task-csv <EFNY_task.csv> --out-png <out.png>
+```
+关键参数：
+- `--method`: pearson/spearman/kendall
+- `--min-valid-ratio`: 单列有效数据占比阈值
+- `--min-pair-ratio`: 两列共同有效数据占比阈值
+
+## 脑-行为关联分析（`src/scripts/run_single_task.py`）
+
+该入口脚本支持：真实分析（`task_id=0`）与单次置换（`task_id>=1`）。
+
+### 1) 最常用命令
+```bash
+# 真实数据
+python src/scripts/run_single_task.py --task_id 0 --model_type adaptive_pls --config_file src/models/config.json
+
+# 单次置换（种子由 task_id 决定，便于 HPC array）
+python src/scripts/run_single_task.py --task_id 1 --model_type adaptive_pls --config_file src/models/config.json
+```
+
+### 2) 关键参数速查
+- `--task_id`: 0=真实；1..N=置换
+- `--model_type`: `adaptive_pls` / `adaptive_scca` / `adaptive_rcca`
+- `--config_file`: 配置文件（建议使用 `src/models/config.json`）
+- `--random_state`: 随机种子（真实重复跑时常用）
+- `--covariates_path`: 可选，协变量 CSV（需包含 `age/sex/meanFD`）
+- `--cv_n_splits`: 外层 CV 折数（默认 5）
+- `--max_missing_rate`: 缺失率阈值
+- `--output_dir`: 输出根目录（默认写入项目 results 目录）
+- `--output_prefix`: 输出前缀
+- `--save_formats`: `json` / `npz`
+- `--log_level`, `--log_file`
+
+查看完整参数：
 ```bash
 python src/scripts/run_single_task.py --help
-
-# 关键参数：
-# --task_id: 0 表示真实数据，1-N 表示置换
-# --model_type: adaptive_pls / adaptive_scca / adaptive_rcca
-# --use_synthetic: 使用合成数据进行测试
-# --covariates_path: 协变量文件路径(.csv，可选)
-# --run_cv: 是否运行交叉验证
-# --cv_n_splits: CV折数
-# --output_dir: 输出目录
-# --log_level: 日志级别
 ```
 
-### 🧪 测试
+### 3) HPC（SLURM）
+仓库提供了 3 个示例提交脚本（可按需要改 `MODEL_TYPE`、array 范围、log 路径等）：
+```bash
+sbatch src/scripts/submit_hpc_real.sh   # 多次真实运行（array=0-10）
+sbatch src/scripts/submit_hpc_perm.sh   # 置换运行（array=1-1000）
+sbatch src/scripts/submit_hpc_job.sh    # 0=真实，1..N=置换（单脚本）
+```
 
-#### 运行示例
+## 结果汇总（real/perm 扫描）
+
+### `src/result_summary/summarize_real_perm_scores.py`
+扫描 `results_root/real` 与 `results_root/perm`，提取每次运行的相关向量并输出 CSV。
 
 ```bash
-# 运行所有示例
-python src/models/example_usage.py
-
-# 运行特定示例
-python -c "from src.models.example_usage import example_basic_analysis; example_basic_analysis()"
+python src/result_summary/summarize_real_perm_scores.py --results_root <results_root> --analysis_type both --atlas <atlas> --model_type <model>
 ```
 
-#### 合成数据测试
+关键参数：
+- `--results_root`: 结果根目录
+- `--analysis_type`: real / perm / both
+- `--atlas`: 可选过滤
+- `--model_type`: 可选过滤
+- `--output_csv`: 输出 CSV
+- `--score_mode`: `first_component` / `mean_all` / `vector3`
 
-```bash
-# 使用合成数据测试自适应PLS模型
-python src/scripts/run_single_task.py \
-    --task_id 0 \
-    --model_type adaptive_pls \
-    --use_synthetic \
-    --n_subjects 100 \
-    --n_brain_features 200 \
-    --n_behavioral_measures 15
-```
+## 输出位置（约定）
 
-### 📈 输出格式
-
-结果以JSON和NPZ格式保存：
-
-#### JSON格式（人类可读）
-```json
-{
-  "task_type": "real_data",
-  "task_id": 0,
-  "model_info": {
-    "model_type": "PLS",
-    "n_components": 5
-  },
-  "canonical_correlations": [0.65, 0.42, 0.28, 0.15, 0.08],
-  "variance_explained_X": [8.5, 12.3, 15.1, 17.2, 19.0],
-  "variance_explained_Y": [22.1, 35.6, 42.8, 48.2, 52.1],
-  "metadata": {
-    "timestamp": "20241214_143000",
-    "n_samples": 394,
-    "n_features_X": 4950,
-    "n_features_Y": 30
-  }
-}
-```
-
-#### NPZ格式（高效存储）
-- 包含分数、载荷和其他数值数据的numpy数组
-- 压缩存储，节省空间
-- 易于加载进行进一步分析
-
-### 🔍 模型比较
-
-| 模型 | 描述 | 使用场景 | 实现状态 | 特点 |
-|-------|-------------|----------|---------------------|-------|
-| Adaptive-PLS | 自适应偏最小二乘法 | 脑-行为关联 | ✅ 完整 | 内部CV调参（当前固定 n_components_range=[5]） |
-| Adaptive-SCCA | 自适应稀疏CCA | 特征选择和可解释性 | ✅ 完整 | 内部CV调参（当前固定 n_components_range=[5]） |
-| Adaptive-rCCA | 自适应rCCA | 正则化CCA | ✅ 完整 | 内部CV调参（当前固定 n_components_range=[5]） |
-
-### ⚙️ 配置
-
-编辑 `src/models/config.json` 自定义：
-- 数据路径和质量阈值
-- 模型参数和默认值
-- 评估设置（CV、置换）
-- 输出格式和位置
-- 日志配置
-- HPC优化设置
-
-### 📚 关键类和函数
-
-#### 数据加载
-- `EFNYDataLoader`: 加载脑和行为数据
-- `create_synthetic_data`: 生成测试数据
-
-#### 预处理
-- `ConfoundRegressor`: Sklearn兼容的混杂回归
-- `DataQualityFilter`: 质量过滤和验证
-
-#### 模型
-- `BaseBrainBehaviorModel`: 所有模型的基类
-- `AdaptivePLSModel`: 自适应PLS
-- `AdaptiveSCCAModel`: 自适应SCCA
-- `AdaptiveRCCAModel`: 自适应rCCA
-- `create_model`: 模型创建的工厂函数
-
-#### 评估
-- `CrossValidator`: 交叉验证框架
-- `PermutationTester`: 置换检验
-- `run_nested_cv_evaluation`: 嵌套CV实现
-
-#### 工具
-- `setup_logging`: 配置日志
-- `save_results`/`load_results`: 结果持久化
-- `ConfigManager`: 配置管理
-
-### 🎯 未来增强
-
-- [ ] 完成Sparse-CCA实现
-- [ ] 添加更多评估指标
-- [ ] 实现特征重要性分析
-- [ ] 添加可视化工具
-- [ ] 支持更多脑分区图谱
-- [ ] 集成神经影像管道（Nipype）
-- [ ] 基于Web的结果可视化
-- [ ] 支持纵向数据分析
-
-## 数据流程
-
-1. **预处理阶段**: 原始数据 → 质量控制 → 格式标准化 → 有效数据列表
-2. **功能连接分析**: fMRI数据 → 脑区时间序列 → 功能连接矩阵 → 组水平分析
-3. **行为指标分析**: 任务数据 → 行为指标计算 → 相似性分析 → 可视化展示
-4. **脑-行为关联**: 脑数据 + 行为数据 → 混杂回归 → PLS/Sparse-CCA → 交叉验证/置换检验
-
-## 使用说明
-
-### 基本使用流程
-```bash
-# 1. 数据预处理
-python src/preprocess/get_mri_sublist.py
-python src/preprocess/screen_head_motion_efny.py
-
-# 2. 功能连接计算
-python src/functional_conn/compute_fc_schaefer.py
-python src/functional_conn/compute_group_avg_fc.py
-
-# 3. 行为指标分析
-python src/metric_compute/compute_efny_metrics.py
-python src/metric_compute/metrics_similarity_heatmap.py
-
-# 4. 脑-行为关联分析（基础示例）
-python src/models/example_usage.py
-```
-
-### 批处理作业
-```bash
-# 提交批处理任务
-bash src/preprocess/batch_run_xcpd.sh
-bash src/functional_conn/submit_compute_fc.sh
-
-# HPC脑-行为关联分析
-sbatch src/scripts/submit_hpc_job.sh
-```
-
-### 合成数据测试
-```bash
-# 使用合成数据测试脑-行为关联模型
-python src/scripts/run_single_task.py \
-    --task_id 0 \
-    --model_type adaptive_pls \
-    --use_synthetic \
-    --n_subjects 100 \
-    --n_brain_features 200 \
-    --n_behavioral_measures 15
-```
-
-## 注意事项
-
-1. **数据格式**: 确保输入数据格式符合脚本要求
-2. **路径设置**: 检查文件路径和目录结构是否正确
-3. **依赖项**: 安装所需的Python包和软件依赖
-4. **参数配置**: 根据具体研究需求调整参数设置
-5. **质量控制**: 定期检查中间结果和输出质量
-6. **HPC使用**: 确保SLURM环境配置正确，合理设置作业资源
-
-## 输出文件
-
-- **预处理**: 有效被试列表、质量控制报告
-- **功能连接**: 功能连接矩阵、组平均结果
-- **行为指标**: 任务性能指标、相似性热图
-- **脑-行为关联**: 规范相关系数、成分分数、载荷矩阵、置换检验结果（JSON和NPZ格式）
-
-## 更新日志
-
-- 2025-12-14: 新增脑-行为关联分析模块（PLS/Sparse-CCA），支持HPC并行化
-- 2025-12-11: 修复了`metrics_similarity_heatmap.py`中Flanker任务指标的显示问题，现在正确包含所有32个行为指标
+常用输出：
+- QC / 表格：`data/EFNY/table/...`
+- FC 矩阵与向量：`data/EFNY/functional_conn...`
+- 脑-行为关联：默认写入 `results/real/...` 与 `results/perm/...`（可用 `--output_dir` 改写）
