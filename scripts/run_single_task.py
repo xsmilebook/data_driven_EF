@@ -352,7 +352,7 @@ def create_model_instance(args):
         model_params = {
             'n_components_range': [5],
             'cv_folds': 5,
-            'criterion': 'canonical_correlation',
+            'criterion': 'first_component_correlation',
             'random_state': args.random_state,
             'scale': True,
             'max_iter': 5000,
@@ -366,7 +366,7 @@ def create_model_instance(args):
             'sparsity_X_range': [0.001, 0.005, 0.01, 0.05],  # 脑数据稀疏度（特征多，用小值）
             'sparsity_Y_range': [0.1, 0.2, 0.3],  # 行为数据稀疏度（特征少，用大值）
             'cv_folds': 5,
-            'criterion': 'canonical_correlation',
+            'criterion': 'first_component_correlation',
             'random_state': args.random_state,
             'max_iter': 10000,
             'tol': 1e-06
@@ -382,7 +382,7 @@ def create_model_instance(args):
             'c_X_range': [0.0, 0.1, 0.3, 0.5],
             'c_Y_range': [0.0, 0.1, 0.3, 0.5],
             'cv_folds': 5,
-            'criterion': 'canonical_correlation',
+            'criterion': 'first_component_correlation',
             'random_state': args.random_state,
             'pca': True,
             'eps': 1e-06
@@ -419,7 +419,7 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
                 model_params = {
                     'n_components_range': perm_n_components_range,
                     'cv_folds': 5,
-                    'criterion': 'canonical_correlation',
+                    'criterion': 'first_component_correlation',
                     'random_state': permutation_seed,
                     'scale': True,
                     'max_iter': 5000,
@@ -431,7 +431,7 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
                     'sparsity_X_range': [0.001, 0.005, 0.01, 0.05],
                     'sparsity_Y_range': [0.1, 0.2, 0.3],
                     'cv_folds': 5,
-                    'criterion': 'canonical_correlation',
+                    'criterion': 'first_component_correlation',
                     'random_state': permutation_seed,
                     'max_iter': 10000,
                     'tol': 1e-06,
@@ -442,7 +442,7 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
                     'c_X_range': [0.0, 0.1, 0.3, 0.5],
                     'c_Y_range': [0.0, 0.1, 0.3, 0.5],
                     'cv_folds': 5,
-                    'criterion': 'canonical_correlation',
+                    'criterion': 'first_component_correlation',
                     'random_state': permutation_seed,
                     'pca': True,
                     'eps': 1e-06,

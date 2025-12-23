@@ -259,6 +259,8 @@ class AdaptiveRCCAModel(BaseBrainBehaviorModel):
         kf = KFold(n_splits=self.cv_folds, shuffle=True, random_state=self.random_state)
 
         canonical_corrs = []
+        first_component_corrs = []
+        first_two_corrs = []
         last_component_corrs = []
         var_exp_X_list = []
         var_exp_Y_list = []
@@ -307,6 +309,11 @@ class AdaptiveRCCAModel(BaseBrainBehaviorModel):
 
                 if corrs:
                     canonical_corrs.append(np.mean(corrs))
+                    first_component_corrs.append(float(corrs[0]))
+                    if len(corrs) >= 2:
+                        first_two_corrs.append(float(np.mean(corrs[:2])))
+                    elif len(corrs) == 1:
+                        first_two_corrs.append(float(corrs[0]))
                     if np.isfinite(last_corr):
                         last_component_corrs.append(float(last_corr))
                     var_exp_X = np.var(X_val_scores, axis=0).sum() / np.var(X_val_scaled, axis=0).sum() * 100
@@ -320,6 +327,8 @@ class AdaptiveRCCAModel(BaseBrainBehaviorModel):
         if not canonical_corrs:
             return {
                 'canonical_correlation': -np.inf,
+                'first_component_correlation': -np.inf,
+                'mean_first_two_correlation': -np.inf,
                 'last_component_correlation': -np.inf,
                 'variance_explained_X': 0.0,
                 'variance_explained_Y': 0.0,
@@ -328,6 +337,8 @@ class AdaptiveRCCAModel(BaseBrainBehaviorModel):
 
         return {
             'canonical_correlation': np.mean(canonical_corrs),
+            'first_component_correlation': np.mean(first_component_corrs) if first_component_corrs else -np.inf,
+            'mean_first_two_correlation': np.mean(first_two_corrs) if first_two_corrs else -np.inf,
             'last_component_correlation': (float(np.mean(last_component_corrs)) if last_component_corrs else -np.inf),
             'variance_explained_X': np.mean(var_exp_X_list) if var_exp_X_list else 0.0,
             'variance_explained_Y': np.mean(var_exp_Y_list) if var_exp_Y_list else 0.0,
@@ -562,6 +573,8 @@ class AdaptivePLSModel(BaseBrainBehaviorModel):
                   random_state=self.random_state)
         
         canonical_corrs = []
+        first_component_corrs = []
+        first_two_corrs = []
         last_component_corrs = []
         var_exp_X_list = []
         var_exp_Y_list = []
@@ -591,6 +604,12 @@ class AdaptivePLSModel(BaseBrainBehaviorModel):
                 corr, _ = pearsonr(X_val_scores[:, i], Y_val_scores[:, i])
                 corrs.append(corr)
             canonical_corrs.append(np.mean(corrs))
+            if corrs:
+                first_component_corrs.append(float(corrs[0]))
+            if len(corrs) >= 2:
+                first_two_corrs.append(float(np.mean(corrs[:2])))
+            elif len(corrs) == 1:
+                first_two_corrs.append(float(corrs[0]))
 
             last_corr = corrs[-1] if corrs else np.nan
             if np.isfinite(last_corr):
@@ -611,6 +630,8 @@ class AdaptivePLSModel(BaseBrainBehaviorModel):
         
         return {
             'canonical_correlation': np.mean(canonical_corrs),
+            'first_component_correlation': np.mean(first_component_corrs) if first_component_corrs else -np.inf,
+            'mean_first_two_correlation': np.mean(first_two_corrs) if first_two_corrs else -np.inf,
             'last_component_correlation': (float(np.mean(last_component_corrs)) if last_component_corrs else -np.inf),
             'variance_explained_X': np.mean(var_exp_X_list),
             'variance_explained_Y': np.mean(var_exp_Y_list),
@@ -644,9 +665,11 @@ class AdaptivePLSModel(BaseBrainBehaviorModel):
         else:
             Y_values = Y
         
-        # 评估每个成分数量
         cv_results = {}
+        best_score = -np.inf
+        best_score_any = -np.inf
         best_n_components = self.n_components_range[0] if self.n_components_range else 1
+        best_n_components_any = best_n_components
         threshold = 0.05
         
         for n_comp in self.n_components_range:
@@ -654,14 +677,21 @@ class AdaptivePLSModel(BaseBrainBehaviorModel):
             metrics = self._evaluate_n_components(X_values, Y_values, n_comp)
             cv_results[n_comp] = metrics
 
-        valid_n = [
-            n for n, m in cv_results.items()
-            if float(m.get('last_component_correlation', -np.inf)) >= threshold
-        ]
-        if valid_n:
-            best_n_components = int(max(valid_n))
-        else:
-            best_n_components = int(self.n_components_range[0])
+            if self.criterion not in metrics:
+                raise ValueError(f"Unsupported criterion: {self.criterion}. Available: {list(metrics.keys())}")
+
+            score = float(metrics[self.criterion])
+            if score > best_score_any:
+                best_score_any = score
+                best_n_components_any = int(n_comp)
+
+            if float(metrics.get('last_component_correlation', -np.inf)) >= threshold:
+                if score > best_score:
+                    best_score = score
+                    best_n_components = int(n_comp)
+
+        if best_score == -np.inf:
+            best_n_components = best_n_components_any
         
         self.optimal_n_components = best_n_components
         self.cv_results_ = cv_results
@@ -846,6 +876,8 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
                   random_state=self.random_state)
         
         canonical_corrs = []
+        first_component_corrs = []
+        first_two_corrs = []
         last_component_corrs = []
         var_exp_X_list = []
         var_exp_Y_list = []
@@ -899,6 +931,11 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
                 
                 if corrs:
                     canonical_corrs.append(np.mean(corrs))
+                    first_component_corrs.append(float(corrs[0]))
+                    if len(corrs) >= 2:
+                        first_two_corrs.append(float(np.mean(corrs[:2])))
+                    elif len(corrs) == 1:
+                        first_two_corrs.append(float(corrs[0]))
                     if np.isfinite(last_corr):
                         last_component_corrs.append(float(last_corr))
                     
@@ -915,6 +952,8 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
         if not canonical_corrs:
             return {
                 'canonical_correlation': -np.inf,
+                'first_component_correlation': -np.inf,
+                'mean_first_two_correlation': -np.inf,
                 'last_component_correlation': -np.inf,
                 'variance_explained_X': 0.0,
                 'variance_explained_Y': 0.0,
@@ -923,6 +962,8 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
         
         return {
             'canonical_correlation': np.mean(canonical_corrs),
+            'first_component_correlation': np.mean(first_component_corrs) if first_component_corrs else -np.inf,
+            'mean_first_two_correlation': np.mean(first_two_corrs) if first_two_corrs else -np.inf,
             'last_component_correlation': (float(np.mean(last_component_corrs)) if last_component_corrs else -np.inf),
             'variance_explained_X': np.mean(var_exp_X_list) if var_exp_X_list else 0.0,
             'variance_explained_Y': np.mean(var_exp_Y_list) if var_exp_Y_list else 0.0,
