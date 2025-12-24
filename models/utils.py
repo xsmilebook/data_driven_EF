@@ -164,6 +164,55 @@ def save_results(results: Dict[str, Any],
     return saved_files
 
 
+def save_large_artifacts(results: Dict[str, Any],
+                         output_dir: Union[str, Path],
+                         keys_to_extract: Optional[set] = None) -> Dict[str, Dict[str, Any]]:
+    """
+    Save large numpy arrays to separate .npy files and replace them with references.
+
+    Args:
+        results: Results dictionary to scan and mutate in place.
+        output_dir: Directory to store extracted arrays.
+        keys_to_extract: Set of keys to extract when value is a numpy array.
+
+    Returns:
+        Mapping of artifact keys to metadata (path, shape, dtype).
+    """
+    if keys_to_extract is None:
+        keys_to_extract = {"test_scores_X", "test_scores_Y", "X_scores", "Y_scores"}
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    artifacts: Dict[str, Dict[str, Any]] = {}
+
+    def _save_array(arr: np.ndarray, artifact_key: str) -> Dict[str, Any]:
+        safe_name = artifact_key.replace("/", "_")
+        file_path = output_dir / f"{safe_name}.npy"
+        np.save(file_path, arr)
+        return {
+            "path": str(file_path),
+            "shape": list(arr.shape),
+            "dtype": str(arr.dtype),
+        }
+
+    def _walk(obj: Any, path_parts: list) -> None:
+        if isinstance(obj, dict):
+            for key, value in list(obj.items()):
+                if key in keys_to_extract and isinstance(value, np.ndarray):
+                    artifact_key = "/".join(path_parts + [key]) if path_parts else key
+                    artifacts[artifact_key] = _save_array(value, artifact_key)
+                    obj[key] = {"artifact_key": artifact_key}
+                else:
+                    _walk(value, path_parts + [key])
+        elif isinstance(obj, list):
+            for idx, item in enumerate(obj):
+                _walk(item, path_parts + [str(idx)])
+
+    _walk(results, [])
+    return artifacts
+
+
 def _convert_numpy_to_list(obj: Any) -> Any:
     """
     递归转换 numpy 数组为 Python 列表

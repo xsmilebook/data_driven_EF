@@ -153,7 +153,28 @@ python src/scripts/run_single_task.py --task_id 1 --model_type adaptive_pls --co
 python src/scripts/run_single_task.py --help
 ```
 
-### 3) HPC（SLURM）
+### 3) 嵌套交叉验证（推荐框架）
+目标：外层评估泛化能力，内层选择超参数，所有预处理严格在训练折内完成以避免信息泄露。
+
+推荐流程（每次运行都遵循同一逻辑）：
+1. 外层 KFold（n_outer）划分训练/测试。
+2. 对每个外层折：
+   - 只用外层训练集拟合预处理：缺失值填补均值、协变量回归、标准化、可选 PCA。
+   - 在外层训练集上做内层 KFold（n_inner）：
+     * 对每组候选参数：在内层训练折拟合同样的预处理，并在内层验证折评估。
+     * 使用统一指标选参（推荐：`meancorr`，即各成分相关系数的均值）。
+   - 选择内层平均分最高的参数；如有并列，可用更小方差或更少参数作为 tie-break。
+   - 用最佳参数在“外层训练集”重新拟合模型（固定参数，不再做模型内部 CV），再在“外层测试集”评估。
+3. 汇总外层结果：各成分相关系数的均值/方差、vector3 等整体指标。
+4. 置换检验：每次置换仅打乱 Y（保持 X/协变量索引一致），完整重复上述嵌套流程并记录种子。
+
+实现约定（便于后续修改）：
+- 预处理步骤的 fit 只发生在训练折（外层与内层都遵守）。
+- 模型内部不再做选参型 CV；超参数仅由内层 CV 决定。
+- 输出至少包含：`outer_fold_results`、`inner_cv_table`、`outer_mean_canonical_correlations`、`outer_all_test_canonical_correlations`、随机种子与参数网格规模。
+- `vector3` = 相关向量的 L2 范数（`||corr_vector||_2`），会随成分数增加而放大；仅在成分数固定时用于对比。
+
+### 4) HPC（SLURM）
 仓库提供了 3 个示例提交脚本（可按需要改 `MODEL_TYPE`、array 范围、log 路径等）：
 ```bash
 sbatch src/scripts/submit_hpc_real.sh   # 多次真实运行（array=0-10）
@@ -184,3 +205,4 @@ python src/result_summary/summarize_real_perm_scores.py --results_root <results_
 - QC / 表格：`data/EFNY/table/...`
 - FC 矩阵与向量：`data/EFNY/functional_conn...`
 - 脑-行为关联：默认写入 `results/real/...` 与 `results/perm/...`（可用 `--output_dir` 改写）
+- 大型数组（如每折 `X_scores/Y_scores`）会保存到同目录的 `artifacts/`，JSON/NPZ 内仅保留索引与路径

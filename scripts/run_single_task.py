@@ -21,10 +21,10 @@ sys.path.insert(0, str(project_root))
 
 from src.models.data_loader import EFNYDataLoader, create_synthetic_data
 from src.models.models import create_model, get_available_models
-from src.models.evaluation import CrossValidator, PermutationTester, run_nested_cv_evaluation
+from src.models.evaluation import run_nested_cv_evaluation
 from src.models.utils import (
     setup_logging, get_results_dir, create_timestamp,
-    save_results, validate_data_shapes, check_data_quality,
+    save_results, save_large_artifacts, validate_data_shapes, check_data_quality,
     config
 )
 
@@ -356,7 +356,8 @@ def create_model_instance(args):
             'random_state': args.random_state,
             'scale': True,
             'max_iter': 5000,
-            'tol': 1e-06
+            'tol': 1e-06,
+            'use_internal_cv': False,
         }
         logger.info("Creating Adaptive-PLS model with fixed n_components_range=[5]")
     elif args.model_type == 'adaptive_scca':
@@ -369,7 +370,8 @@ def create_model_instance(args):
             'criterion': 'first_component_correlation',
             'random_state': args.random_state,
             'max_iter': 10000,
-            'tol': 1e-06
+            'tol': 1e-06,
+            'use_internal_cv': False,
         }
         logger.info(f"Creating Adaptive-SCCA model with n_components range: {model_params['n_components_range']}")
         logger.info(f"sparsity_X range: {model_params['sparsity_X_range']}")
@@ -385,7 +387,8 @@ def create_model_instance(args):
             'criterion': 'first_component_correlation',
             'random_state': args.random_state,
             'pca': True,
-            'eps': 1e-06
+            'eps': 1e-06,
+            'use_internal_cv': False,
         }
         logger.info(f"Creating Adaptive-rCCA model with n_components range: {model_params['n_components_range']}")
         logger.info(f"c_X range: {model_params['c_X_range']}")
@@ -405,27 +408,38 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
 
     def _build_nested_param_candidates(model_for_grid):
         params0 = model_for_grid.get_params()
-        model_type = str(params0.get('model_type', '')).lower()
+        n_range = params0.get('n_components_range', []) or [params0.get('n_components', 1)]
+        candidates = []
+        if args.model_type == 'adaptive_pls':
+            for n_comp in n_range:
+                p = dict(params0)
+                p['n_components'] = int(n_comp)
+                p['use_internal_cv'] = False
+                candidates.append(p)
+            return candidates or [params0]
         if args.model_type == 'adaptive_scca':
-            candidates = []
-            for sx in params0.get('sparsity_X_range', []):
-                for sy in params0.get('sparsity_Y_range', []):
-                    p = dict(params0)
-                    p['sparsity_X_range'] = [sx]
-                    p['sparsity_Y_range'] = [sy]
-                    candidates.append(p)
+            for n_comp in n_range:
+                for sx in params0.get('sparsity_X_range', []):
+                    for sy in params0.get('sparsity_Y_range', []):
+                        p = dict(params0)
+                        p['n_components'] = int(n_comp)
+                        p['sparsity_X'] = float(sx)
+                        p['sparsity_Y'] = float(sy)
+                        p['use_internal_cv'] = False
+                        candidates.append(p)
             return candidates or [params0]
         if args.model_type == 'adaptive_rcca':
-            candidates = []
-            for cx in params0.get('c_X_range', []):
-                for cy in params0.get('c_Y_range', []):
-                    p = dict(params0)
-                    p['c_X_range'] = [cx]
-                    p['c_Y_range'] = [cy]
-                    candidates.append(p)
+            for n_comp in n_range:
+                for cx in params0.get('c_X_range', []):
+                    for cy in params0.get('c_Y_range', []):
+                        p = dict(params0)
+                        p['n_components'] = int(n_comp)
+                        p['c_X'] = float(cx)
+                        p['c_Y'] = float(cy)
+                        p['use_internal_cv'] = False
+                        candidates.append(p)
             return candidates or [params0]
         return [params0]
-    
     # 置换检验模式
     if args.task_id > 0:
         logger.info(f"Running permutation test (task_id={args.task_id})")
@@ -447,6 +461,7 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
                     'scale': True,
                     'max_iter': 5000,
                     'tol': 1e-06,
+                    'use_internal_cv': False,
                 }
             elif args.model_type == 'adaptive_scca':
                 model_params = {
@@ -458,6 +473,7 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
                     'random_state': permutation_seed,
                     'max_iter': 10000,
                     'tol': 1e-06,
+                    'use_internal_cv': False,
                 }
             else:
                 model_params = {
@@ -469,6 +485,7 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
                     'random_state': permutation_seed,
                     'pca': True,
                     'eps': 1e-06,
+                    'use_internal_cv': False,
                 }
 
             logger.info(
@@ -639,8 +656,18 @@ def save_results_with_metadata(result, args):
         'slurm_job_name': os.environ.get('SLURM_JOB_NAME'),
         'config_snapshot': config.config
     })
+
+    cv_results = result.get('cv_results', {})
+    if isinstance(cv_results, dict) and "score_metric" in cv_results:
+        metadata['cv_score_metric'] = cv_results["score_metric"]
     
     result['metadata'] = metadata
+
+    artifacts_dir = output_dir / "artifacts"
+    artifact_map = save_large_artifacts(result, artifacts_dir)
+    if artifact_map:
+        result['artifacts'] = artifact_map
+        metadata['artifacts_dir'] = str(artifacts_dir)
     
     # 保存结果
     saved_files = save_results(result, output_path, format="both")
@@ -663,9 +690,13 @@ def save_results_with_metadata(result, args):
                 n_list = []
                 for fr in outer_folds:
                     p = fr.get('best_params', {})
-                    n_range = p.get('n_components_range')
-                    if isinstance(n_range, list) and n_range:
-                        n_list.append(int(n_range[0]))
+                    n_val = p.get('n_components')
+                    if n_val is None:
+                        n_range = p.get('n_components_range')
+                        if isinstance(n_range, list) and n_range:
+                            n_val = n_range[0]
+                    if n_val is not None:
+                        n_list.append(int(n_val))
                 if n_list:
                     optimal_n_components = int(max(set(n_list), key=n_list.count))
             if optimal_n_components is not None:
@@ -688,11 +719,23 @@ def save_results_with_metadata(result, args):
                 combos = []
                 for fr in outer_folds:
                     p = fr.get('best_params', {})
-                    n_range = p.get('n_components_range')
-                    sx_range = p.get('sparsity_X_range')
-                    sy_range = p.get('sparsity_Y_range')
-                    if isinstance(n_range, list) and n_range and isinstance(sx_range, list) and sx_range and isinstance(sy_range, list) and sy_range:
-                        combos.append((int(n_range[0]), float(sx_range[0]), float(sy_range[0])))
+                    n_val = p.get('n_components')
+                    sx_val = p.get('sparsity_X')
+                    sy_val = p.get('sparsity_Y')
+                    if n_val is None:
+                        n_range = p.get('n_components_range')
+                        if isinstance(n_range, list) and n_range:
+                            n_val = n_range[0]
+                    if sx_val is None:
+                        sx_range = p.get('sparsity_X_range')
+                        if isinstance(sx_range, list) and sx_range:
+                            sx_val = sx_range[0]
+                    if sy_val is None:
+                        sy_range = p.get('sparsity_Y_range')
+                        if isinstance(sy_range, list) and sy_range:
+                            sy_val = sy_range[0]
+                    if n_val is not None and sx_val is not None and sy_val is not None:
+                        combos.append((int(n_val), float(sx_val), float(sy_val)))
                 if combos:
                     best_combo = max(set(combos), key=combos.count)
                     optimal_n_components, optimal_sparsity_X, optimal_sparsity_Y = best_combo
@@ -718,11 +761,23 @@ def save_results_with_metadata(result, args):
                 combos = []
                 for fr in outer_folds:
                     p = fr.get('best_params', {})
-                    n_range = p.get('n_components_range')
-                    cx_range = p.get('c_X_range')
-                    cy_range = p.get('c_Y_range')
-                    if isinstance(n_range, list) and n_range and isinstance(cx_range, list) and cx_range and isinstance(cy_range, list) and cy_range:
-                        combos.append((int(n_range[0]), float(cx_range[0]), float(cy_range[0])))
+                    n_val = p.get('n_components')
+                    cx_val = p.get('c_X')
+                    cy_val = p.get('c_Y')
+                    if n_val is None:
+                        n_range = p.get('n_components_range')
+                        if isinstance(n_range, list) and n_range:
+                            n_val = n_range[0]
+                    if cx_val is None:
+                        cx_range = p.get('c_X_range')
+                        if isinstance(cx_range, list) and cx_range:
+                            cx_val = cx_range[0]
+                    if cy_val is None:
+                        cy_range = p.get('c_Y_range')
+                        if isinstance(cy_range, list) and cy_range:
+                            cy_val = cy_range[0]
+                    if n_val is not None and cx_val is not None and cy_val is not None:
+                        combos.append((int(n_val), float(cx_val), float(cy_val)))
                 if combos:
                     best_combo = max(set(combos), key=combos.count)
                     optimal_n_components, optimal_c_X, optimal_c_Y = best_combo

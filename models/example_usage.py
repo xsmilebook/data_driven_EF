@@ -4,6 +4,7 @@
 """
 
 import sys
+import numpy as np
 from pathlib import Path
 
 # 添加项目根目录到 Python 路径
@@ -12,7 +13,7 @@ sys.path.insert(0, str(project_root))
 
 from models import (
     EFNYDataLoader, create_synthetic_data, ConfoundRegressor,
-    create_model, CrossValidator, PermutationTester,
+    create_model, run_nested_cv_evaluation,
     setup_logging, save_results, get_available_models
 )
 
@@ -31,7 +32,7 @@ def example_basic_analysis():
     print(f"数据形状 - 脑: {brain_data.shape}, 行为: {behavioral_data.shape}")
     
     # 创建调参版本 PLS 模型（此处固定 n_components_range=[5]）
-    pls_model = create_model('adaptive_pls', n_components_range=[5], random_state=42)
+    pls_model = create_model('adaptive_pls', n_components_range=[5], random_state=42, use_internal_cv=False)
     
     # 拟合模型
     pls_model.fit(brain_data, behavioral_data)
@@ -54,72 +55,74 @@ def example_basic_analysis():
 
 
 def example_cross_validation():
-    """交叉验证示例"""
+    """Nested CV example."""
     print("\n" + "="*60)
-    print("示例 2: 交叉验证")
+    print("Example 2: Nested CV")
     print("="*60)
     
-    # 创建数据
+    # Create data
     brain_data, behavioral_data, covariates = create_synthetic_data(
         n_subjects=200, n_brain_features=200, n_behavioral_measures=15
     )
     
-    # 创建模型
-    model = create_model('adaptive_pls', n_components_range=[5], random_state=42)
+    # Create model (disable internal CV)
+    model = create_model('adaptive_pls', n_components_range=[5], random_state=42, use_internal_cv=False)
+    params0 = model.get_params()
+    params0['n_components'] = 5
+    params0['use_internal_cv'] = False
     
-    # 创建交叉验证器
-    cv = CrossValidator(n_splits=5, shuffle=True, random_state=42)
+    # Run nested CV
+    cv_results = run_nested_cv_evaluation(
+        model,
+        brain_data,
+        behavioral_data,
+        confounds=covariates,
+        outer_cv_splits=5,
+        inner_cv_splits=3,
+        param_grid=[params0],
+    )
     
-    # 运行交叉验证
-    cv_results = cv.run_cv_evaluation(model, brain_data, behavioral_data, confounds=covariates)
-    
-    # 创建汇总表
-    summary_df = cv.create_cv_summary_table(cv_results)
-    
-    print("\n交叉验证结果:")
-    print(summary_df.to_string(index=False))
-
+    print("\nNested CV results:")
+    print("mean canonical correlations:", cv_results.get('outer_mean_canonical_correlations'))
 
 def example_permutation_test():
-    """置换检验示例"""
+    """Single-permutation example."""
     print("\n" + "="*60)
-    print("示例 3: 置换检验")
+    print("Example 3: Single permutation")
     print("="*60)
     
-    # 创建数据
+    # Create data
     brain_data, behavioral_data, covariates = create_synthetic_data(
         n_subjects=150, n_brain_features=150, n_behavioral_measures=10
     )
     
-    # 创建模型
-    model = create_model('adaptive_pls', n_components_range=[5], random_state=42)
+    # Create model (disable internal CV)
+    model = create_model('adaptive_pls', n_components_range=[5], random_state=42, use_internal_cv=False)
+    params0 = model.get_params()
+    params0['n_components'] = 5
+    params0['use_internal_cv'] = False
     
-    # 运行真实数据分析
-    model.fit(brain_data, behavioral_data)
-    X_scores, Y_scores = model.transform(brain_data, behavioral_data)
-    real_correlations = model.calculate_canonical_correlations(X_scores, Y_scores)
+    # Run a single permutation
+    rng = np.random.default_rng(42)
+    if hasattr(behavioral_data, 'values'):
+        Y_perm = behavioral_data.values[rng.permutation(len(behavioral_data))]
+    else:
+        Y_perm = behavioral_data[rng.permutation(len(behavioral_data))]
     
-    # 运行置换检验
-    perm_tester = PermutationTester(n_permutations=100, random_state=42)
+    perm_results = run_nested_cv_evaluation(
+        model,
+        brain_data,
+        Y_perm,
+        confounds=covariates,
+        outer_cv_splits=5,
+        inner_cv_splits=3,
+        param_grid=[params0],
+        outer_random_state=42,
+        inner_random_state=42,
+    )
     
-    perm_correlations = []
-    for i in range(100):
-        perm_result = perm_tester.run_permutation_test(
-            model, brain_data, behavioral_data, confounds=covariates, permutation_seed=42+i
-        )
-        perm_correlations.append(perm_result['canonical_correlations'])
-    
-    perm_correlations = np.array(perm_correlations)
-    
-    # 计算 p 值
-    p_values = perm_tester.calculate_p_values(real_correlations, perm_correlations)
-    
-    print("\n置换检验结果:")
-    print("成分 | 真实相关 | p 值")
-    print("-" * 25)
-    for i, (real_corr, p_val) in enumerate(zip(real_correlations, p_values)):
-        print(f"  {i+1}  |   {real_corr:.4f}   | {p_val:.4f}")
-
+    print("\nSingle permutation results:")
+    print("mean canonical correlations:", perm_results.get('outer_mean_canonical_correlations'))
 
 def example_available_models():
     """可用模型展示"""

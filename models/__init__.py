@@ -8,7 +8,7 @@ using Partial Least Squares (PLS) and Sparse Canonical Correlation Analysis (Spa
 from .data_loader import EFNYDataLoader, create_synthetic_data
 from .preprocessing import ConfoundRegressor, DataQualityFilter, create_preprocessing_pipeline
 from .models import BaseBrainBehaviorModel, AdaptivePLSModel, AdaptiveSCCAModel, AdaptiveRCCAModel, create_model, get_available_models
-from .evaluation import CrossValidator, PermutationTester, run_nested_cv_evaluation
+from .evaluation import run_nested_cv_evaluation
 from .utils import setup_logging, get_project_root, get_data_dir, get_results_dir, ConfigManager, save_results
 
 __version__ = "1.0.0"
@@ -33,8 +33,6 @@ __all__ = [
     "get_available_models",
     
     # Evaluation
-    "CrossValidator",
-    "PermutationTester",
     "run_nested_cv_evaluation",
     
     # Utilities
