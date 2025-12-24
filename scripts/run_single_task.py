@@ -523,13 +523,11 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
         )
 
         mean_corrs = np.asarray(nested_results.get('outer_mean_canonical_correlations', []), dtype=float)
-        vector3_stat = float(np.linalg.norm(mean_corrs)) if mean_corrs.size else float('nan')
 
         result = {
             'permutation_seed': permutation_seed,
             'canonical_correlations': mean_corrs,
             'mean_canonical_correlations': mean_corrs,
-            'cv_statistic_vector3': vector3_stat,
             'n_components': int(mean_corrs.size),
             'n_samples': int(len(X_raw)),
             'cv_n_splits': int(args.cv_n_splits),
@@ -543,7 +541,6 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
         
         logger.info(
             "Permutation test completed. "
-            f"vector3(stat)={result.get('cv_statistic_vector3', float('nan')):.6f}; "
             f"Max CV mean canonical correlation={np.max(result['canonical_correlations']):.4f}"
         )
         
@@ -574,7 +571,6 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
         )
 
         cv_mean_corrs = np.asarray(nested_results.get('outer_mean_canonical_correlations', []), dtype=float)
-        cv_vector3_stat = float(np.linalg.norm(cv_mean_corrs)) if cv_mean_corrs.size else float('nan')
         
         result = {
             'task_type': 'real_data',
@@ -582,7 +578,6 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
             'model_info': model.get_model_info(),
             'canonical_correlations': cv_mean_corrs,
             'mean_canonical_correlations': cv_mean_corrs,
-            'cv_statistic_vector3': cv_vector3_stat,
             'n_samples': brain_data.shape[0],
             'n_features_X': brain_data.shape[1],
             'n_features_Y': behavioral_data.shape[1]
@@ -594,7 +589,6 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
 
         logger.info(
             "Real data analysis completed. "
-            f"vector3(stat)={cv_vector3_stat:.6f}; "
             f"Max CV mean canonical correlation={np.max(cv_mean_corrs):.4f}"
         )
 

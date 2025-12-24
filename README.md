@@ -165,14 +165,13 @@ python src/scripts/run_single_task.py --help
      * 使用统一指标选参（推荐：`meancorr`，即各成分相关系数的均值）。
    - 选择内层平均分最高的参数；如有并列，可用更小方差或更少参数作为 tie-break。
    - 用最佳参数在“外层训练集”重新拟合模型（固定参数，不再做模型内部 CV），再在“外层测试集”评估。
-3. 汇总外层结果：各成分相关系数的均值/方差、vector3 等整体指标。
+3. 汇总外层结果：各成分相关系数的均值/方差等整体指标。
 4. 置换检验：每次置换仅打乱 Y（保持 X/协变量索引一致），完整重复上述嵌套流程并记录种子。
 
 实现约定（便于后续修改）：
 - 预处理步骤的 fit 只发生在训练折（外层与内层都遵守）。
 - 模型内部不再做选参型 CV；超参数仅由内层 CV 决定。
 - 输出至少包含：`outer_fold_results`、`inner_cv_table`、`outer_mean_canonical_correlations`、`outer_all_test_canonical_correlations`、随机种子与参数网格规模。
-- `vector3` = 相关向量的 L2 范数（`||corr_vector||_2`），会随成分数增加而放大；仅在成分数固定时用于对比。
 
 ### 4) HPC（SLURM）
 仓库提供了 3 个示例提交脚本（可按需要改 `MODEL_TYPE`、array 范围、log 路径等）：
@@ -197,7 +196,7 @@ python src/result_summary/summarize_real_perm_scores.py --results_root <results_
 - `--atlas`: 可选过滤
 - `--model_type`: 可选过滤
 - `--output_csv`: 输出 CSV
-- `--score_mode`: `first_component` / `mean_all` / `vector3`
+- `--score_mode`: `first_component` / `mean_all`
 
 ## 输出位置（约定）
 

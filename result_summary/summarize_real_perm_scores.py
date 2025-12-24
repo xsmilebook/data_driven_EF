@@ -31,8 +31,6 @@ def _score_from_corrs(corrs: np.ndarray, score_mode: str) -> float:
         return float(corrs[0])
     if score_mode == "mean_all":
         return float(np.nanmean(corrs))
-    if score_mode == "vector3":
-        return float(np.linalg.norm(corrs))
     raise ValueError(f"Unsupported score_mode: {score_mode}")
 
 
@@ -82,7 +80,7 @@ def parse_args():
         "--score_mode",
         type=str,
         default="first_component",
-        choices=["first_component", "mean_all", "vector3"],
+        choices=["first_component", "mean_all"],
     )
     return ap.parse_args()
 
