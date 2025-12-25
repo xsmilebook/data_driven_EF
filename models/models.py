@@ -10,7 +10,6 @@ from abc import ABC, abstractmethod
 from typing import Dict, Tuple, Optional, Union
 from sklearn.cross_decomposition import PLSCanonical
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import KFold
 from scipy.stats import pearsonr
 import logging
 
@@ -220,7 +219,6 @@ class AdaptiveRCCAModel(BaseBrainBehaviorModel):
         n_components: Optional[int] = None,
         c_X: Optional[float] = None,
         c_Y: Optional[float] = None,
-        use_internal_cv: bool = True,
     ):
         if n_components_range is None:
             n_components_range = [5]
@@ -237,7 +235,6 @@ class AdaptiveRCCAModel(BaseBrainBehaviorModel):
         self.criterion = criterion
         self.pca = pca
         self.eps = eps
-        self.use_internal_cv = bool(use_internal_cv)
         self.fixed_n_components = n_components
         self.fixed_c_X = c_X
         self.fixed_c_Y = c_Y
@@ -256,110 +253,8 @@ class AdaptiveRCCAModel(BaseBrainBehaviorModel):
                 "Please install or upgrade it with: pip install -U cca-zoo"
             )
 
-    def _evaluate_hyperparameter_combo(
-        self,
-        X: np.ndarray,
-        Y: np.ndarray,
-        n_components: int,
-        c_X: float,
-        c_Y: float,
-    ) -> Dict[str, float]:
-        kf = KFold(n_splits=self.cv_folds, shuffle=True, random_state=self.random_state)
-
-        canonical_corrs = []
-        first_component_corrs = []
-        first_two_corrs = []
-        last_component_corrs = []
-        var_exp_X_list = []
-        var_exp_Y_list = []
-
-        for train_idx, val_idx in kf.split(X):
-            X_train, X_val = X[train_idx], X[val_idx]
-            Y_train, Y_val = Y[train_idx], Y[val_idx]
-
-            scaler_X_fold = StandardScaler()
-            scaler_Y_fold = StandardScaler()
-            X_train_scaled = scaler_X_fold.fit_transform(X_train)
-            Y_train_scaled = scaler_Y_fold.fit_transform(Y_train)
-            X_val_scaled = scaler_X_fold.transform(X_val)
-            Y_val_scaled = scaler_Y_fold.transform(Y_val)
-
-            try:
-                if _rcca_uses_latent_dimensions:
-                    rcca_model = _rCCA(
-                        latent_dimensions=n_components,
-                        c=[c_X, c_Y],
-                        pca=self.pca,
-                        eps=self.eps,
-                        random_state=self.random_state,
-                    )
-                else:
-                    rcca_model = _rCCA(
-                        latent_dims=n_components,
-                        c=[c_X, c_Y],
-                        pca=self.pca,
-                        eps=self.eps,
-                        random_state=self.random_state,
-                    )
-
-                rcca_model.fit([X_train_scaled, Y_train_scaled])
-                X_val_scores, Y_val_scores = rcca_model.transform([X_val_scaled, Y_val_scaled])
-
-                corrs = []
-                last_corr = np.nan
-                for i in range(n_components):
-                    if X_val_scores.shape[1] > i and Y_val_scores.shape[1] > i:
-                        corr, _ = pearsonr(X_val_scores[:, i], Y_val_scores[:, i])
-                        if not np.isnan(corr):
-                            corrs.append(corr)
-                        if i == (n_components - 1):
-                            last_corr = corr
-
-                if corrs:
-                    canonical_corrs.append(np.mean(corrs))
-                    first_component_corrs.append(float(corrs[0]))
-                    if len(corrs) >= 2:
-                        first_two_corrs.append(float(np.mean(corrs[:2])))
-                    elif len(corrs) == 1:
-                        first_two_corrs.append(float(corrs[0]))
-                    if np.isfinite(last_corr):
-                        last_component_corrs.append(float(last_corr))
-                    var_exp_X = np.var(X_val_scores, axis=0).sum() / np.var(X_val_scaled, axis=0).sum() * 100
-                    var_exp_Y = np.var(Y_val_scores, axis=0).sum() / np.var(Y_val_scaled, axis=0).sum() * 100
-                    var_exp_X_list.append(var_exp_X)
-                    var_exp_Y_list.append(var_exp_Y)
-            except Exception as e:
-                logger.warning(f"rCCA fitting failed for n_comp={n_components}, c_X={c_X}, c_Y={c_Y}: {e}")
-                continue
-
-        if not canonical_corrs:
-            return {
-                'canonical_correlation': -np.inf,
-                'first_component_correlation': -np.inf,
-                'mean_first_two_correlation': -np.inf,
-                'last_component_correlation': -np.inf,
-                'variance_explained_X': 0.0,
-                'variance_explained_Y': 0.0,
-                'canonical_correlation_std': np.inf,
-            }
-
-        return {
-            'canonical_correlation': np.mean(canonical_corrs),
-            'first_component_correlation': np.mean(first_component_corrs) if first_component_corrs else -np.inf,
-            'mean_first_two_correlation': np.mean(first_two_corrs) if first_two_corrs else -np.inf,
-            'last_component_correlation': (float(np.mean(last_component_corrs)) if last_component_corrs else -np.inf),
-            'variance_explained_X': np.mean(var_exp_X_list) if var_exp_X_list else 0.0,
-            'variance_explained_Y': np.mean(var_exp_Y_list) if var_exp_Y_list else 0.0,
-            'canonical_correlation_std': np.std(canonical_corrs),
-        }
-
     def fit(self, X: Union[np.ndarray, pd.DataFrame], Y: Union[np.ndarray, pd.DataFrame]) -> 'AdaptiveRCCAModel':
-        if not self.use_internal_cv:
-            logger.info("Starting fixed-parameter rCCA fitting (no internal CV)")
-        else:
-            logger.info(f"Starting adaptive rCCA fitting with n_components range: {self.n_components_range}")
-            logger.info(f"c_X range: {self.c_X_range}")
-            logger.info(f"c_Y range: {self.c_Y_range}")
+        logger.info("Starting fixed-parameter rCCA fitting (nested CV only)")
 
         if isinstance(X, pd.DataFrame):
             X_values = X.values
@@ -372,46 +267,9 @@ class AdaptiveRCCAModel(BaseBrainBehaviorModel):
             Y_values = Y
 
         cv_results = None
-        if self.use_internal_cv:
-            cv_results = {}
-            best_score = -np.inf
-            best_score_any = -np.inf
-            best_n_components = self.n_components_range[0]
-            best_c_X = self.c_X_range[0]
-            best_c_Y = self.c_Y_range[0]
-
-            threshold = 0.05
-
-            for n_comp in self.n_components_range:
-                for c_X in self.c_X_range:
-                    for c_Y in self.c_Y_range:
-                        logger.info(f"Evaluating n_comp={n_comp}, c_X={c_X}, c_Y={c_Y}")
-                        metrics = self._evaluate_hyperparameter_combo(X_values, Y_values, n_comp, c_X, c_Y)
-                        cv_results[(n_comp, c_X, c_Y)] = metrics
-
-                        score = metrics[self.criterion]
-                        if score > best_score_any:
-                            best_score_any = score
-                        if float(metrics.get('last_component_correlation', -np.inf)) >= threshold:
-                            if score > best_score:
-                                best_score = score
-                                best_n_components = n_comp
-                                best_c_X = c_X
-                                best_c_Y = c_Y
-
-            if best_score == -np.inf:
-                for (n_comp, c_X, c_Y), metrics in cv_results.items():
-                    score = metrics[self.criterion]
-                    if score > best_score:
-                        best_score = score
-                        best_n_components = n_comp
-                        best_c_X = c_X
-                        best_c_Y = c_Y
-        else:
-            best_n_components = int(self.fixed_n_components or self.n_components_range[0])
-            best_c_X = float(self.fixed_c_X if self.fixed_c_X is not None else self.c_X_range[0])
-            best_c_Y = float(self.fixed_c_Y if self.fixed_c_Y is not None else self.c_Y_range[0])
-            best_score = float('nan')
+        best_n_components = int(self.fixed_n_components or self.n_components_range[0])
+        best_c_X = float(self.fixed_c_X if self.fixed_c_X is not None else self.c_X_range[0])
+        best_c_Y = float(self.fixed_c_Y if self.fixed_c_Y is not None else self.c_Y_range[0])
 
         self.optimal_n_components = best_n_components
         self.optimal_c_X = best_c_X
@@ -491,7 +349,6 @@ class AdaptiveRCCAModel(BaseBrainBehaviorModel):
             'criterion': self.criterion,
             'pca': self.pca,
             'eps': self.eps,
-            'use_internal_cv': self.use_internal_cv,
             'fixed_n_components': self.fixed_n_components,
             'fixed_c_X': self.fixed_c_X,
             'fixed_c_Y': self.fixed_c_Y,
@@ -514,7 +371,6 @@ class AdaptiveRCCAModel(BaseBrainBehaviorModel):
             'n_components': self.fixed_n_components,
             'c_X': self.fixed_c_X,
             'c_Y': self.fixed_c_Y,
-            'use_internal_cv': self.use_internal_cv,
         }
 
 
@@ -548,13 +404,13 @@ def create_model(model_type: str, **kwargs) -> BaseBrainBehaviorModel:
 
 class AdaptivePLSModel(BaseBrainBehaviorModel):
     """
-    自适应PLS模型 - 使用内部交叉验证确定最优成分数量
+    PLS模型（固定参数，超参数由外层嵌套CV决定）
     """
     
     def __init__(self, n_components_range: list = None, cv_folds: int = 5,
                  criterion: str = 'canonical_correlation', random_state: Optional[int] = None,
                  scale: bool = True, max_iter: int = 500, tol: float = 1e-06,
-                 n_components: Optional[int] = None, use_internal_cv: bool = True):
+                 n_components: Optional[int] = None):
         """
         初始化自适应PLS模型
         
@@ -577,7 +433,6 @@ class AdaptivePLSModel(BaseBrainBehaviorModel):
         self.scale = scale
         self.max_iter = max_iter
         self.tol = tol
-        self.use_internal_cv = bool(use_internal_cv)
         self.fixed_n_components = n_components
         
         self.optimal_n_components = None
@@ -586,90 +441,6 @@ class AdaptivePLSModel(BaseBrainBehaviorModel):
         self.is_fitted = False
         self.n_components = None  # 用于兼容性
         
-    def _evaluate_n_components(self, X: np.ndarray, Y: np.ndarray, 
-                              n_components: int) -> Dict[str, float]:
-        """
-        评估特定成分数量的性能
-        
-        Args:
-            X: 脑数据
-            Y: 行为数据
-            n_components: 成分数量
-            
-        Returns:
-            评估指标字典
-        """
-        # 创建内部交叉验证
-        kf = KFold(n_splits=self.cv_folds, shuffle=True, 
-                  random_state=self.random_state)
-        
-        canonical_corrs = []
-        first_component_corrs = []
-        first_two_corrs = []
-        last_component_corrs = []
-        var_exp_X_list = []
-        var_exp_Y_list = []
-        stability_scores = []
-        
-        for train_idx, val_idx in kf.split(X):
-            # 分割数据
-            X_train, X_val = X[train_idx], X[val_idx]
-            Y_train, Y_val = Y[train_idx], Y[val_idx]
-            
-            # 创建并拟合模型
-            pls_model = PLSCanonical(
-                n_components=n_components,
-                scale=self.scale,
-                max_iter=self.max_iter,
-                tol=self.tol
-            )
-            
-            pls_model.fit(X_train, Y_train)
-            
-            # 转换验证集
-            X_val_scores, Y_val_scores = pls_model.transform(X_val, Y_val)
-            
-            # 计算典型相关系数
-            corrs = []
-            for i in range(n_components):
-                corr, _ = pearsonr(X_val_scores[:, i], Y_val_scores[:, i])
-                corrs.append(corr)
-            canonical_corrs.append(np.mean(corrs))
-            if corrs:
-                first_component_corrs.append(float(corrs[0]))
-            if len(corrs) >= 2:
-                first_two_corrs.append(float(np.mean(corrs[:2])))
-            elif len(corrs) == 1:
-                first_two_corrs.append(float(corrs[0]))
-
-            last_corr = corrs[-1] if corrs else np.nan
-            if np.isfinite(last_corr):
-                last_component_corrs.append(float(last_corr))
-            
-            # 计算方差解释（简化版）
-            var_exp_X_list.append(np.var(X_val_scores, axis=0).sum() / 
-                                np.var(X_val, axis=0).sum() * 100)
-            var_exp_Y_list.append(np.var(Y_val_scores, axis=0).sum() / 
-                                np.var(Y_val, axis=0).sum() * 100)
-            
-            # 计算稳定性（载荷的一致性）
-            if hasattr(pls_model, 'x_loadings_'):
-                loadings = pls_model.x_loadings_
-                # 计算载荷的稀疏性和稳定性
-                stability = np.mean(np.abs(loadings)) / (np.std(loadings) + 1e-8)
-                stability_scores.append(stability)
-        
-        return {
-            'canonical_correlation': np.mean(canonical_corrs),
-            'first_component_correlation': np.mean(first_component_corrs) if first_component_corrs else -np.inf,
-            'mean_first_two_correlation': np.mean(first_two_corrs) if first_two_corrs else -np.inf,
-            'last_component_correlation': (float(np.mean(last_component_corrs)) if last_component_corrs else -np.inf),
-            'variance_explained_X': np.mean(var_exp_X_list),
-            'variance_explained_Y': np.mean(var_exp_Y_list),
-            'stability': np.mean(stability_scores) if stability_scores else 0.0,
-            'canonical_correlation_std': np.std(canonical_corrs)
-        }
-    
     def fit(self, X: Union[np.ndarray, pd.DataFrame], 
             Y: Union[np.ndarray, pd.DataFrame]) -> 'AdaptivePLSModel':
         """
@@ -682,10 +453,7 @@ class AdaptivePLSModel(BaseBrainBehaviorModel):
         Returns:
             self
         """
-        if not self.use_internal_cv:
-            logger.info("Starting fixed-parameter PLS fitting (no internal CV)")
-        else:
-            logger.info(f"Starting adaptive PLS fitting with component range: {self.n_components_range}")
+        logger.info("Starting fixed-parameter PLS fitting (nested CV only)")
         logger.info(f"X shape: {X.shape}, Y shape: {Y.shape}")
         
         # 转换数据格式
@@ -700,42 +468,13 @@ class AdaptivePLSModel(BaseBrainBehaviorModel):
             Y_values = Y
         
         cv_results = None
-        if self.use_internal_cv:
-            cv_results = {}
-            best_score = -np.inf
-            best_score_any = -np.inf
-            best_n_components = self.n_components_range[0] if self.n_components_range else 1
-            best_n_components_any = best_n_components
-            threshold = 0.05
-
-            for n_comp in self.n_components_range:
-                logger.info(f"Evaluating n_components = {n_comp}")
-                metrics = self._evaluate_n_components(X_values, Y_values, n_comp)
-                cv_results[n_comp] = metrics
-
-                if self.criterion not in metrics:
-                    raise ValueError(f"Unsupported criterion: {self.criterion}. Available: {list(metrics.keys())}")
-
-                score = float(metrics[self.criterion])
-                if score > best_score_any:
-                    best_score_any = score
-                    best_n_components_any = int(n_comp)
-
-                if float(metrics.get('last_component_correlation', -np.inf)) >= threshold:
-                    if score > best_score:
-                        best_score = score
-                        best_n_components = int(n_comp)
-
-            if best_score == -np.inf:
-                best_n_components = best_n_components_any
-        else:
-            best_n_components = int(self.fixed_n_components or (self.n_components_range[0] if self.n_components_range else 1))
+        best_n_components = int(self.fixed_n_components or (self.n_components_range[0] if self.n_components_range else 1))
 
         self.optimal_n_components = best_n_components
         self.cv_results_ = cv_results
         self.n_components = best_n_components  # update n_components for compatibility
         
-        logger.info(f"Optimal n_components selected: {self.optimal_n_components} (criterion: {self.criterion})")
+        logger.info(f"Using fixed n_components: {self.optimal_n_components}")
         
         # 使用最优成分数量创建最终模型
         self.model = PLSCanonical(
@@ -799,7 +538,6 @@ class AdaptivePLSModel(BaseBrainBehaviorModel):
             'scale': self.scale,
             'max_iter': self.max_iter,
             'tol': self.tol,
-            'use_internal_cv': self.use_internal_cv,
             'fixed_n_components': self.fixed_n_components,
             'is_fitted': self.is_fitted
         }
@@ -832,13 +570,12 @@ class AdaptivePLSModel(BaseBrainBehaviorModel):
             'max_iter': self.max_iter,
             'tol': self.tol,
             'n_components': self.fixed_n_components,
-            'use_internal_cv': self.use_internal_cv,
         }
 
 
 class AdaptiveSCCAModel(BaseBrainBehaviorModel):
     """
-    自适应 Sparse-CCA 模型 - 使用内部交叉验证同时确定最优成分数和稀疏度参数
+    Sparse-CCA 模型（固定参数，超参数由外层嵌套CV决定）
     """
     
     def __init__(self, n_components_range: list = None,
@@ -851,8 +588,7 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
                  tol: float = 1e-06,
                  n_components: Optional[int] = None,
                  sparsity_X: Optional[float] = None,
-                 sparsity_Y: Optional[float] = None,
-                 use_internal_cv: bool = True):
+                 sparsity_Y: Optional[float] = None):
         """
         初始化自适应 Sparse-CCA 模型
         
@@ -884,7 +620,6 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
         self.criterion = criterion
         self.max_iter = max_iter
         self.tol = tol
-        self.use_internal_cv = bool(use_internal_cv)
         self.fixed_n_components = n_components
         self.fixed_sparsity_X = sparsity_X
         self.fixed_sparsity_Y = sparsity_Y
@@ -906,120 +641,6 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
                 "implementation. Please install it with: pip install -U cca-zoo"
             )
     
-    def _evaluate_hyperparameter_combo(self, X: np.ndarray, Y: np.ndarray, 
-                                        n_components: int,
-                                        sparsity_X: float, sparsity_Y: float) -> Dict[str, float]:
-        """
-        评估特定超参数组合的性能
-        
-        Args:
-            X: 脑数据
-            Y: 行为数据
-            n_components: 成分数量
-            sparsity_X: 脑数据稀疏度
-            sparsity_Y: 行为数据稀疯度
-            
-        Returns:
-            评估指标字典
-        """
-        kf = KFold(n_splits=self.cv_folds, shuffle=True, 
-                  random_state=self.random_state)
-        
-        canonical_corrs = []
-        first_component_corrs = []
-        first_two_corrs = []
-        last_component_corrs = []
-        var_exp_X_list = []
-        var_exp_Y_list = []
-        
-        for train_idx, val_idx in kf.split(X):
-            # 分割数据
-            X_train, X_val = X[train_idx], X[val_idx]
-            Y_train, Y_val = Y[train_idx], Y[val_idx]
-            
-            # 标准化
-            scaler_X_fold = StandardScaler()
-            scaler_Y_fold = StandardScaler()
-            X_train_scaled = scaler_X_fold.fit_transform(X_train)
-            Y_train_scaled = scaler_Y_fold.fit_transform(Y_train)
-            X_val_scaled = scaler_X_fold.transform(X_val)
-            Y_val_scaled = scaler_Y_fold.transform(Y_val)
-            
-            # 创建并拟合 SCCA 模型
-            try:
-                if _scca_ipls_uses_latent_dimensions:
-                    scca_model = _SCCA_IPLS(
-                        latent_dimensions=n_components,
-                        random_state=self.random_state,
-                        tol=self.tol,
-                        epochs=self.max_iter,
-                    )
-                else:
-                    scca_model = _SCCA_IPLS(
-                        latent_dims=n_components,
-                        random_state=self.random_state,
-                        c=[sparsity_X, sparsity_Y],
-                        max_iter=self.max_iter,
-                        tol=self.tol,
-                    )
-                
-                scca_model.fit([X_train_scaled, Y_train_scaled])
-                
-                # 转换验证集
-                X_val_scores, Y_val_scores = scca_model.transform([X_val_scaled, Y_val_scaled])
-                
-                # 计算典型相关系数
-                corrs = []
-                last_corr = np.nan
-                for i in range(n_components):
-                    if X_val_scores.shape[1] > i and Y_val_scores.shape[1] > i:
-                        corr, _ = pearsonr(X_val_scores[:, i], Y_val_scores[:, i])
-                        if not np.isnan(corr):
-                            corrs.append(corr)
-                        if i == (n_components - 1):
-                            last_corr = corr
-                
-                if corrs:
-                    canonical_corrs.append(np.mean(corrs))
-                    first_component_corrs.append(float(corrs[0]))
-                    if len(corrs) >= 2:
-                        first_two_corrs.append(float(np.mean(corrs[:2])))
-                    elif len(corrs) == 1:
-                        first_two_corrs.append(float(corrs[0]))
-                    if np.isfinite(last_corr):
-                        last_component_corrs.append(float(last_corr))
-                    
-                    # 计算方差解释
-                    var_exp_X = np.var(X_val_scores, axis=0).sum() / np.var(X_val_scaled, axis=0).sum() * 100
-                    var_exp_Y = np.var(Y_val_scores, axis=0).sum() / np.var(Y_val_scaled, axis=0).sum() * 100
-                    var_exp_X_list.append(var_exp_X)
-                    var_exp_Y_list.append(var_exp_Y)
-                    
-            except Exception as e:
-                logger.warning(f"SCCA fitting failed for n_comp={n_components}, sparsity_X={sparsity_X}, sparsity_Y={sparsity_Y}: {e}")
-                continue
-        
-        if not canonical_corrs:
-            return {
-                'canonical_correlation': -np.inf,
-                'first_component_correlation': -np.inf,
-                'mean_first_two_correlation': -np.inf,
-                'last_component_correlation': -np.inf,
-                'variance_explained_X': 0.0,
-                'variance_explained_Y': 0.0,
-                'canonical_correlation_std': np.inf
-            }
-        
-        return {
-            'canonical_correlation': np.mean(canonical_corrs),
-            'first_component_correlation': np.mean(first_component_corrs) if first_component_corrs else -np.inf,
-            'mean_first_two_correlation': np.mean(first_two_corrs) if first_two_corrs else -np.inf,
-            'last_component_correlation': (float(np.mean(last_component_corrs)) if last_component_corrs else -np.inf),
-            'variance_explained_X': np.mean(var_exp_X_list) if var_exp_X_list else 0.0,
-            'variance_explained_Y': np.mean(var_exp_Y_list) if var_exp_Y_list else 0.0,
-            'canonical_correlation_std': np.std(canonical_corrs)
-        }
-    
     def fit(self, X: Union[np.ndarray, pd.DataFrame], 
             Y: Union[np.ndarray, pd.DataFrame]) -> 'AdaptiveSCCAModel':
         """
@@ -1032,13 +653,7 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
         Returns:
             self
         """
-        if not self.use_internal_cv:
-            logger.info("Starting fixed-parameter SCCA fitting (no internal CV)")
-        else:
-            logger.info(f"Starting adaptive SCCA fitting with n_components range: {self.n_components_range}")
-            logger.info(f"sparsity_X range: {self.sparsity_X_range}")
-            logger.info(f"sparsity_Y range: {self.sparsity_Y_range}")
-            logger.info(f"Total combinations to evaluate: {len(self.n_components_range) * len(self.sparsity_X_range) * len(self.sparsity_Y_range)}")
+        logger.info("Starting fixed-parameter SCCA fitting (nested CV only)")
         logger.info(f"X shape: {X.shape}, Y shape: {Y.shape}")
         
         # 转换数据格式
@@ -1052,47 +667,10 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
         else:
             Y_values = Y
         
-        # 网格搜索最优超参数组合
         cv_results = None
-        if self.use_internal_cv:
-            cv_results = {}
-            best_score = -np.inf
-            best_score_any = -np.inf
-            best_n_components = self.n_components_range[0]
-            best_sparsity_X = self.sparsity_X_range[0]
-            best_sparsity_Y = self.sparsity_Y_range[0]
-
-            threshold = 0.05
-
-            for n_comp in self.n_components_range:
-                for sparsity_X in self.sparsity_X_range:
-                    for sparsity_Y in self.sparsity_Y_range:
-                        logger.info(f"Evaluating n_comp={n_comp}, sparsity_X={sparsity_X}, sparsity_Y={sparsity_Y}")
-                        metrics = self._evaluate_hyperparameter_combo(X_values, Y_values, n_comp, sparsity_X, sparsity_Y)
-                        cv_results[(n_comp, sparsity_X, sparsity_Y)] = metrics
-
-                        score = metrics[self.criterion]
-                        if score > best_score_any:
-                            best_score_any = score
-                        if float(metrics.get('last_component_correlation', -np.inf)) >= threshold:
-                            if score > best_score:
-                                best_score = score
-                                best_n_components = n_comp
-                                best_sparsity_X = sparsity_X
-                                best_sparsity_Y = sparsity_Y
-
-            if best_score == -np.inf:
-                for (n_comp, sparsity_X, sparsity_Y), metrics in cv_results.items():
-                    score = metrics[self.criterion]
-                    if score > best_score:
-                        best_score = score
-                        best_n_components = n_comp
-                        best_sparsity_X = sparsity_X
-                        best_sparsity_Y = sparsity_Y
-        else:
-            best_n_components = int(self.fixed_n_components or self.n_components_range[0])
-            best_sparsity_X = float(self.fixed_sparsity_X if self.fixed_sparsity_X is not None else self.sparsity_X_range[0])
-            best_sparsity_Y = float(self.fixed_sparsity_Y if self.fixed_sparsity_Y is not None else self.sparsity_Y_range[0])
+        best_n_components = int(self.fixed_n_components or self.n_components_range[0])
+        best_sparsity_X = float(self.fixed_sparsity_X if self.fixed_sparsity_X is not None else self.sparsity_X_range[0])
+        best_sparsity_Y = float(self.fixed_sparsity_Y if self.fixed_sparsity_Y is not None else self.sparsity_Y_range[0])
 
         self.optimal_n_components = best_n_components
         self.optimal_sparsity_X = best_sparsity_X
@@ -1104,7 +682,6 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
         logger.info(f"  n_components={self.optimal_n_components}")
         logger.info(f"  sparsity_X={self.optimal_sparsity_X}")
         logger.info(f"  sparsity_Y={self.optimal_sparsity_Y}")
-        logger.info(f"  Best {self.criterion}: {best_score:.4f}")
         
         # 使用最优超参数创建最终模型
         if _scca_ipls_uses_latent_dimensions:
@@ -1203,7 +780,6 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
             'criterion': self.criterion,
             'max_iter': self.max_iter,
             'tol': self.tol,
-            'use_internal_cv': self.use_internal_cv,
             'fixed_n_components': self.fixed_n_components,
             'fixed_sparsity_X': self.fixed_sparsity_X,
             'fixed_sparsity_Y': self.fixed_sparsity_Y,
@@ -1241,7 +817,6 @@ class AdaptiveSCCAModel(BaseBrainBehaviorModel):
             'n_components': self.fixed_n_components,
             'sparsity_X': self.fixed_sparsity_X,
             'sparsity_Y': self.fixed_sparsity_Y,
-            'use_internal_cv': self.use_internal_cv,
         }
 
 

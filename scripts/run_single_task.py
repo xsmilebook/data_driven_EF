@@ -357,7 +357,6 @@ def create_model_instance(args):
             'scale': True,
             'max_iter': 5000,
             'tol': 1e-06,
-            'use_internal_cv': False,
         }
         logger.info("Creating Adaptive-PLS model with fixed n_components_range=[5]")
     elif args.model_type == 'adaptive_scca':
@@ -371,7 +370,6 @@ def create_model_instance(args):
             'random_state': args.random_state,
             'max_iter': 10000,
             'tol': 1e-06,
-            'use_internal_cv': False,
         }
         logger.info(f"Creating Adaptive-SCCA model with n_components range: {model_params['n_components_range']}")
         logger.info(f"sparsity_X range: {model_params['sparsity_X_range']}")
@@ -388,7 +386,6 @@ def create_model_instance(args):
             'random_state': args.random_state,
             'pca': True,
             'eps': 1e-06,
-            'use_internal_cv': False,
         }
         logger.info(f"Creating Adaptive-rCCA model with n_components range: {model_params['n_components_range']}")
         logger.info(f"c_X range: {model_params['c_X_range']}")
@@ -441,7 +438,6 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
             for n_comp in n_range:
                 p = dict(params0)
                 p['n_components'] = int(n_comp)
-                p['use_internal_cv'] = False
                 candidates.append(p)
             return candidates or [params0]
         if args.model_type == 'adaptive_scca':
@@ -452,7 +448,6 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
                         p['n_components'] = int(n_comp)
                         p['sparsity_X'] = float(sx)
                         p['sparsity_Y'] = float(sy)
-                        p['use_internal_cv'] = False
                         candidates.append(p)
             return candidates or [params0]
         if args.model_type == 'adaptive_rcca':
@@ -463,7 +458,6 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
                         p['n_components'] = int(n_comp)
                         p['c_X'] = float(cx)
                         p['c_Y'] = float(cy)
-                        p['use_internal_cv'] = False
                         candidates.append(p)
             return candidates or [params0]
         return [params0]
@@ -486,7 +480,6 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
                     'scale': True,
                     'max_iter': 5000,
                     'tol': 1e-06,
-                    'use_internal_cv': False,
                 }
             elif args.model_type == 'adaptive_scca':
                 model_params = {
@@ -498,7 +491,6 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
                     'random_state': permutation_seed,
                     'max_iter': 10000,
                     'tol': 1e-06,
-                    'use_internal_cv': False,
                 }
             else:
                 model_params = {
@@ -510,7 +502,6 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
                     'random_state': permutation_seed,
                     'pca': True,
                     'eps': 1e-06,
-                    'use_internal_cv': False,
                 }
 
             logger.info(
@@ -564,7 +555,6 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
             param_candidates = _build_nested_param_candidates(base_model)
             for p in param_candidates:
                 p['n_components'] = 1
-                p['use_internal_cv'] = False
 
             nested_results = run_nested_cv_evaluation(
                 base_model,
