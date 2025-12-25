@@ -190,17 +190,19 @@ def main():
         score_mat[i, :n] = arr[:n]
 
     mean_scores = np.nanmean(score_mat, axis=0)
+    median_scores = np.nanmedian(score_mat, axis=0)
 
     out_csv = output_dir / "real_scores_summary.csv"
     with out_csv.open("w", encoding="utf-8") as f:
-        f.write("component,score_mean,n_folds\n")
+        f.write("component,score_mean,score_median,n_folds\n")
         for i in range(max_components):
-            f.write(f"{i+1},{mean_scores[i]:.6f},{score_mat.shape[0]}\n")
+            f.write(f"{i+1},{mean_scores[i]:.6f},{median_scores[i]:.6f},{score_mat.shape[0]}\n")
 
     agg_npz = output_dir / "real_loadings_scores_summary.npz"
     np.savez_compressed(
         agg_npz,
         scores_mean=mean_scores,
+        scores_median=median_scores,
     )
 
     if all_fold_x_loadings and all_fold_y_loadings:

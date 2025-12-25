@@ -178,27 +178,27 @@ python src/scripts/run_single_task.py --help
 目标：按成分逐步检验第 k 个成分（控制前 k-1 个成分），避免后续成分被前序成分“带出”。
 
 推荐流程：
-1. 真实数据（real）运行时，**保存每个外层 fold 的 loadings**（X/Y），以及每折对应的相关向量与评分。
+1. 真实数据（real）运行时，保存每个外层 fold 的 loadings（X/Y），以及每折对应的相关向量与评分。
    - 同时保存外层训练集与测试集的 X/Y scores，便于 stepwise 残差化。
 2. 单独脚本汇总所有 real 结果：
-   - 汇总输出：每个成分的 real score（mean）与对应的 loadings（mean）。
+   - 汇总输出：每个成分的 real score（mean/median）与对应的 loadings（mean）。
    - 同时输出全样本的 train/test scores（按 fold 内平均，再跨 real 取 mean）。
 3. 置换检验（perm）对每个成分 k 进行 stepwise：
-   - 读取 real 的 score 与 loadings。
-   - 在 X/Y 上依次剔除前 k-1 个成分（用 real loadings 做投影并回归残差）。
-   - 在残差上拟合并提取第 k 个成分得分，计算相关作为 perm score。
-   - 用 perm 分布对 real 的第 k 个成分 score 计算 **右尾单侧** p 值（real 越大越显著）。
+   - 读取 real 的 score 与全样本 train scores（mean）。
+   - 将 real 的前 k-1 成分 train scores 作为额外协变量加入 confounds。
+   - 在残差化后的数据上拟合并提取第 k 个成分得分，计算相关作为 perm score。
+   - 用 perm 分布对 real 的第 k 个成分 **中位数** score 计算右尾单侧 p 值（real 越大越显著）。
 
 输出建议：
-- real：每折 loadings + 每折 score + 汇总后的 mean/median。
-- perm：对每个 k 保存 perm 分布与 p 值表格（CSV/JSON）。
+- real：每折 loadings + 每折 train/test scores + fold 索引 + 汇总后的 mean/median（报告中位数）。
+- perm：每个 k 的 stepwise scores + p 值表格（CSV，基于 real 中位数）。
 
 ### 5) HPC（SLURM）
+建议使用 submit_hpc_* 批量运行 real 与 perm（real 也需要多次运行以获得稳健中位数统计）。
 仓库提供了 3 个示例提交脚本（可按需要改 `MODEL_TYPE`、array 范围、log 路径等）：
 ```bash
 sbatch src/scripts/submit_hpc_real.sh   # 多次真实运行（array=0-10）
 sbatch src/scripts/submit_hpc_perm.sh   # 置换运行（array=1-1000）
-sbatch src/scripts/submit_hpc_job.sh    # 0=真实，1..N=置换（单脚本）
 ```
 
 ## 结果汇总（real/perm 扫描）
@@ -218,18 +218,24 @@ python src/result_summary/summarize_real_perm_scores.py --results_root <results_
 - `--output_csv`: 输出 CSV
 - `--score_mode`: `first_component` / `mean_all`
 
+### 必需顺序（stepwise 置换）
+1. 运行 real（建议用 `submit_hpc_real.sh` 批量跑）。
+2. 汇总 real：`summarize_real_loadings_scores.py`（生成 real mean loadings + 全样本 train/test scores + score median）。
+3. 运行 perm（建议用 `submit_hpc_perm.sh` 批量跑，stepwise 会读取 real 汇总结果）。
+4. 汇总 perm：`summarize_perm_stepwise_pvalues.py`（右尾单侧 p 值，基于 real 中位数）。
+
 ### `src/result_summary/summarize_real_loadings_scores.py`
-汇总 real 的外层 fold loadings 与相关分数，输出平均/中位数结果。
+汇总 real 的外层 fold loadings 与相关分数，输出 mean/median 结果。
 
 ```bash
 python src/result_summary/summarize_real_loadings_scores.py --results_root <results_root> --atlas <atlas> --model_type <model>
 ```
 
 关键参数：
-- 无（默认使用 mean 聚合）
+- 无（默认输出 mean 与 median）
 
 ### `src/result_summary/summarize_perm_stepwise_pvalues.py`
-汇总 perm 的 stepwise 分数并计算右尾单侧 p 值。
+汇总 perm 的 stepwise 分数并计算右尾单侧 p 值（对 real 中位数）。
 
 ```bash
 python src/result_summary/summarize_perm_stepwise_pvalues.py --results_root <results_root> --atlas <atlas> --model_type <model>

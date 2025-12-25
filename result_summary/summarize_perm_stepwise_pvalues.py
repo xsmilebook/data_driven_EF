@@ -32,7 +32,10 @@ def _load_real_scores(results_root: Path, atlas: str | None) -> np.ndarray | Non
         return None
     try:
         data = np.load(summary_path)
-        return np.asarray(data.get("scores_mean"), dtype=float).reshape(-1)
+        scores = data.get("scores_median")
+        if scores is None:
+            scores = data.get("scores_mean")
+        return np.asarray(scores, dtype=float).reshape(-1)
     except Exception:
         return None
 
