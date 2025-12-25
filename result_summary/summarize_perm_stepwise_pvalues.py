@@ -12,22 +12,34 @@ from src.models.utils import load_results
 
 def _iter_perm_results(results_root: Path, atlas: str | None, model_type: str | None):
     base = results_root / "perm"
-    if atlas is not None:
-        base = base / atlas
-    if model_type is not None:
-        base = base / model_type
     if not base.exists():
         return
-    for p in base.glob("**/seed_*/result.json"):
+    if atlas is not None and model_type is not None:
+        base = base / atlas / model_type
+        json_glob = "**/seed_*/result.json"
+        npz_glob = "**/seed_*/result.npz"
+    elif atlas is not None:
+        base = base / atlas
+        json_glob = "**/seed_*/result.json"
+        npz_glob = "**/seed_*/result.npz"
+    elif model_type is not None:
+        json_glob = f"**/{model_type}/seed_*/result.json"
+        npz_glob = f"**/{model_type}/seed_*/result.npz"
+    else:
+        json_glob = "**/seed_*/result.json"
+        npz_glob = "**/seed_*/result.npz"
+
+    for p in base.glob(json_glob):
         yield p
-    for p in base.glob("**/seed_*/result.npz"):
+    for p in base.glob(npz_glob):
         yield p
 
 
 def _load_real_scores(results_root: Path, atlas: str | None) -> np.ndarray | None:
     if atlas is None:
-        return None
-    summary_path = results_root / "summary" / atlas / "real_loadings_scores_summary.npz"
+        summary_path = results_root / "summary" / "real_loadings_scores_summary.npz"
+    else:
+        summary_path = results_root / "summary" / atlas / "real_loadings_scores_summary.npz"
     if not summary_path.exists():
         return None
     try:
@@ -72,11 +84,6 @@ def main():
             continue
         perm_scores.append(step_scores)
 
-        if real_scores is None:
-            real_from_perm = res.get("real_scores_mean")
-            if real_from_perm is not None:
-                real_scores = np.asarray(real_from_perm, dtype=float).reshape(-1)
-
     if not perm_scores:
         raise RuntimeError("No permutation stepwise scores found.")
     if real_scores is None:
@@ -93,7 +100,13 @@ def main():
         pad = np.full((n_components - real_scores.size,), np.nan, dtype=float)
         real_scores = np.concatenate([real_scores, pad])
 
-    out_csv = Path(args.output_csv) if args.output_csv else results_root / "summary" / "perm_stepwise_pvalues.csv"
+    if args.output_csv:
+        out_csv = Path(args.output_csv)
+    else:
+        out_dir = results_root / "summary"
+        if args.atlas:
+            out_dir = out_dir / args.atlas
+        out_csv = out_dir / "perm_stepwise_pvalues.csv"
     out_csv.parent.mkdir(parents=True, exist_ok=True)
 
     with out_csv.open("w", encoding="utf-8") as f:

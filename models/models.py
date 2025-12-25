@@ -377,17 +377,17 @@ class AdaptiveRCCAModel(BaseBrainBehaviorModel):
             best_score = -np.inf
             best_score_any = -np.inf
             best_n_components = self.n_components_range[0]
-            best_sparsity_X = self.sparsity_X_range[0]
-            best_sparsity_Y = self.sparsity_Y_range[0]
+            best_c_X = self.c_X_range[0]
+            best_c_Y = self.c_Y_range[0]
 
             threshold = 0.05
 
             for n_comp in self.n_components_range:
-                for sparsity_X in self.sparsity_X_range:
-                    for sparsity_Y in self.sparsity_Y_range:
-                        logger.info(f"Evaluating n_comp={n_comp}, sparsity_X={sparsity_X}, sparsity_Y={sparsity_Y}")
-                        metrics = self._evaluate_hyperparameter_combo(X_values, Y_values, n_comp, sparsity_X, sparsity_Y)
-                        cv_results[(n_comp, sparsity_X, sparsity_Y)] = metrics
+                for c_X in self.c_X_range:
+                    for c_Y in self.c_Y_range:
+                        logger.info(f"Evaluating n_comp={n_comp}, c_X={c_X}, c_Y={c_Y}")
+                        metrics = self._evaluate_hyperparameter_combo(X_values, Y_values, n_comp, c_X, c_Y)
+                        cv_results[(n_comp, c_X, c_Y)] = metrics
 
                         score = metrics[self.criterion]
                         if score > best_score_any:
@@ -396,26 +396,26 @@ class AdaptiveRCCAModel(BaseBrainBehaviorModel):
                             if score > best_score:
                                 best_score = score
                                 best_n_components = n_comp
-                                best_sparsity_X = sparsity_X
-                                best_sparsity_Y = sparsity_Y
+                                best_c_X = c_X
+                                best_c_Y = c_Y
 
             if best_score == -np.inf:
-                for (n_comp, sparsity_X, sparsity_Y), metrics in cv_results.items():
+                for (n_comp, c_X, c_Y), metrics in cv_results.items():
                     score = metrics[self.criterion]
                     if score > best_score:
                         best_score = score
                         best_n_components = n_comp
-                        best_sparsity_X = sparsity_X
-                        best_sparsity_Y = sparsity_Y
+                        best_c_X = c_X
+                        best_c_Y = c_Y
         else:
             best_n_components = int(self.fixed_n_components or self.n_components_range[0])
-            best_sparsity_X = float(self.fixed_sparsity_X if self.fixed_sparsity_X is not None else self.sparsity_X_range[0])
-            best_sparsity_Y = float(self.fixed_sparsity_Y if self.fixed_sparsity_Y is not None else self.sparsity_Y_range[0])
+            best_c_X = float(self.fixed_c_X if self.fixed_c_X is not None else self.c_X_range[0])
+            best_c_Y = float(self.fixed_c_Y if self.fixed_c_Y is not None else self.c_Y_range[0])
             best_score = float('nan')
 
         self.optimal_n_components = best_n_components
-        self.optimal_sparsity_X = best_sparsity_X
-        self.optimal_sparsity_Y = best_sparsity_Y
+        self.optimal_c_X = best_c_X
+        self.optimal_c_Y = best_c_Y
         self.n_components = best_n_components  # update n_components for compatibility
         self.cv_results_ = cv_results
 

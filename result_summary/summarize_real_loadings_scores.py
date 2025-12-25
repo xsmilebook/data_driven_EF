@@ -26,15 +26,26 @@ def _load_artifact(result: dict, artifact_key: str) -> np.ndarray | None:
 
 def _iter_real_results(results_root: Path, atlas: str | None, model_type: str | None):
     base = results_root / "real"
-    if atlas is not None:
-        base = base / atlas
-    if model_type is not None:
-        base = base / model_type
     if not base.exists():
         return
-    for p in base.glob("**/seed_*/result.json"):
+    if atlas is not None and model_type is not None:
+        base = base / atlas / model_type
+        json_glob = "**/seed_*/result.json"
+        npz_glob = "**/seed_*/result.npz"
+    elif atlas is not None:
+        base = base / atlas
+        json_glob = "**/seed_*/result.json"
+        npz_glob = "**/seed_*/result.npz"
+    elif model_type is not None:
+        json_glob = f"**/{model_type}/seed_*/result.json"
+        npz_glob = f"**/{model_type}/seed_*/result.npz"
+    else:
+        json_glob = "**/seed_*/result.json"
+        npz_glob = "**/seed_*/result.npz"
+
+    for p in base.glob(json_glob):
         yield p
-    for p in base.glob("**/seed_*/result.npz"):
+    for p in base.glob(npz_glob):
         yield p
 
 
@@ -53,7 +64,12 @@ def main():
     if not results_root.exists():
         raise FileNotFoundError(f"results_root not found: {results_root}")
 
-    output_dir = Path(args.output_dir) if args.output_dir else results_root / "summary"
+    if args.output_dir:
+        output_dir = Path(args.output_dir)
+    else:
+        output_dir = results_root / "summary"
+        if args.atlas:
+            output_dir = output_dir / args.atlas
     output_dir.mkdir(parents=True, exist_ok=True)
 
     all_fold_scores = []

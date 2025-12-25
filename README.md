@@ -195,7 +195,7 @@ python src/scripts/run_single_task.py --help
 
 ### 5) HPC（SLURM）
 建议使用 submit_hpc_* 批量运行 real 与 perm（real 也需要多次运行以获得稳健中位数统计）。
-仓库提供了 3 个示例提交脚本（可按需要改 `MODEL_TYPE`、array 范围、log 路径等）：
+仓库提供了 2 个示例提交脚本（可按需要改 `MODEL_TYPE`、array 范围、log 路径等）：
 ```bash
 sbatch src/scripts/submit_hpc_real.sh   # 多次真实运行（array=0-10）
 sbatch src/scripts/submit_hpc_perm.sh   # 置换运行（array=1-1000）
@@ -220,12 +220,12 @@ python src/result_summary/summarize_real_perm_scores.py --results_root <results_
 
 ### 必需顺序（stepwise 置换）
 1. 运行 real（建议用 `submit_hpc_real.sh` 批量跑）。
-2. 汇总 real：`summarize_real_loadings_scores.py`（生成 real mean loadings + 全样本 train/test scores + score median）。
+2. 汇总 real：`summarize_real_loadings_scores.py`（生成 real mean loadings + 全样本 train/test scores + score median，默认输出到 `results_root/summary/<atlas>`）。
 3. 运行 perm（建议用 `submit_hpc_perm.sh` 批量跑，stepwise 会读取 real 汇总结果）。
-4. 汇总 perm：`summarize_perm_stepwise_pvalues.py`（右尾单侧 p 值，基于 real 中位数）。
+4. 汇总 perm：`summarize_perm_stepwise_pvalues.py`（右尾单侧 p 值，基于 real 中位数，默认输出到 `results_root/summary/<atlas>`）。
 
 ### `src/result_summary/summarize_real_loadings_scores.py`
-汇总 real 的外层 fold loadings 与相关分数，输出 mean/median 结果。
+汇总 real 的外层 fold loadings 与相关分数，输出 mean/median 结果（默认写入 `results_root/summary/<atlas>`）。
 
 ```bash
 python src/result_summary/summarize_real_loadings_scores.py --results_root <results_root> --atlas <atlas> --model_type <model>
@@ -235,7 +235,7 @@ python src/result_summary/summarize_real_loadings_scores.py --results_root <resu
 - 无（默认输出 mean 与 median）
 
 ### `src/result_summary/summarize_perm_stepwise_pvalues.py`
-汇总 perm 的 stepwise 分数并计算右尾单侧 p 值（对 real 中位数）。
+汇总 perm 的 stepwise 分数并计算右尾单侧 p 值（对 real 中位数，默认写入 `results_root/summary/<atlas>`）。
 
 ```bash
 python src/result_summary/summarize_perm_stepwise_pvalues.py --results_root <results_root> --atlas <atlas> --model_type <model>
