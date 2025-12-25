@@ -406,6 +406,33 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
     """运行分析"""
     logger = logging.getLogger(__name__)
 
+    def _load_real_stepwise_summary(results_root: Path, atlas_tag: str):
+        summary_dir = results_root / "summary" / atlas_tag
+        scores_path = summary_dir / "real_loadings_scores_summary.npz"
+        subject_scores_path = summary_dir / "real_subject_train_scores.npz"
+        x_loadings_path = summary_dir / "real_x_loadings_summary.npy"
+        y_loadings_path = summary_dir / "real_y_loadings_summary.npy"
+
+        if not scores_path.exists() or not subject_scores_path.exists():
+            raise FileNotFoundError(
+                f"Real summary not found in {summary_dir}. "
+                "Run summarize_real_loadings_scores.py first."
+            )
+
+        scores = np.load(scores_path)
+        subject_scores = np.load(subject_scores_path)
+        x_loadings = np.load(x_loadings_path) if x_loadings_path.exists() else None
+        y_loadings = np.load(y_loadings_path) if y_loadings_path.exists() else None
+
+        return {
+            "scores_mean": scores.get("scores_mean"),
+            "X_scores_mean": subject_scores.get("X_scores_mean"),
+            "Y_scores_mean": subject_scores.get("Y_scores_mean"),
+            "x_loadings": x_loadings,
+            "y_loadings": y_loadings,
+            "summary_dir": summary_dir,
+        }
+
     def _build_nested_param_candidates(model_for_grid):
         params0 = model_for_grid.get_params()
         n_range = params0.get('n_components_range', []) or [params0.get('n_components', 1)]
@@ -443,8 +470,6 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
     # 置换检验模式
     if args.task_id > 0:
         logger.info(f"Running permutation test (task_id={args.task_id})")
-        
-        # 设置置换种子
         permutation_seed = args.random_state + args.task_id
 
         if args.model_type in ('adaptive_pls', 'adaptive_scca', 'adaptive_rcca'):
@@ -489,13 +514,12 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
                 }
 
             logger.info(
-                f"Permutation adaptive search: model={args.model_type}, "
-                f"search_range={perm_n_components_range}"
+                f"Permutation adaptive search: model={args.model_type}, search_range={perm_n_components_range}"
             )
             base_model = create_model(args.model_type, **model_params)
         else:
             base_model = model
-        
+
         X_raw = brain_data.values if isinstance(brain_data, pd.DataFrame) else brain_data
         Y_raw = behavioral_data.values if isinstance(behavioral_data, pd.DataFrame) else behavioral_data
         C_raw = covariates.values if isinstance(covariates, pd.DataFrame) else covariates
@@ -504,46 +528,80 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
         permuted_indices = np.random.permutation(len(Y_raw))
         Y_perm = Y_raw[permuted_indices]
 
-        param_candidates = _build_nested_param_candidates(base_model)
-        nested_results = run_nested_cv_evaluation(
-            base_model,
-            X_raw,
-            Y_perm,
-            confounds=C_raw,
-            outer_cv_splits=args.cv_n_splits,
-            inner_cv_splits=3,
-            param_grid=param_candidates,
-            outer_shuffle=args.cv_shuffle,
-            inner_shuffle=True,
-            outer_random_state=permutation_seed,
-            inner_random_state=permutation_seed,
-            standardize_domains=False,
-            pca_components_X=None,
-            pca_components_Y=None,
-        )
+        atlas_tag = _infer_atlas_tag(config.get('data.brain_file', ''))
+        results_root = Path(config.get('output.results_dir', str(get_results_dir())))
+        real_summary = _load_real_stepwise_summary(results_root, atlas_tag)
+        real_scores_mean = real_summary.get('scores_mean')
+        real_X_scores = real_summary.get('X_scores_mean')
+        real_Y_scores = real_summary.get('Y_scores_mean')
 
-        mean_corrs = np.asarray(nested_results.get('outer_mean_canonical_correlations', []), dtype=float)
+        if real_scores_mean is None or real_X_scores is None or real_Y_scores is None:
+            raise ValueError('Real stepwise summary is missing required scores.')
+        if real_X_scores.shape[0] != X_raw.shape[0] or real_Y_scores.shape[0] != X_raw.shape[0]:
+            raise ValueError(
+                f"Real stepwise scores subject count mismatch: "
+                f"real={real_X_scores.shape[0]} vs X={X_raw.shape[0]}"
+            )
+
+        n_components = int(np.asarray(real_scores_mean).size)
+        perm_stepwise_scores = []
+        perm_stepwise_results = []
+
+        for k in range(1, n_components + 1):
+            extra_confounds = None
+            if k > 1:
+                extra_confounds = np.hstack([
+                    real_X_scores[:, :k-1],
+                    real_Y_scores[:, :k-1],
+                ])
+            if C_raw is not None and extra_confounds is not None:
+                confounds_k = np.hstack([C_raw, extra_confounds])
+            elif extra_confounds is not None:
+                confounds_k = extra_confounds
+            else:
+                confounds_k = C_raw
+
+            param_candidates = _build_nested_param_candidates(base_model)
+            for p in param_candidates:
+                p['n_components'] = 1
+                p['use_internal_cv'] = False
+
+            nested_results = run_nested_cv_evaluation(
+                base_model,
+                X_raw,
+                Y_perm,
+                confounds=confounds_k,
+                outer_cv_splits=args.cv_n_splits,
+                inner_cv_splits=3,
+                param_grid=param_candidates,
+                outer_shuffle=args.cv_shuffle,
+                inner_shuffle=True,
+                outer_random_state=permutation_seed,
+                inner_random_state=permutation_seed,
+                standardize_domains=False,
+                pca_components_X=None,
+                pca_components_Y=None,
+            )
+
+            k_score = float(np.asarray(nested_results.get('outer_mean_canonical_correlations', [np.nan]))[0])
+            perm_stepwise_scores.append(k_score)
+            perm_stepwise_results.append(nested_results)
 
         result = {
             'permutation_seed': permutation_seed,
-            'canonical_correlations': mean_corrs,
-            'mean_canonical_correlations': mean_corrs,
-            'n_components': int(mean_corrs.size),
+            'stepwise_scores': np.asarray(perm_stepwise_scores, dtype=float),
+            'stepwise_results': perm_stepwise_results,
+            'n_components': int(n_components),
             'n_samples': int(len(X_raw)),
             'cv_n_splits': int(args.cv_n_splits),
-            'cv_results': nested_results,
-            'cv_all_canonical_correlations': nested_results.get('outer_all_test_canonical_correlations'),
+            'task_type': 'permutation',
+            'task_id': args.task_id,
+            'real_scores_mean': np.asarray(real_scores_mean, dtype=float),
         }
-        
-        result['task_type'] = 'permutation'
-        result['task_id'] = args.task_id
-        result['permutation_seed'] = permutation_seed
-        
+
         logger.info(
-            "Permutation test completed. "
-            f"Max CV mean canonical correlation={np.max(result['canonical_correlations']):.4f}"
+            f"Permutation stepwise completed. Max score={np.nanmax(perm_stepwise_scores):.4f}"
         )
-        
     else:
         # 真实数据分析
         logger.info("Running real data analysis")

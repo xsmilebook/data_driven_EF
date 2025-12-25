@@ -159,12 +159,13 @@ python src/scripts/run_single_task.py --help
 推荐流程（每次运行都遵循同一逻辑）：
 1. 外层 KFold（n_outer）划分训练/测试。
 2. 对每个外层折：
-   - 只用外层训练集拟合预处理：缺失值填补均值、协变量回归、标准化、可选 PCA。
-   - 在外层训练集上做内层 KFold（n_inner）：
-     * 对每组候选参数：在内层训练折拟合同样的预处理，并在内层验证折评估。
-     * 使用统一指标选参（推荐：`meancorr`，即各成分相关系数的均值）。
-   - 选择内层平均分最高的参数；如有并列，可用更小方差或更少参数作为 tie-break。
-   - 用最佳参数在“外层训练集”重新拟合模型（固定参数，不再做模型内部 CV），再在“外层测试集”评估。
+   - 先进入内层 KFold（n_inner），不要提前在“外层训练集整体”拟合任何预处理。
+   - 内层每个折：
+     * 只用“内层训练折”拟合预处理（缺失值填补、协变量回归、标准化、可选 PCA）。
+     * 将同一预处理应用到“内层验证折”，计算评分。
+     * 对每组候选参数重复上述过程并汇总得分。
+   - 选择内层平均分最高的参数（推荐指标：`meancorr`=各成分相关系数均值）；如并列，用更小方差或更少参数作为 tie-break。
+   - 用最佳参数在“外层训练集整体”重新拟合预处理与模型（固定参数、无模型内部 CV），再在“外层测试集”评估。
 3. 汇总外层结果：各成分相关系数的均值/方差等整体指标。
 4. 置换检验：每次置换仅打乱 Y（保持 X/协变量索引一致），完整重复上述嵌套流程并记录种子。
 
@@ -173,7 +174,26 @@ python src/scripts/run_single_task.py --help
 - 模型内部不再做选参型 CV；超参数仅由内层 CV 决定。
 - 输出至少包含：`outer_fold_results`、`inner_cv_table`、`outer_mean_canonical_correlations`、`outer_all_test_canonical_correlations`、随机种子与参数网格规模。
 
-### 4) HPC（SLURM）
+### 4) 置换检验（stepwise）
+目标：按成分逐步检验第 k 个成分（控制前 k-1 个成分），避免后续成分被前序成分“带出”。
+
+推荐流程：
+1. 真实数据（real）运行时，**保存每个外层 fold 的 loadings**（X/Y），以及每折对应的相关向量与评分。
+   - 同时保存外层训练集与测试集的 X/Y scores，便于 stepwise 残差化。
+2. 单独脚本汇总所有 real 结果：
+   - 汇总输出：每个成分的 real score（mean）与对应的 loadings（mean）。
+   - 同时输出全样本的 train/test scores（按 fold 内平均，再跨 real 取 mean）。
+3. 置换检验（perm）对每个成分 k 进行 stepwise：
+   - 读取 real 的 score 与 loadings。
+   - 在 X/Y 上依次剔除前 k-1 个成分（用 real loadings 做投影并回归残差）。
+   - 在残差上拟合并提取第 k 个成分得分，计算相关作为 perm score。
+   - 用 perm 分布对 real 的第 k 个成分 score 计算 **右尾单侧** p 值（real 越大越显著）。
+
+输出建议：
+- real：每折 loadings + 每折 score + 汇总后的 mean/median。
+- perm：对每个 k 保存 perm 分布与 p 值表格（CSV/JSON）。
+
+### 5) HPC（SLURM）
 仓库提供了 3 个示例提交脚本（可按需要改 `MODEL_TYPE`、array 范围、log 路径等）：
 ```bash
 sbatch src/scripts/submit_hpc_real.sh   # 多次真实运行（array=0-10）
@@ -197,6 +217,23 @@ python src/result_summary/summarize_real_perm_scores.py --results_root <results_
 - `--model_type`: 可选过滤
 - `--output_csv`: 输出 CSV
 - `--score_mode`: `first_component` / `mean_all`
+
+### `src/result_summary/summarize_real_loadings_scores.py`
+汇总 real 的外层 fold loadings 与相关分数，输出平均/中位数结果。
+
+```bash
+python src/result_summary/summarize_real_loadings_scores.py --results_root <results_root> --atlas <atlas> --model_type <model>
+```
+
+关键参数：
+- 无（默认使用 mean 聚合）
+
+### `src/result_summary/summarize_perm_stepwise_pvalues.py`
+汇总 perm 的 stepwise 分数并计算右尾单侧 p 值。
+
+```bash
+python src/result_summary/summarize_perm_stepwise_pvalues.py --results_root <results_root> --atlas <atlas> --model_type <model>
+```
 
 ## 输出位置（约定）
 

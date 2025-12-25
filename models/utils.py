@@ -179,7 +179,16 @@ def save_large_artifacts(results: Dict[str, Any],
         Mapping of artifact keys to metadata (path, shape, dtype).
     """
     if keys_to_extract is None:
-        keys_to_extract = {"test_scores_X", "test_scores_Y", "X_scores", "Y_scores"}
+        keys_to_extract = {
+            "train_scores_X",
+            "train_scores_Y",
+            "test_scores_X",
+            "test_scores_Y",
+            "X_scores",
+            "Y_scores",
+            "x_loadings",
+            "y_loadings",
+        }
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)

@@ -260,6 +260,21 @@ def run_nested_cv_evaluation(model: BaseBrainBehaviorModel,
             Y_test_out_p,
             return_scores=True,
         )
+        train_score, train_corrs, X_train_scores, Y_train_scores = _fit_and_score(
+            best_theta,
+            X_train_out_p,
+            Y_train_out_p,
+            X_train_out_p,
+            Y_train_out_p,
+            return_scores=True,
+        )
+        x_loadings, y_loadings = None, None
+        try:
+            model_ref = model.__class__(**best_theta)
+            model_ref.fit(X_train_out_p, Y_train_out_p)
+            x_loadings, y_loadings = model_ref.get_loadings()
+        except Exception:
+            x_loadings, y_loadings = None, None
         outer_fold_results.append(
             {
                 'outer_fold': outer_fold_idx,
@@ -275,6 +290,13 @@ def run_nested_cv_evaluation(model: BaseBrainBehaviorModel,
                 'test_canonical_correlations': test_corrs,
                 'test_scores_X': X_test_scores,
                 'test_scores_Y': Y_test_scores,
+                'train_mean_corr': train_score,
+                'train_mean_score': train_score,
+                'train_canonical_correlations': train_corrs,
+                'train_scores_X': X_train_scores,
+                'train_scores_Y': Y_train_scores,
+                'x_loadings': x_loadings,
+                'y_loadings': y_loadings,
             }
         )
 
