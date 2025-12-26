@@ -70,6 +70,8 @@ def main():
         output_dir = results_root / "summary"
         if args.atlas:
             output_dir = output_dir / args.atlas
+        if args.model_type:
+            output_dir = output_dir / args.model_type
     output_dir.mkdir(parents=True, exist_ok=True)
 
     all_fold_scores = []

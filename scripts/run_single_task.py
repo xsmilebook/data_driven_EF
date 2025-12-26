@@ -403,8 +403,8 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
     """运行分析"""
     logger = logging.getLogger(__name__)
 
-    def _load_real_stepwise_summary(results_root: Path, atlas_tag: str):
-        summary_dir = results_root / "summary" / atlas_tag
+    def _load_real_stepwise_summary(results_root: Path, atlas_tag: str, model_type: str):
+        summary_dir = results_root / "summary" / atlas_tag / model_type
         scores_path = summary_dir / "real_loadings_scores_summary.npz"
         subject_scores_path = summary_dir / "real_subject_train_scores.npz"
         x_loadings_path = summary_dir / "real_x_loadings_summary.npy"
@@ -521,7 +521,7 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
 
         atlas_tag = _infer_atlas_tag(config.get('data.brain_file', ''))
         results_root = Path(config.get('output.results_dir', str(get_results_dir())))
-        real_summary = _load_real_stepwise_summary(results_root, atlas_tag)
+        real_summary = _load_real_stepwise_summary(results_root, atlas_tag, args.model_type)
         real_scores_mean = real_summary.get('scores_mean')
         real_X_scores = real_summary.get('X_scores_mean')
         real_Y_scores = real_summary.get('Y_scores_mean')

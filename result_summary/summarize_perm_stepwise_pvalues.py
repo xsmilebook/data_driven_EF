@@ -35,11 +35,14 @@ def _iter_perm_results(results_root: Path, atlas: str | None, model_type: str | 
         yield p
 
 
-def _load_real_scores(results_root: Path, atlas: str | None) -> np.ndarray | None:
+def _load_real_scores(results_root: Path, atlas: str | None, model_type: str | None) -> np.ndarray | None:
     if atlas is None:
-        summary_path = results_root / "summary" / "real_loadings_scores_summary.npz"
+        summary_path = results_root / "summary"
     else:
-        summary_path = results_root / "summary" / atlas / "real_loadings_scores_summary.npz"
+        summary_path = results_root / "summary" / atlas
+    if model_type is not None:
+        summary_path = summary_path / model_type
+    summary_path = summary_path / "real_loadings_scores_summary.npz"
     if not summary_path.exists():
         return None
     try:
@@ -68,7 +71,7 @@ def main():
         raise FileNotFoundError(f"results_root not found: {results_root}")
 
     perm_scores = []
-    real_scores = _load_real_scores(results_root, args.atlas)
+    real_scores = _load_real_scores(results_root, args.atlas, args.model_type)
 
     for path in _iter_perm_results(results_root, args.atlas, args.model_type):
         try:
@@ -106,6 +109,8 @@ def main():
         out_dir = results_root / "summary"
         if args.atlas:
             out_dir = out_dir / args.atlas
+        if args.model_type:
+            out_dir = out_dir / args.model_type
         out_csv = out_dir / "perm_stepwise_pvalues.csv"
     out_csv.parent.mkdir(parents=True, exist_ok=True)
 
