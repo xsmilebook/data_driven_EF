@@ -94,10 +94,13 @@ def prepare_trials(df,
     n_rt_deleted = int(n_rt_before - n_rt_after)
 
     n_problem = int(n_rt_deleted + n_rt_na)
-    if n_raw > 0 and (n_problem > n_raw * (1 - float(min_prop))):
-        out_merged = pd.concat([df_rt, df_no_rt], axis=0)
-        return {'ok': False, 'df': out_merged, 'n_raw': n_raw, 'n_kept': int(len(out_merged))}
-
     out_merged = pd.concat([df_rt, df_no_rt], axis=0)
-    return {'ok': True, 'df': out_merged, 'n_raw': n_raw, 'n_kept': int(len(out_merged))}
-
+    low_prop = n_raw > 0 and (n_problem > n_raw * (1 - float(min_prop)))
+    ok = (not low_prop) or (len(out_merged) > 0)
+    return {
+        'ok': ok,
+        'low_prop': low_prop,
+        'df': out_merged,
+        'n_raw': n_raw,
+        'n_kept': int(len(out_merged)),
+    }
