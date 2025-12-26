@@ -42,7 +42,7 @@ def extract_id_from_subject_code(subject_code):
         logging.error(f"Error extracting ID from subject_code '{subject_code}': {e}")
         return None
 
-def build_behavioral_data(metrics_file, demo_file, output_file, keep_complete_only=True):
+def build_behavioral_data(metrics_file, demo_file, output_file, keep_complete_only=False):
     """
     Build behavioral data table by merging metrics with demographic data.
     
@@ -186,7 +186,7 @@ def main():
     """Main function."""
     parser = argparse.ArgumentParser(description='Build behavioral data table by merging EFNY metrics with demographic data')
     parser.add_argument('--metrics', '-m', 
-                       default='d:\\code\\data_driven_EF\\data\\EFNY\\table\\metrics\\EFNY_metrics.csv',
+                       default='d:\\code\\data_driven_EF\\data\\EFNY\\table\\metrics\\EFNY_beh_metrics.csv',
                        help='Input metrics CSV file path')
     parser.add_argument('--demo', '-d', 
                        default='d:\\code\\data_driven_EF\\data\\EFNY\\table\\demo\\EFNY_demo_with_rsfmri.csv',
@@ -212,7 +212,7 @@ def main():
         return 1
     
     # Run the build process
-    success = build_behavioral_data(args.metrics, args.demo, args.output, keep_complete_only=True)
+    success = build_behavioral_data(args.metrics, args.demo, args.output, keep_complete_only=False)
     
     return 0 if success else 1
 

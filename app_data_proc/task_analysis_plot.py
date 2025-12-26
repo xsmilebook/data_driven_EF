@@ -1,5 +1,6 @@
+#!/usr/bin/env python3
 """
-Visualize and summarize task coverage outputs.
+Plot task coverage summaries from EFNY_behavioral_data.csv outputs.
 """
 
 import argparse
@@ -9,162 +10,123 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
-def print_summary(task_summary_df, subject_level_df, meta):
-    print("=" * 60)
-    print("Task Coverage Summary")
-    print("=" * 60)
-
-    if meta:
-        print(f"\nTotal files: {meta.get('total_files', 'N/A')}")
-        print(f"Total tasks: {meta.get('task_count', 'N/A')}")
-        print(f"Subject-level records: {meta.get('subject_level_records', 'N/A')}")
-        print(
-            "Subjects with all tasks: "
-            f"{meta.get('subjects_with_all_tasks', 'N/A')}"
-        )
-        print(
-            "Subjects with all tasks (excluding FZSS, ZYST): "
-            f"{meta.get('subjects_with_all_tasks_excluding_fzss_zyst', 'N/A')}"
-        )
-
-    print(f"Tasks in summary: {len(task_summary_df)}")
-    print(f"Total subjects (task presence sum): {task_summary_df['Subject_Count'].sum()}")
-
-    print("\nTop tasks by subject count:")
-    print(task_summary_df.head(10)[["Task", "Subject_Count", "Subject_Pct", "Task_Category"]])
-
-    print("\nBottom tasks by subject count:")
-    print(task_summary_df.tail(10)[["Task", "Subject_Count", "Subject_Pct", "Task_Category"]])
-
-    if not subject_level_df.empty:
-        row_stats = (
-            subject_level_df.groupby("Task")["N_Rows"]
-            .agg(["mean", "std", "min", "max"])
-            .round(2)
-        )
-        print("\nRow count stats (per task):")
-        print(row_stats.head(10))
-
-
-def plot_task_summary(task_summary_df, subject_level_df, output_dir, top_n):
-    os.makedirs(output_dir, exist_ok=True)
-
-    # Figure 1: top tasks and category totals
-    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-
-    top_tasks = task_summary_df.head(top_n).iloc[::-1]
-    axes[0, 0].barh(top_tasks["Task"], top_tasks["Subject_Count"], color="#4C72B0")
-    axes[0, 0].set_title(f"Top {top_n} Tasks by Subject Count")
-    axes[0, 0].set_xlabel("Subject Count")
-    axes[0, 0].grid(axis="x", alpha=0.3)
-
-    category_counts = (
-        task_summary_df.groupby("Task_Category")["Subject_Count"].sum().sort_values()
+def apply_plot_style():
+    """Increase font sizes for all plots."""
+    plt.rcParams.update(
+        {
+            "font.size": 14,
+            "axes.titlesize": 18,
+            "axes.labelsize": 16,
+            "xtick.labelsize": 12,
+            "ytick.labelsize": 12,
+            "legend.fontsize": 12,
+        }
     )
-    axes[0, 1].barh(category_counts.index, category_counts.values, color="#55A868")
-    axes[0, 1].set_title("Subjects by Task Category")
-    axes[0, 1].set_xlabel("Subject Count")
-    axes[0, 1].grid(axis="x", alpha=0.3)
 
-    axes[1, 0].scatter(
-        task_summary_df["Subject_Count"],
-        task_summary_df["Mean_Rows"],
-        alpha=0.7,
-        color="#C44E52",
+
+def plot_task_missing(task_missing_df, ax):
+    task_missing_df = task_missing_df.sort_values("Subjects_Missing_Data", ascending=True)
+    ax.barh(task_missing_df["Task"], task_missing_df["Subjects_Missing_Data"], color="#4C72B0")
+    ax.set_title("Missing Subjects by Task")
+    ax.set_xlabel("Subjects Missing Data")
+    ax.grid(axis="x", alpha=0.3)
+
+
+def plot_task_count_dist(task_count_df, ax):
+    ax.bar(task_count_df["Task_Count"].astype(int), task_count_df["Subject_Count"], color="#55A868")
+    ax.set_title("Subjects by Task Count")
+    ax.set_xlabel("Tasks with Data")
+    ax.set_ylabel("Subject Count")
+    ax.grid(axis="y", alpha=0.3)
+
+
+def plot_age_dist(age_df, ax):
+    age_df = age_df.copy()
+    age_df["Age_Floor"] = age_df["Age"].astype(float).apply(lambda val: int(val))
+    binned = (
+        age_df.groupby("Age_Floor")["Subject_Count"]
+        .sum()
+        .reset_index()
+        .sort_values("Age_Floor")
     )
-    axes[1, 0].set_xlabel("Subject Count")
-    axes[1, 0].set_ylabel("Mean Rows")
-    axes[1, 0].set_title("Subject Count vs Mean Rows")
-    axes[1, 0].grid(alpha=0.3)
+    ax.bar(binned["Age_Floor"].astype(str), binned["Subject_Count"], color="#C44E52")
+    ax.set_title("Age Distribution")
+    ax.set_xlabel("Age")
+    ax.set_ylabel("Subject Count")
+    ax.tick_params(axis="x")
+    ax.grid(axis="y", alpha=0.3)
 
-    axes[1, 1].hist(task_summary_df["Mean_Missing_Rate"], bins=20, color="#8172B2")
-    axes[1, 1].set_title("Distribution of Mean Missing Rate")
-    axes[1, 1].set_xlabel("Mean Missing Rate")
-    axes[1, 1].set_ylabel("Task Count")
-    axes[1, 1].grid(axis="y", alpha=0.3)
 
-    fig.tight_layout()
-    fig_path = os.path.join(output_dir, "task_analysis_overview.png")
-    fig.savefig(fig_path, dpi=300, bbox_inches="tight")
-    plt.close(fig)
+def plot_group_dist(group_df, ax):
+    group_df = group_df.copy()
+    group_df["Group"] = group_df["Group"].astype(str)
+    ax.bar(group_df["Group"], group_df["Subject_Count"], color="#8172B2")
+    ax.set_title("Group Distribution")
+    ax.set_ylabel("Subject Count")
+    ax.tick_params(axis="x")
+    ax.grid(axis="y", alpha=0.3)
 
-    # Figure 2: row count distribution per task (if subject-level data available)
-    if not subject_level_df.empty:
-        top_tasks_list = task_summary_df.head(top_n)["Task"].tolist()
-        subset = subject_level_df[subject_level_df["Task"].isin(top_tasks_list)]
-        if not subset.empty:
-            fig, ax = plt.subplots(figsize=(18, 8))
-            data = [
-                subset[subset["Task"] == task]["N_Rows"].values
-                for task in top_tasks_list
-            ]
-            ax.boxplot(data, labels=top_tasks_list, showfliers=False)
-            ax.set_title(f"Row Count Distribution (Top {top_n} Tasks)")
-            ax.set_ylabel("Rows per Subject")
-            ax.grid(axis="y", alpha=0.3)
-            ax.tick_params(axis="x", rotation=45)
 
-            fig.tight_layout()
-            fig_path = os.path.join(output_dir, "task_row_count_boxplot.png")
-            fig.savefig(fig_path, dpi=300, bbox_inches="tight")
-            plt.close(fig)
+def plot_sex_dist(sex_df, ax):
+    sex_df = sex_df.copy()
+    sex_df["Sex"] = sex_df["Sex"].astype(str).replace({"1": "Male", "2": "Female"})
+    ax.bar(sex_df["Sex"], sex_df["Subject_Count"], color="#64B5CD")
+    ax.set_title("Sex Distribution")
+    ax.set_ylabel("Subject Count")
+    ax.tick_params(axis="x")
+    ax.grid(axis="y", alpha=0.3)
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Summarize and visualize task analysis outputs."
-    )
-    parser.add_argument(
-        "--summary_csv",
-        default=r"d:\code\data_driven_EF\data\EFNY\results\behavior_data\task_analysis\task_subject_counts.csv",
-        help="CSV produced by task_analysis_run.py.",
-    )
-    parser.add_argument(
-        "--subject_csv",
-        default=r"d:\code\data_driven_EF\data\EFNY\results\behavior_data\task_analysis\task_subject_level_summary.csv",
-        help="Subject-level summary CSV.",
-    )
-    parser.add_argument(
-        "--meta_json",
-        default=r"d:\code\data_driven_EF\data\EFNY\results\behavior_data\task_analysis\task_analysis_meta.json",
-        help="Metadata JSON file.",
+        description="Plot task coverage summaries from EFNY_behavioral_data.csv outputs."
     )
     parser.add_argument(
         "--output_dir",
-        default=r"d:\code\data_driven_EF\data\EFNY\results\behavior_data\task_analysis\figures",
-        help="Directory to save figures.",
+        default=r"d:\code\data_driven_EF\data\EFNY\results\behavior_data\task_analysis",
+        help="Output directory containing summary CSVs.",
     )
     parser.add_argument(
-        "--top_n",
-        type=int,
-        default=15,
-        help="Top N tasks to show in plots.",
+        "--fig_dir",
+        default=r"d:\code\data_driven_EF\data\EFNY\results\behavior_data\task_analysis\figures",
+        help="Directory to save figures.",
     )
 
     args = parser.parse_args()
 
-    if not os.path.exists(args.summary_csv):
-        print(f"Error: Summary CSV not found: {args.summary_csv}")
-        return 1
+    task_missing_path = os.path.join(args.output_dir, "task_missing_counts.csv")
+    task_count_path = os.path.join(args.output_dir, "task_count_distribution.csv")
+    age_dist_path = os.path.join(args.output_dir, "age_distribution.csv")
+    sex_dist_path = os.path.join(args.output_dir, "sex_distribution.csv")
+    group_dist_path = os.path.join(args.output_dir, "group_distribution.csv")
 
-    task_summary_df = pd.read_csv(args.summary_csv)
-    if task_summary_df.empty:
-        print("Error: Summary CSV is empty.")
-        return 1
+    for path in [task_missing_path, task_count_path, age_dist_path, sex_dist_path, group_dist_path]:
+        if not os.path.exists(path):
+            raise SystemExit(f"Missing summary file: {path}")
 
-    subject_level_df = pd.DataFrame()
-    if os.path.exists(args.subject_csv):
-        subject_level_df = pd.read_csv(args.subject_csv)
+    task_missing_df = pd.read_csv(task_missing_path)
+    task_count_df = pd.read_csv(task_count_path)
+    age_df = pd.read_csv(age_dist_path)
+    sex_df = pd.read_csv(sex_dist_path)
+    group_df = pd.read_csv(group_dist_path)
 
-    meta = None
-    if os.path.exists(args.meta_json):
-        meta = pd.read_json(args.meta_json, typ="series").to_dict()
+    os.makedirs(args.fig_dir, exist_ok=True)
+    apply_plot_style()
 
-    print_summary(task_summary_df, subject_level_df, meta)
-    plot_task_summary(task_summary_df, subject_level_df, args.output_dir, args.top_n)
+    fig, axes = plt.subplots(3, 2, figsize=(18, 16))
+    plot_task_missing(task_missing_df, axes[0, 0])
+    plot_task_count_dist(task_count_df, axes[0, 1])
+    plot_age_dist(age_df, axes[1, 0])
+    plot_group_dist(group_df, axes[1, 1])
+    plot_sex_dist(sex_df, axes[2, 0])
+    axes[2, 1].axis("off")
 
-    print("\nAnalysis complete.")
-    print(f"Figures saved to: {args.output_dir}")
+    fig.tight_layout()
+    fig_path = os.path.join(args.fig_dir, "task_analysis_overview.png")
+    fig.savefig(fig_path, dpi=300, bbox_inches="tight")
+    plt.close(fig)
+
+    print(f"Figures saved to: {args.fig_dir}")
     return 0
 
 

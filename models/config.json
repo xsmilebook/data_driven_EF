@@ -11,6 +11,24 @@
     "confound_variables": ["sex", "age", "meanFD"]
   },
   "behavioral": {
+    "task_prefixes": [
+      "GNG",
+      "FLANKER",
+      "SST",
+      "ColorStroop",
+      "EmotionStroop",
+      "CPT",
+      "DCCS",
+      "DT",
+      "EmotionSwitch",
+      "KT",
+      "oneback_number",
+      "twoback_number",
+      "oneback_spatial",
+      "twoback_spatial",
+      "oneback_emotion",
+      "twoback_emotion"
+    ],
     "selected_measures": [
       "FLANKER_ACC", "FLANKER_RT_Mean", "FLANKER_RT_SD",
       "FLANKER_Congruent_ACC", "FLANKER_Congruent_RT",

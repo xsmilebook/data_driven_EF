@@ -112,7 +112,7 @@ def merge_with_rsfmri_qc(demo_df, qc_file, output_file):
     logging.info(f"Successfully added meanFD column to {len(merged_df)} subjects")
 
     merged_df = merged_df[merged_df['age'] < 26]
-    merged_df = merged_df[merged_df['group'] == ""]
+    # merged_df = merged_df[merged_df['group'] == ""]
     merged_df = merged_df[merged_df['meanFD'].notna()]
     
     # Save merged data
