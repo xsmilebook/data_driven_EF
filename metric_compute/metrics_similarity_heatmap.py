@@ -5,6 +5,89 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+TASK_DIMENSIONS = {
+    "GNG": "inhibition",
+    "FLANKER": "inhibition",
+    "SST": "inhibition",
+    "ColorStroop": "inhibition",
+    "EmotionStroop": "inhibition",
+    "CPT": "inhibition",
+    "DCCS": "shifting",
+    "DT": "shifting",
+    "EmotionSwitch": "shifting",
+    "KT": "updating",
+    "oneback_number": "updating",
+    "twoback_number": "updating",
+    "oneback_spatial": "updating",
+    "twoback_spatial": "updating",
+    "oneback_emotion": "updating",
+    "twoback_emotion": "updating",
+}
+
+SELECTED_METRICS = [
+    "FLANKER_Contrast_RT",
+    "FLANKER_Contrast_ACC",
+    "FLANKER_RT_Mean",
+    "SST_SSRT",
+    "SST_Stop_ACC",
+    "SST_Go_RT_Mean",
+    "DT_Switch_Cost_RT",
+    "DT_Switch_Cost_ACC",
+    "DT_RT_Mean",
+    "ColorStroop_Contrast_RT",
+    "ColorStroop_Contrast_ACC",
+    "ColorStroop_RT_Mean",
+    "EmotionStroop_Contrast_RT",
+    "EmotionStroop_Contrast_ACC",
+    "EmotionStroop_RT_Mean",
+    "CPT_dprime",
+    "CPT_NoGo_ACC",
+    "CPT_Go_RT_Mean",
+    "EmotionSwitch_Switch_Cost_RT",
+    "EmotionSwitch_Switch_Cost_ACC",
+    "EmotionSwitch_RT_Mean",
+    "oneback_number_dprime",
+    "oneback_number_RT_Mean",
+    "twoback_number_dprime",
+    "twoback_number_RT_Mean",
+    "oneback_spatial_dprime",
+    "oneback_spatial_RT_Mean",
+    "twoback_spatial_dprime",
+    "twoback_spatial_RT_Mean",
+    "KT_Overall_ACC",
+    "KT_Mean_RT",
+    "KT_RT_SD",
+    "DCCS_Switch_Cost_RT",
+    "DCCS_Switch_Cost_ACC",
+    "DCCS_RT_Mean",
+    "GNG_dprime",
+    "GNG_NoGo_ACC",
+    "GNG_Go_RT_Mean",
+    "oneback_emotion_dprime",
+    "oneback_emotion_RT_Mean",
+    "twoback_emotion_dprime",
+    "twoback_emotion_RT_Mean",
+]
+
+DIM_ORDER = ["inhibition", "shifting", "updating"]
+
+HIGHER_BETTER_KEYS = [
+    "ACC",
+    "dprime",
+]
+
+LOWER_BETTER_KEYS = [
+    "RT",
+    "SSRT",
+    "RT_Mean",
+    "RT_SD",
+    "Switch_Cost_RT",
+    "Contrast_RT",
+    "Go_RT_Mean",
+    "Mean_RT",
+]
+
+
 def load_metrics(path: Path) -> pd.DataFrame:
     try:
         df = pd.read_csv(path, encoding="utf-8")
@@ -12,105 +95,70 @@ def load_metrics(path: Path) -> pd.DataFrame:
         df = pd.read_csv(path, encoding="utf-8", engine="python", on_bad_lines="warn")
     return df
 
-def load_task_cfg(task_csv: Path) -> tuple[dict, dict]:
-    try:
-        df = pd.read_csv(task_csv, dtype=str, keep_default_na=False, encoding="utf-8")
-    except Exception:
-        df = pd.read_csv(
-            task_csv,
-            dtype=str,
-            keep_default_na=False,
-            encoding="utf-8",
-            engine="python",
-            on_bad_lines="warn",
-        )
-    df.columns = [c.strip() for c in df.columns]
-    dims = {}
-    valids = {}
-    for _, r in df.iterrows():
-        task = str(r.get("Task", "")).strip()
-        dim = str(r.get("dim", "")).strip()
-        if not task:
-            continue
-        dims[task] = dim
-        ms = set()
-        for m in ["d_prime", "ACC", "SSRT", "Reaction_Time", "Contrast_ACC", "Contrast_RT", "Switch_Cost"]:
-            v = str(r.get(m, "")).strip().lower()
-            if v in ("true", "1", "yes"):
-                ms.add(m)
-        valids[task] = ms
-    return dims, valids
 
-def select_numeric_columns(df: pd.DataFrame, min_ratio: float) -> pd.DataFrame:
-    cols = [c for c in df.columns if c not in ["subject_code", "file_name"]]
-    num = {}
-    n = len(df)
-    for c in cols:
-        s = pd.to_numeric(df[c], errors="coerce")
-        valid = np.count_nonzero(~np.isnan(s)) / n if n > 0 else 0.0
-        if valid > min_ratio:
-            num[c] = s
-    return pd.DataFrame(num)
+def get_task_prefix(metric_name: str, prefixes: list[str]) -> str:
+    for prefix in prefixes:
+        if metric_name.startswith(f"{prefix}_"):
+            return prefix
+    return ""
 
-def filter_by_task_validity(df: pd.DataFrame, dims: dict, valids: dict) -> tuple[pd.DataFrame, list[str], list[str]]:
+
+def select_metrics(df: pd.DataFrame, min_ratio: float) -> tuple[pd.DataFrame, list[str], list[str], list[str]]:
+    prefixes = sorted(TASK_DIMENSIONS.keys(), key=len, reverse=True)
     kept = {}
     labels = []
     groups = []
-    for c in df.columns:
-        if "_" not in c:
-            continue
-        task, metric = c.split("_", 1)
-        mname = metric
-        if task in valids and mname in valids[task]:
-            kept[c] = df[c]
-            labels.append(c)
-            groups.append(dims.get(task, ""))
-    out = pd.DataFrame(kept)
-    return out, labels, groups
+    missing = []
+    n = len(df)
 
-def order_by_groups(df: pd.DataFrame, labels: list[str], groups: list[str], order: list[str]) -> tuple[pd.DataFrame, list[str], list[str], list[int]]:
-    # Define the metric type order
-    metric_order = ["d_prime", "ACC", "Contrast_ACC", "SSRT", "Reaction_Time", "Contrast_RT", "Switch_Cost"]
-    
+    for metric in SELECTED_METRICS:
+        if metric not in df.columns:
+            missing.append(metric)
+            continue
+        s = pd.to_numeric(df[metric], errors="coerce")
+        valid_ratio = np.count_nonzero(~np.isnan(s)) / n if n > 0 else 0.0
+        if valid_ratio <= min_ratio:
+            continue
+        task_prefix = get_task_prefix(metric, prefixes)
+        group = TASK_DIMENSIONS.get(task_prefix, "")
+        kept[metric] = s
+        labels.append(metric)
+        groups.append(group)
+
+    out = pd.DataFrame(kept)
+    return out, labels, groups, missing
+
+def order_by_groups(
+    df: pd.DataFrame,
+    labels: list[str],
+    groups: list[str],
+    order: list[str],
+) -> tuple[pd.DataFrame, list[str], list[str], list[int]]:
     items = list(zip(labels, groups))
     ordered = []
-    
-    # For each group in the specified order
+
     for g in order:
-        # Get all items in this group
-        group_items = [(lab, grp) for lab, grp in items if grp == g]
-        
-        # Sort items within this group by metric type
-        def get_metric_order(item):
-            lab, _ = item
-            # Extract metric name (everything after first underscore)
-            if "_" in lab:
-                metric_name = lab.split("_", 1)[1]
-                # Try to find the metric in our predefined order
-                for i, metric_type in enumerate(metric_order):
-                    if metric_name == metric_type:
-                        return i
-                # If not found, put it at the end
-                return len(metric_order)
-            return len(metric_order)
-        
-        # Sort group items by metric order
-        group_items.sort(key=get_metric_order)
-        
-        # Add sorted items to the ordered list
-        for lab, grp in group_items:
-            ordered.append(lab)
-    
-    # Add any remaining items that weren't in the specified order
+        group_items = [lab for lab, grp in items if grp == g]
+
+        def desirability_key(label: str) -> tuple[int, str]:
+            metric = label.split("_", 1)[1] if "_" in label else label
+            metric_upper = metric.upper()
+
+            if any(key.upper() in metric_upper for key in HIGHER_BETTER_KEYS):
+                return (0, label)
+            if any(key.upper() in metric_upper for key in LOWER_BETTER_KEYS):
+                return (2, label)
+            return (1, label)
+
+        group_items.sort(key=desirability_key)
+        ordered.extend(group_items)
+
     for lab, grp in items:
         if grp not in order:
             ordered.append(lab)
-    
+
     df2 = df[ordered]
-    grp2 = []
-    for lab in ordered:
-        task = lab.split("_", 1)[0]
-        grp2.append(groups[labels.index(lab)])
+    grp2 = [groups[labels.index(lab)] for lab in ordered]
     boundaries = []
     count = 0
     for g in order:
@@ -184,37 +232,35 @@ def plot_heatmap(mat: pd.DataFrame, out_path: Path, title: str, boundaries: list
 def main() -> None:
     parser = argparse.ArgumentParser()
     base = Path("D:/code/data_driven_EF/")
-    default_csv = base / "data" / "EFNY" / "table" / "metrics" / "EFNY_metrics.csv"
-    default_task = base / "data" / "EFNY" / "table" / "metrics" / "EFNY_task.csv"
+    default_csv = base / "data" / "EFNY" / "table" / "demo" / "EFNY_behavioral_data.csv"
     default_png = base / "data" / "EFNY" / "figures" / "metrics" / "EFNY_metrics_similarity_heatmap.png"
     parser.add_argument("--csv", default=str(default_csv))
-    parser.add_argument("--task-csv", default=str(default_task))
     parser.add_argument("--out-png", default=str(default_png))
     parser.add_argument("--method", default="pearson", choices=["pearson", "spearman", "kendall"])
     parser.add_argument("--min-valid-ratio", type=float, default=0.5)
     parser.add_argument("--min-pair-ratio", type=float, default=0.5)
     args = parser.parse_args()
     csv_path = Path(args.csv)
-    task_path = Path(args.task_csv)
     if not csv_path.exists():
         print(f"Not found: {csv_path}", file=sys.stderr)
         return
-    if not task_path.exists():
-        print(f"Not found: {task_path}", file=sys.stderr)
-        return
-    dims, valids = load_task_cfg(task_path)
     df = load_metrics(csv_path)
-    num_df = select_numeric_columns(df, args.min_valid_ratio)
-    filt_df, labels, groups = filter_by_task_validity(num_df, dims, valids)
+    filt_df, labels, groups, missing = select_metrics(df, args.min_valid_ratio)
     if filt_df.shape[1] == 0:
         print("No valid metric columns", file=sys.stderr)
         return
+    if missing:
+        print("Missing metrics (not in CSV):", file=sys.stderr)
+        for metric in missing:
+            print(f"  - {metric}", file=sys.stderr)
     
     print(f"Found {len(labels)} valid metrics:")
     for i, label in enumerate(labels):
         print(f"  {i+1}: {label} (group: {groups[i]})")
     
-    ordered_df, ordered_labels, ordered_groups, boundaries = order_by_groups(filt_df, labels, groups, ["Inhibition", "Working_Memory", "Shifting"])
+    ordered_df, ordered_labels, ordered_groups, boundaries = order_by_groups(
+        filt_df, labels, groups, DIM_ORDER
+    )
     
     print(f"\nOrdered {len(ordered_labels)} metrics:")
     for i, label in enumerate(ordered_labels):
