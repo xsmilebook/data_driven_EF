@@ -11,39 +11,72 @@ from pathlib import Path
 import glob
 
 
-def rename_sheet_in_excel(file_path):
+def get_task_renaming_rules():
     """
-    Rename 'EmotionStoop' sheet to 'EmotionStroop' in an Excel file.
+    定义任务名称重命名规则
+    
+    Returns:
+        dict: 原始名称 -> 目标名称的映射
+    """
+    return {
+        'LG': 'EmotionSwitch',
+        'STROOP': 'ColorStroop', 
+        'SpatialNBack': 'Spatial2Back',
+        'Emotion2Backformal': 'Emotion2Back',
+        'Number2Backformal': 'Number2Back',
+        'Spatial1Backformal': 'Spatial1Back',
+        'EmotionStoop': 'EmotionStroop'  # 保留原有的修正
+    }
+
+def rename_sheets_in_excel(file_path):
+    """
+    根据重命名规则批量重命名Excel文件中的sheet
     
     Args:
         file_path (str): Path to the Excel file
     
     Returns:
-        bool: True if sheet was renamed, False otherwise
+        list: 被重命名的sheet列表
     """
+    renaming_rules = get_task_renaming_rules()
+    renamed_sheets = []
+    
     try:
         # Load the workbook
         workbook = openpyxl.load_workbook(file_path)
         
-        # Check if 'EmotionStoop' sheet exists
-        if 'EmotionStoop' in workbook.sheetnames:
-            # Get the sheet
-            sheet = workbook['EmotionStoop']
-            # Rename the sheet
-            sheet.title = 'EmotionStroop'
-            # Save the workbook
+        # 检查并应用重命名规则
+        for old_name, new_name in renaming_rules.items():
+            if old_name in workbook.sheetnames:
+                # Get the sheet
+                sheet = workbook[old_name]
+                # Rename the sheet
+                sheet.title = new_name
+                renamed_sheets.append(f"'{old_name}' -> '{new_name}'")
+                print(f"Renamed '{old_name}' to '{new_name}' in: {os.path.basename(file_path)}")
+        
+        # 处理其他带formal后缀的任务
+        for sheet_name in workbook.sheetnames:
+            if 'formal' in sheet_name.lower() and sheet_name not in renaming_rules:
+                new_name = sheet_name.replace('formal', '')
+                if new_name not in workbook.sheetnames:  # 确保新名称不存在
+                    sheet = workbook[sheet_name]
+                    sheet.title = new_name
+                    renamed_sheets.append(f"'{sheet_name}' -> '{new_name}'")
+                    print(f"Renamed '{sheet_name}' to '{new_name}' in: {os.path.basename(file_path)}")
+        
+        # Save the workbook if any changes were made
+        if renamed_sheets:
             workbook.save(file_path)
             workbook.close()
-            print(f"Renamed 'EmotionStoop' to 'EmotionStroop' in: {file_path}")
-            return True
+            return renamed_sheets
         else:
             workbook.close()
-            print(f"No 'EmotionStoop' sheet found in: {file_path}")
-            return False
+            return []
             
     except Exception as e:
         print(f"Error processing {file_path}: {str(e)}")
-        return False
+        return []
 
 
 def process_directory(directory_path):
@@ -62,19 +95,24 @@ def process_directory(directory_path):
     
     print(f"Found {len(excel_files)} Excel files to process")
     
-    renamed_count = 0
+    total_renamed_files = 0
+    total_renamed_sheets = 0
     processed_count = 0
     
     for file_path in excel_files:
         processed_count += 1
         print(f"\nProcessing file {processed_count}/{len(excel_files)}: {os.path.basename(file_path)}")
         
-        if rename_sheet_in_excel(file_path):
-            renamed_count += 1
+        renamed_sheets = rename_sheets_in_excel(file_path)
+        if renamed_sheets:
+            total_renamed_files += 1
+            total_renamed_sheets += len(renamed_sheets)
+            print(f"  Renamed {len(renamed_sheets)} sheets: {', '.join(renamed_sheets)}")
     
     print(f"\nProcessing complete!")
     print(f"Total files processed: {processed_count}")
-    print(f"Files with 'EmotionStoop' sheet renamed: {renamed_count}")
+    print(f"Files with renamed sheets: {total_renamed_files}")
+    print(f"Total sheets renamed: {total_renamed_sheets}")
 
 
 def main():
