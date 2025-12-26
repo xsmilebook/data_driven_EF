@@ -159,7 +159,7 @@ DEFAULT_TASK_CONFIG = {
     },
     'ZYST': {
         'type': 'zyst',
-        'filter_rt': True,
+        'filter_rt': False,
         'min_prop': 0.5,
         'metrics': ['ACC', 'RT_Mean', 'RT_SD', 'T0_ACC', 'T1_ACC', 'T1_given_T0_ACC', 'T0_RT', 'T1_RT'],
     },
@@ -172,7 +172,7 @@ DEFAULT_TASK_CONFIG = {
     },
     'KT': {
         'type': 'kt',
-        'filter_rt': True,
+        'filter_rt': False,
         'rt_max': 3.0,
         'min_prop': 0.5,
         'metrics': ['ACC', 'RT_Mean', 'RT_SD', 'Overall_ACC', 'Mean_RT'],

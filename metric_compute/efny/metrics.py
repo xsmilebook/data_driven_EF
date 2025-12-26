@@ -360,6 +360,17 @@ def _rt_stats_correct(df):
     return (mean_rt, sd_rt)
 
 
+def _rt_stats_all(df):
+    if df is None or len(df) == 0 or 'rt' not in df.columns:
+        return (np.nan, np.nan)
+    s = pd.to_numeric(df['rt'], errors='coerce').dropna()
+    if len(s) == 0:
+        return (np.nan, np.nan)
+    mean_rt = float(s.mean())
+    sd_rt = float(s.std(ddof=1)) if len(s) > 1 else np.nan
+    return (mean_rt, sd_rt)
+
+
 def _acc(df):
     if df is None or len(df) == 0 or 'correct_trial' not in df.columns:
         return np.nan
@@ -387,9 +398,9 @@ def analyze_nback(df, cfg):
     lag = stim.shift(n_back)
     trial_type = pd.Series(np.nan, index=d.index, dtype='object')
     target_mask = stim.notna() & lag.notna() & (stim == lag)
-    nontarget_mask = stim.notna() & lag.notna() & (stim != lag)
-    trial_type.loc[target_mask] = 'target'
+    nontarget_mask = stim.notna() & ~target_mask
     trial_type.loc[nontarget_mask] = 'nontarget'
+    trial_type.loc[target_mask] = 'target'
 
     d2 = d.copy()
     d2['trial_type'] = trial_type
@@ -398,7 +409,7 @@ def analyze_nback(df, cfg):
         return None
 
     acc = _acc(d2)
-    rt_mean, rt_sd = _rt_stats_correct(d2)
+    rt_mean, rt_sd = _rt_stats_all(d2)
     hit_rate = float(d2.loc[d2['trial_type'] == 'target', 'correct_trial'].mean()) if (d2['trial_type'] == 'target').any() else np.nan
     fa_rate = float((~d2.loc[d2['trial_type'] == 'nontarget', 'correct_trial']).mean()) if (d2['trial_type'] == 'nontarget').any() else np.nan
 
@@ -462,7 +473,7 @@ def analyze_conflict(df, cfg, task_name):
         return None
 
     acc_all = _acc(d)
-    rt_mean, rt_sd = _rt_stats_correct(d)
+    rt_mean, rt_sd = _rt_stats_all(d)
 
     out = {
         'ACC': acc_all,
@@ -473,7 +484,7 @@ def analyze_conflict(df, cfg, task_name):
     for label, prefix in [('congruent', 'Congruent'), ('incongruent', 'Incongruent')]:
         sub = d[d['cond'] == label]
         out[f'{prefix}_ACC'] = _acc(sub)
-        m, _ = _rt_stats_correct(sub)
+        m, _ = _rt_stats_all(sub)
         out[f'{prefix}_RT'] = m
 
     out['Contrast_RT'] = out['Incongruent_RT'] - out['Congruent_RT'] if np.isfinite(out.get('Incongruent_RT', np.nan)) and np.isfinite(out.get('Congruent_RT', np.nan)) else np.nan
@@ -534,7 +545,7 @@ def analyze_switch(df, cfg, task_name):
         return None
 
     acc_all = _acc(d)
-    rt_mean, rt_sd = _rt_stats_correct(d)
+    rt_mean, rt_sd = _rt_stats_all(d)
 
     out = {
         'ACC': acc_all,
@@ -545,7 +556,7 @@ def analyze_switch(df, cfg, task_name):
     for label, prefix in [('repeat', 'Repeat'), ('switch', 'Switch')]:
         sub = d[d['switch_type'] == label]
         out[f'{prefix}_ACC'] = _acc(sub)
-        m, _ = _rt_stats_correct(sub)
+        m, _ = _rt_stats_all(sub)
         out[f'{prefix}_RT'] = m
 
     out['Switch_Cost_RT'] = out['Switch_RT'] - out['Repeat_RT'] if np.isfinite(out.get('Switch_RT', np.nan)) and np.isfinite(out.get('Repeat_RT', np.nan)) else np.nan
@@ -556,62 +567,137 @@ def analyze_switch(df, cfg, task_name):
 def analyze_sst(df, cfg):
     if df is None or len(df) == 0:
         return None
-    if 'SSRT' not in df.columns:
-        return None
 
     d = df.copy()
-    ssrt_col = d['SSRT'].astype(str)
-    stop_mask = (ssrt_col != '-') & ssrt_col.notna()
-    go_mask = (ssrt_col == '-')
+    if len(d) >= 96:
+        d = d.iloc[:96].copy()
 
-    go_trials = d.loc[go_mask].copy()
-    stop_trials = d.loc[stop_mask].copy()
-
-    ssd = to_numeric(ssrt_col[stop_mask])
-    ssd = ssd.dropna()
-    if len(ssd) > 0 and ssd.max() > 10:
-        ssd = ssd / 1000.0
-    mean_ssd = float(ssd.mean()) if len(ssd) > 0 else np.nan
-
-    if 'key' in d.columns:
-        key = stop_trials['key'].astype(str).str.strip().str.lower()
-        no_press_alias = ['no', 'none', '不按', '未按', '空', 'null', 'n/a', 'nan', '']
-        inhibit_success = key.isin(no_press_alias)
-        stop_acc = float(inhibit_success.mean()) if len(inhibit_success) > 0 else np.nan
-    else:
-        stop_acc = np.nan
-
-    prep_go = prepare_trials(
-        go_trials,
-        filter_rt=True,
-        rt_min=float(cfg.get('rt_min', 0.2)),
-        rt_max=float(cfg.get('rt_max', 20.0)),
-        min_prop=float(cfg.get('min_prop', 0.5)),
-    )
-    if not prep_go.get('ok', False):
+    rt_var = cfg.get('rt_var', 'rt')
+    if rt_var not in d.columns:
         return None
-    go_clean = prep_go['df']
-    go_rt_mean, go_rt_sd = _rt_stats_correct(go_clean)
-    acc_all = _acc(go_clean)
+    d['rt'] = pd.to_numeric(d[rt_var], errors='coerce')
+
+    ans_var = cfg.get('ans_var', 'answer')
+    resp_var = cfg.get('resp_var', 'key')
+
+    if ans_var in d.columns and resp_var in d.columns:
+        ans = d[ans_var]
+        resp = d[resp_var]
+        correct_trial = ans.eq(resp)
+        correct_trial = correct_trial.where(~(ans.isna() | resp.isna()), pd.NA)
+        d['correct_trial'] = correct_trial
+    else:
+        d['correct_trial'] = pd.NA
+
+    ssd_var = cfg.get('ssd_var', 'SSRT')
+    if ssd_var not in d.columns:
+        return {
+            'ACC': np.nan,
+            'RT_Mean': np.nan,
+            'RT_SD': np.nan,
+            'SSRT': np.nan,
+            'Mean_SSD': np.nan,
+            'Stop_ACC': np.nan,
+            'Go_RT_Mean': np.nan,
+            'Go_RT_SD': np.nan,
+        }
+
+    ssd = pd.to_numeric(d[ssd_var], errors='coerce')
+    is_stop = ssd.notna()
+    resp_series = d[resp_var] if resp_var in d.columns else pd.Series(pd.NA, index=d.index)
+
+    correct = pd.Series(pd.NA, index=d.index, dtype='object')
+    correct.loc[~is_stop] = d.loc[~is_stop, 'correct_trial']
+    correct.loc[is_stop] = resp_series.loc[is_stop].isna()
+
+    stop_trials = d.loc[is_stop]
+    go_trials = d.loc[~is_stop]
+
+    stop_acc = float(pd.to_numeric(correct.loc[is_stop], errors='coerce').mean()) if len(stop_trials) > 0 else np.nan
+    mean_ssd = float(ssd.loc[is_stop].mean()) if len(stop_trials) > 0 else np.nan
+
+    go_corr = go_trials.loc[correct.loc[~is_stop] == True].copy()
+    if len(go_corr) == 0:
+        return {
+            'ACC': float(pd.to_numeric(correct, errors='coerce').mean()),
+            'RT_Mean': np.nan,
+            'RT_SD': np.nan,
+            'SSRT': np.nan,
+            'Mean_SSD': mean_ssd,
+            'Stop_ACC': stop_acc,
+            'Go_RT_Mean': np.nan,
+            'Go_RT_SD': np.nan,
+        }
+
+    rt_max = cfg.get('rt_max', np.inf)
+    min_prop = cfg.get('min_prop', 0.5)
+
+    has_rt = go_corr['rt'].notna()
+    go_corr_rt = go_corr.loc[has_rt].copy()
+    n_rt_na = int((~has_rt).sum())
+    n_rt_before = int(len(go_corr_rt))
+
+    go_corr_rt = go_corr_rt[go_corr_rt['rt'] >= 0.2]
+    if np.isfinite(rt_max):
+        go_corr_rt = go_corr_rt[go_corr_rt['rt'] <= float(rt_max)]
+
+    if len(go_corr_rt) > 0:
+        m_rt = float(go_corr_rt['rt'].mean())
+        s_rt = float(go_corr_rt['rt'].std(ddof=1)) if len(go_corr_rt) > 1 else np.nan
+        if np.isfinite(s_rt) and s_rt > 0:
+            z = (go_corr_rt['rt'] - m_rt) / s_rt
+            go_corr_rt = go_corr_rt.loc[z.abs() <= 3].copy()
+
+    n_rt_after = int(len(go_corr_rt))
+    n_rt_deleted = int(n_rt_before - n_rt_after)
+    n_problem = int(n_rt_deleted + n_rt_na)
+    n_corr_all = int(len(go_corr))
+
+    if n_corr_all > 0 and n_problem > n_corr_all * (1 - float(min_prop)):
+        return {
+            'ACC': float(pd.to_numeric(correct, errors='coerce').mean()),
+            'RT_Mean': np.nan,
+            'RT_SD': np.nan,
+            'SSRT': np.nan,
+            'Mean_SSD': mean_ssd,
+            'Stop_ACC': stop_acc,
+            'Go_RT_Mean': np.nan,
+            'Go_RT_SD': np.nan,
+        }
+
+    if len(go_corr_rt) == 0:
+        return {
+            'ACC': float(pd.to_numeric(correct, errors='coerce').mean()),
+            'RT_Mean': np.nan,
+            'RT_SD': np.nan,
+            'SSRT': np.nan,
+            'Mean_SSD': mean_ssd,
+            'Stop_ACC': stop_acc,
+            'Go_RT_Mean': np.nan,
+            'Go_RT_SD': np.nan,
+        }
 
     ssrt = np.nan
     if np.isfinite(stop_acc) and (0 < stop_acc < 1) and np.isfinite(mean_ssd):
-        m = (go_clean['correct_trial'] == True) & go_clean['rt'].notna()
-        rts = pd.to_numeric(go_clean.loc[m, 'rt'], errors='coerce').dropna().values
-        if len(rts) > 0:
-            p_resp_stop = 1.0 - float(stop_acc)
-            q = float(np.quantile(rts, min(max(p_resp_stop, 0.0), 1.0)))
-            ssrt = q - float(mean_ssd)
+        sorted_go_rt = np.sort(go_corr_rt['rt'].values)
+        p = 1.0 - float(stop_acc)
+        n = len(sorted_go_rt)
+        idx = int(np.floor(n * p))
+        idx = max(1, min(n, idx))
+        ssrt = float(sorted_go_rt[idx - 1]) - float(mean_ssd)
+
+    mean_go_rt = float(go_corr_rt['rt'].mean())
+    sd_go_rt = float(go_corr_rt['rt'].std(ddof=1)) if len(go_corr_rt) > 1 else np.nan
 
     return {
-        'ACC': acc_all,
-        'RT_Mean': go_rt_mean,
-        'RT_SD': go_rt_sd,
+        'ACC': float(pd.to_numeric(correct, errors='coerce').mean()),
+        'RT_Mean': mean_go_rt,
+        'RT_SD': sd_go_rt,
         'SSRT': ssrt,
         'Mean_SSD': mean_ssd,
         'Stop_ACC': stop_acc,
-        'Go_RT_Mean': go_rt_mean,
-        'Go_RT_SD': go_rt_sd,
+        'Go_RT_Mean': mean_go_rt,
+        'Go_RT_SD': sd_go_rt,
     }
 
 
@@ -630,32 +716,61 @@ def analyze_gng_cpt(df, cfg):
     if not (go_mask.any() or nogo_mask.any()):
         return None
 
-    no_press_alias = ['no', 'none', '不按', '未按', '空', 'null', 'n/a', 'nan', '']
-    is_press = key.isin(['true', '1', 'yes'])
-    is_no_press = key.isin(no_press_alias) | key.isin(['false', '0', 'no'])
+    ans_raw = d['answer'] if 'answer' in d.columns else pd.Series(pd.NA, index=d.index)
+    key_raw = d['key'] if 'key' in d.columns else pd.Series(pd.NA, index=d.index)
+    correct_trial = ans_raw.eq(key_raw)
+    correct_trial = correct_trial.where(~ans_raw.isna(), pd.NA)
+    d['correct_trial'] = correct_trial
 
-    d['correct_trial'] = pd.array([pd.NA] * len(d), dtype='boolean')
-    d.loc[go_mask, 'correct_trial'] = is_press[go_mask].values
-    d.loc[nogo_mask, 'correct_trial'] = is_no_press[nogo_mask].values
+    d['trial_type'] = pd.NA
+    d.loc[go_mask, 'trial_type'] = 'go'
+    d.loc[nogo_mask, 'trial_type'] = 'nogo'
 
-    go_trials = d.loc[go_mask].copy()
-    nogo_trials = d.loc[nogo_mask].copy()
+    go_trials_raw = d[d['trial_type'] == 'go']
+    nogo_trials_all = d[d['trial_type'] == 'nogo']
 
-    prep_go = prepare_trials(
-        go_trials,
-        filter_rt=True,
-        rt_min=float(cfg.get('rt_min', 0.2)),
-        rt_max=float(cfg.get('rt_max', 20.0)),
-        min_prop=float(cfg.get('min_prop', 0.5)),
-    )
-    if not prep_go.get('ok', False):
-        return None
-    go_clean = prep_go['df']
-    go_rt_mean, go_rt_sd = _rt_stats_correct(go_clean)
+    rt_var = cfg.get('rt_var', 'rt')
+    rt_max = cfg.get('rt_max', np.inf)
+    min_prop = cfg.get('min_prop', 0.5)
 
-    go_acc = _acc(go_clean)
-    nogo_acc = _acc(nogo_trials)
-    acc_all = _acc(d)
+    if len(go_trials_raw) > 0 and rt_var in d.columns:
+        go_trials_rt = go_trials_raw.copy()
+        go_trials_rt['rt'] = pd.to_numeric(go_trials_rt[rt_var], errors='coerce')
+
+        has_rt = go_trials_rt['rt'].notna()
+        go_with_rt = go_trials_rt.loc[has_rt].copy()
+        n_rt_na = int((~has_rt).sum())
+        n_rt_before = int(len(go_with_rt))
+
+        go_with_rt = go_with_rt[go_with_rt['rt'] >= 0.2]
+        if np.isfinite(rt_max):
+            go_with_rt = go_with_rt[go_with_rt['rt'] <= float(rt_max)]
+
+        if len(go_with_rt) > 0:
+            m_rt = float(go_with_rt['rt'].mean())
+            s_rt = float(go_with_rt['rt'].std(ddof=1)) if len(go_with_rt) > 1 else np.nan
+            if np.isfinite(s_rt) and s_rt > 0:
+                z = (go_with_rt['rt'] - m_rt) / s_rt
+                go_with_rt = go_with_rt.loc[z.abs() <= 3].copy()
+
+        n_rt_after = int(len(go_with_rt))
+        n_rt_deleted = int(n_rt_before - n_rt_after)
+        n_go_all = int(len(go_trials_raw))
+        n_problem = int(n_rt_deleted + n_rt_na)
+
+        if n_go_all > 0 and n_problem > n_go_all * (1 - float(min_prop)):
+            return None
+
+        go_trials_valid = go_with_rt
+    else:
+        go_trials_valid = go_trials_raw.iloc[0:0].copy()
+
+    go_acc = float(pd.to_numeric(go_trials_valid['correct_trial'], errors='coerce').mean()) if len(go_trials_valid) > 0 else np.nan
+    nogo_acc = float(pd.to_numeric(nogo_trials_all['correct_trial'], errors='coerce').mean()) if len(nogo_trials_all) > 0 else np.nan
+    acc_all = float(pd.to_numeric(d['correct_trial'], errors='coerce').mean()) if len(d) > 0 else np.nan
+
+    go_rt_mean = float(pd.to_numeric(go_trials_valid['rt'], errors='coerce').mean()) if len(go_trials_valid) > 0 else np.nan
+    go_rt_sd = float(pd.to_numeric(go_trials_valid['rt'], errors='coerce').std(ddof=1)) if len(go_trials_valid) > 1 else np.nan
 
     dprime = compute_dprime(go_acc, 1.0 - nogo_acc if np.isfinite(nogo_acc) else np.nan)
 
@@ -674,7 +789,7 @@ def analyze_gng_cpt(df, cfg):
 def analyze_zyst(df, cfg):
     prep = prepare_trials(
         df,
-        filter_rt=bool(cfg.get('filter_rt', True)),
+        filter_rt=bool(cfg.get('filter_rt', False)),
         rt_min=float(cfg.get('rt_min', 0.2)),
         rt_max=float(cfg.get('rt_max', 20.0)),
         min_prop=float(cfg.get('min_prop', 0.5)),
@@ -685,6 +800,13 @@ def analyze_zyst(df, cfg):
     if 'trial_index' not in d.columns:
         return None
 
+    resp_var = cfg.get('resp_var', 'key')
+    min_resp = int(cfg.get('min_resp', 128))
+    if resp_var in d.columns:
+        n_valid_resp = int(d[resp_var].notna().sum())
+        if n_valid_resp < min_resp:
+            return None
+
     mat = d['trial_index'].astype(str).str.extract(r'^(\d+)\s*-\s*(\d+)')
     d['trial'] = pd.to_numeric(mat[0], errors='coerce')
     d['subtrial'] = pd.to_numeric(mat[1], errors='coerce')
@@ -692,19 +814,40 @@ def analyze_zyst(df, cfg):
     if len(d) == 0:
         return None
 
-    t0 = d[d['subtrial'] == 0]
-    t1 = d[d['subtrial'] == 1]
-    t0_acc = _acc(t0)
-    t1_acc = _acc(t1)
+    t0_list = []
+    t1_list = []
+    t1_given_t0_correct = []
 
-    good_trials = set(t0.loc[t0['correct_trial'] == True, 'trial'].dropna().astype(int).tolist())
-    t1_given = t1[t1['trial'].isin(good_trials)]
-    t1_given_acc = _acc(t1_given) if len(t1_given) > 0 else np.nan
+    for trial_id in sorted(d['trial'].dropna().unique()):
+        group = d[d['trial'] == trial_id]
+        if not set([0, 1]).issubset(set(group['subtrial'])):
+            continue
 
-    t0_rt_mean, _ = _rt_stats_correct(t0)
-    t1_rt_mean, _ = _rt_stats_correct(t1)
-    acc_all = _acc(d)
-    rt_mean, rt_sd = _rt_stats_correct(d)
+        t0 = group[group['subtrial'] == 0].iloc[0]
+        t1 = group[group['subtrial'] == 1].iloc[0]
+
+        t0_val = t0.get('correct_trial', pd.NA)
+        t1_val = t1.get('correct_trial', pd.NA)
+        t0_corr = 1 if isinstance(t0_val, (bool, np.bool_)) and t0_val else 0
+        t1_corr = 1 if isinstance(t1_val, (bool, np.bool_)) and t1_val else 0
+
+        t0_list.append(t0_corr)
+        t1_list.append(t1_corr)
+        if t0_corr == 1:
+            t1_given_t0_correct.append(t1_corr)
+
+    if len(t0_list) == 0 or len(t1_list) == 0:
+        return None
+
+    t0_acc = float(np.mean(t0_list)) if len(t0_list) > 0 else np.nan
+    t1_acc = float(np.mean(t1_list)) if len(t1_list) > 0 else np.nan
+    t1_acc_given_t0_correct = float(np.mean(t1_given_t0_correct)) if len(t1_given_t0_correct) > 0 else np.nan
+
+    t0_rt_mean, _ = _rt_stats_all(d[d['subtrial'] == 0])
+    t1_rt_mean, _ = _rt_stats_all(d[d['subtrial'] == 1])
+
+    acc_all = float(pd.to_numeric(d.get('correct_trial', pd.Series([], dtype='float')).fillna(False), errors='coerce').mean()) if len(d) > 0 else np.nan
+    rt_mean, rt_sd = _rt_stats_all(d)
 
     return {
         'ACC': acc_all,
@@ -712,7 +855,7 @@ def analyze_zyst(df, cfg):
         'RT_SD': rt_sd,
         'T0_ACC': t0_acc,
         'T1_ACC': t1_acc,
-        'T1_given_T0_ACC': t1_given_acc,
+        'T1_given_T0_ACC': t1_acc_given_t0_correct,
         'T0_RT': t0_rt_mean,
         'T1_RT': t1_rt_mean,
     }
@@ -773,7 +916,7 @@ def analyze_kt(df, cfg):
         return None
     d = prep['df']
     acc_all = _acc(d)
-    rt_mean, rt_sd = _rt_stats_correct(d)
+    rt_mean, rt_sd = _rt_stats_all(d)
     return {
         'ACC': acc_all,
         'RT_Mean': rt_mean,
@@ -813,4 +956,3 @@ def get_raw_metrics(df, cfg, task_name):
             if k in out:
                 out[k] = v
     return out
-

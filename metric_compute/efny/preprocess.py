@@ -74,6 +74,8 @@ def prepare_trials(df,
     if not filter_rt:
         return {'ok': True, 'df': out, 'n_raw': n_raw, 'n_kept': int(len(out))}
 
+    out['_trial_order'] = np.arange(len(out))
+
     has_rt = out['rt'].notna()
     df_rt = out.loc[has_rt].copy()
     df_no_rt = out.loc[~has_rt].copy()
@@ -95,10 +97,11 @@ def prepare_trials(df,
 
     n_problem = int(n_rt_deleted + n_rt_na)
     out_merged = pd.concat([df_rt, df_no_rt], axis=0)
+    if '_trial_order' in out_merged.columns:
+        out_merged = out_merged.sort_values('_trial_order').drop(columns=['_trial_order'])
     low_prop = n_raw > 0 and (n_problem > n_raw * (1 - float(min_prop)))
-    ok = (not low_prop) or (len(out_merged) > 0)
     return {
-        'ok': ok,
+        'ok': not low_prop,
         'low_prop': low_prop,
         'df': out_merged,
         'n_raw': n_raw,
