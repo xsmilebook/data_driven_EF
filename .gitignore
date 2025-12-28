@@ -1,8 +1,27 @@
-# data and outputs
-data/
+# ===== data (do not commit) =====
+data/raw/
+data/external/
+data/interim/
+data/processed/
+
+# keep small metadata docs if needed
+!data/README.md
+!data/**/README.md
+!data/**/data_dictionary.*
+
+# ===== outputs (do not commit, allow final if you want) =====
 outputs/
+!outputs/figures/final/
+!outputs/figures/final/**
+!outputs/tables/final/
+!outputs/tables/final/**
+!outputs/results/final/
+!outputs/results/final/**
+
+# logs & tmp
 logs/
 tmp/
+*.log
 
 # python
 __pycache__/
@@ -13,7 +32,7 @@ __pycache__/
 # jupyter
 .ipynb_checkpoints/
 
-# editor
+# editors
 .DS_Store
 .idea/
 .vscode/
