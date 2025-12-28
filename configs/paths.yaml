@@ -9,8 +9,3 @@ datasets:
     interim: data/interim/EFNY
     processed: data/processed/EFNY
     outputs: outputs/EFNY
-  ABCD:
-    raw: data/raw/ABCD
-    interim: data/interim/ABCD
-    processed: data/processed/ABCD
-    outputs: outputs/ABCD
