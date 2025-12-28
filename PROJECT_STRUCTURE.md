@@ -1,7 +1,6 @@
 # Project Structure
 
-This document defines the stable folder structure and responsibilities
-of each directory in this project.
+This document defines the stable folder structure and responsibilities of each directory in this project.
 
 ## High-level principles
 - data/ and outputs/ are runtime artifacts and are NOT version-controlled
