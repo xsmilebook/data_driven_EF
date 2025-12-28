@@ -10,13 +10,12 @@ Project rules and conventions for data_driven_EF.
   - `models/` (model definitions + nested CV)
   - `scripts/` (entrypoints + HPC)
   - `result_summary/` (aggregation)
-- Project documentation lives under `docs/docs/` as Markdown only:
-  - `research_plan/` (project plans)
-  - `EFNY_behavioral_metrics/` (behavior docs)
-  - `EFNY_neuroimg/` (neuroimaging docs)
-  - `EFNY_models_pipeline/` (modeling pipeline docs)
+- Project documentation lives under `docs/` as Markdown only:
+  - `report/research_plan/` (old project plans)
+  - `datasets/EFNY_behavioral_metrics/` (old behavior docs)
+  - `datasets/EFNY_neuroimg_prep/` (neuroimaging docs)
+  - `datasets/reportEFNY_models_pipeline/` (modeling pipeline docs)
 - Project execution records live under `src/docs/` as Markdown only (session notes, run logs, analysis summaries).
-- AI should not modify `docs/docs/` unless explicitly requested.
 - Every Codex session should produce or update a session record in `src/docs/`.
 
 ## Data storage rules
