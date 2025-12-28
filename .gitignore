@@ -1,0 +1,19 @@
+# data and outputs
+data/
+outputs/
+logs/
+tmp/
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# jupyter
+.ipynb_checkpoints/
+
+# editor
+.DS_Store
+.idea/
+.vscode/
