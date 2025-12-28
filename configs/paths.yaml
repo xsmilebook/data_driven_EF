@@ -1,0 +1,16 @@
+project_root: .
+
+data_root: data
+outputs_root: outputs
+
+datasets:
+  EFNY:
+    raw: data/raw/EFNY
+    interim: data/interim/EFNY
+    processed: data/processed/EFNY
+    outputs: outputs/EFNY
+  ABCD:
+    raw: data/raw/ABCD
+    interim: data/interim/ABCD
+    processed: data/processed/ABCD
+    outputs: outputs/ABCD

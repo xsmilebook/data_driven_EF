@@ -6,17 +6,9 @@ data/processed/
 
 # keep small metadata docs if needed
 !data/README.md
-!data/**/README.md
-!data/**/data_dictionary.*
 
 # ===== outputs (do not commit, allow final if you want) =====
 outputs/
-!outputs/figures/final/
-!outputs/figures/final/**
-!outputs/tables/final/
-!outputs/tables/final/**
-!outputs/results/final/
-!outputs/results/final/**
 
 # logs & tmp
 logs/
