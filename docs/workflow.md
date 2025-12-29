@@ -11,6 +11,12 @@ All runnable entry points under `scripts/` should accept:
 
 Prefer `python -m scripts.run_*` wrappers when available to keep entry points consistent.
 
+Example:
+
+```bash
+python -m scripts.run_single_task --dataset EFNY --config configs/paths.yaml --dry-run
+```
+
 Dataset-specific assumptions are configured in `configs/datasets/<DATASET>.yaml`.
 Dataset-agnostic analysis defaults may be configured in `configs/analysis.yaml`.
 
@@ -31,6 +37,12 @@ Summary scripts under `src/result_summary/` default to:
 
 You can override this with `--results_root` when needed.
 
+Example:
+
+```bash
+python -m scripts.run_summarize_real_perm_scores --dataset EFNY --config configs/paths.yaml --analysis_type both --atlas <atlas> --model_type <model>
+```
+
 ## Quick sanity check (dry-run)
 
 From the repository root:
@@ -50,3 +62,9 @@ Submission scripts:
 
 They set `#SBATCH --chdir` to the cluster project root and write SLURM stdout/stderr plus per-task logs under `outputs/<DATASET>/logs/...`.
 Note: SLURM `#SBATCH --output/--error` paths are static and cannot expand environment variables, so they remain dataset-specific in the script headers.
+
+Example:
+
+```bash
+sbatch scripts/submit_hpc_real.sh
+```

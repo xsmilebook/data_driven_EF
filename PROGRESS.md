@@ -35,6 +35,7 @@ Engineering-only refactor to standardize paths, entry points, and documentation 
 - Updated README to reflect new standardized CLI usage for FC and behavioral tools.
 - Updated `docs/workflow.md` to recommend `scripts.run_*` wrappers.
 - Added README usage blocks for result_summary script wrappers.
+- Added example CLI blocks to `docs/workflow.md`.
 - Ran `py_compile` and `run_single_task --dry-run` after the updates.
 
 ## In progress
