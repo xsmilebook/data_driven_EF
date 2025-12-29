@@ -13,6 +13,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from src.config_io import load_simple_yaml
+from src.path_config import load_paths_config, resolve_dataset_roots
 
 ACC_PRIORITY_SUFFIXES = [
     "_ACC",
@@ -321,44 +323,90 @@ def plot_metric_list(df, metrics, output_path, title, xlabel, grid_shape=None):
     plt.close(fig)
 
 
+def _resolve_defaults(args):
+    if not args.dataset:
+        raise ValueError("Missing --dataset (required when defaults are used).")
+    repo_root = Path(__file__).resolve().parents[2]
+    paths_cfg = load_paths_config(args.paths_config, repo_root=repo_root)
+    roots = resolve_dataset_roots(paths_cfg, dataset=args.dataset)
+    dataset_cfg_path = (
+        Path(args.dataset_config)
+        if args.dataset_config is not None
+        else (repo_root / "configs" / "datasets" / f"{args.dataset}.yaml")
+    )
+    dataset_cfg = load_simple_yaml(dataset_cfg_path)
+    files_cfg = dataset_cfg.get("files", {})
+    behavioral_rel = files_cfg.get("behavioral_file")
+    if not behavioral_rel:
+        raise ValueError("Missing files.behavioral_file in dataset config.")
+
+    behavioral_csv = roots["processed_root"] / behavioral_rel
+    output_dir = roots["outputs_root"] / "figures" / "behavior_data" / "metric_exploration"
+    log_path = roots["outputs_root"] / "logs" / "behavior_data" / "metric_exploration.log"
+    summary_dir = roots["outputs_root"] / "results" / "behavior_data" / "metric_exploration"
+    return behavioral_csv, output_dir, log_path, summary_dir, dataset_cfg_path
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Exploratory plots for behavioral ACC metrics."
     )
     parser.add_argument(
         "--behavioral_csv",
-        default="data/processed/EFNY/table/demo/EFNY_behavioral_data.csv",
+        default=None,
         help="Behavioral data CSV path.",
     )
     parser.add_argument(
         "--config",
-        default="configs/datasets/EFNY.yaml",
+        default=None,
         help="Dataset config (YAML) containing behavioral.task_prefixes.",
     )
     parser.add_argument(
         "--output_dir",
-        default="outputs/EFNY/figures/behavior_data/metric_exploration",
+        default=None,
         help="Output directory for figures.",
     )
     parser.add_argument(
         "--log",
-        default="outputs/EFNY/logs/behavior_data/metric_exploration.log",
+        default=None,
         help="Log file path.",
     )
     parser.add_argument(
         "--summary_dir",
-        default="outputs/EFNY/results/behavior_data/metric_exploration",
+        default=None,
         help="Output directory for CSV summaries.",
     )
+    parser.add_argument("--dataset", type=str, default=None)
+    parser.add_argument("--paths-config", dest="paths_config", type=str, default="configs/paths.yaml")
+    parser.add_argument("--dataset-config", dest="dataset_config", type=str, default=None)
 
     args = parser.parse_args()
+
+    dataset_config = args.dataset_config or args.config
+    args.dataset_config = dataset_config
+
+    if (
+        args.behavioral_csv is None
+        or args.output_dir is None
+        or args.log is None
+        or args.summary_dir is None
+        or args.dataset_config is None
+    ):
+        behavioral_csv, output_dir, log_path, summary_dir, dataset_cfg_path = _resolve_defaults(args)
+        args.behavioral_csv = str(behavioral_csv)
+        args.output_dir = str(output_dir)
+        args.log = str(log_path)
+        args.summary_dir = str(summary_dir)
+        if args.dataset_config is None:
+            args.dataset_config = str(dataset_cfg_path)
+
     setup_logging(args.log)
 
     if not os.path.exists(args.behavioral_csv):
         logging.error("Behavioral CSV not found: %s", args.behavioral_csv)
         return 1
 
-    task_prefixes = load_task_prefixes(args.config)
+    task_prefixes = load_task_prefixes(args.dataset_config)
     df = pd.read_csv(args.behavioral_csv)
 
     selection_df, summary_df = summarize_acc(df, task_prefixes)

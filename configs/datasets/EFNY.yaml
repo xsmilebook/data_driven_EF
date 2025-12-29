@@ -9,6 +9,9 @@ files:
   # Swap the atlas name in both directory and filename to switch resolution.
   # Default atlas: Schaefer400.
   brain_file: fc_vector/Schaefer400/EFNY_Schaefer400_FC_matrix.npy
+  demo_raw_file: table/demo/EFNY_demo_all.csv
+  demo_processed_file: table/demo/EFNY_demo_processed.csv
+  qc_rest_fd_file: table/qc/rest_fd_summary.csv
   behavioral_file: table/demo/EFNY_behavioral_data.csv
   behavioral_metrics_file: table/metrics/EFNY_beh_metrics.csv
   sublist_file: table/sublist/sublist.txt

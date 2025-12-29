@@ -8,6 +8,7 @@
 #SBATCH --array=1-508%508
 #SBATCH --output=outputs/EFNY/logs/functional_conn_z/%x_%A_%a.out
 #SBATCH --error=outputs/EFNY/logs/functional_conn_z/%x_%A_%a.err
+# NOTE: SBATCH log paths are static (no env expansion). Keep dataset-specific paths here.
 
 source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
 conda activate ML
@@ -16,8 +17,9 @@ eval "$(python -m scripts.render_paths --dataset EFNY --config configs/paths.yam
 ROOT_DIR="${PROJECT_DIR}"
 SUBLIST="$PROCESSED_ROOT/table/sublist/rest_valid_sublist.txt"
 SCRIPT="$ROOT_DIR/src/functional_conn/fisher_z_fc.py"
+LOG_DIR="$OUTPUTS_ROOT/logs/functional_conn_z"
 
-mkdir -p "$ROOT_DIR/outputs/EFNY/logs/functional_conn_z"
+mkdir -p "$LOG_DIR"
 
 SUBJECT=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$SUBLIST" | tr -d '\r')
 if [ -z "$SUBJECT" ]; then

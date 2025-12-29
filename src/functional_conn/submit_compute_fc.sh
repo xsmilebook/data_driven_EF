@@ -8,6 +8,7 @@
 #SBATCH --array=1-508%508            # TODO: Update array range based on line count of sublist
 #SBATCH --output=outputs/EFNY/logs/functional_conn/%x_%A_%a.out
 #SBATCH --error=outputs/EFNY/logs/functional_conn/%x_%A_%a.err
+# NOTE: SBATCH log paths are static (no env expansion). Keep dataset-specific paths here.
 
 source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
 conda activate ML
@@ -27,9 +28,10 @@ ROOT_DIR="${PROJECT_DIR}"
 SUBLIST="$PROCESSED_ROOT/table/sublist/rest_valid_sublist.txt"
 SCRIPT="$ROOT_DIR/src/functional_conn/compute_fc_schaefer.py"
 QC_FILE="$INTERIM_ROOT/table/qc/rest_fd_summary.csv"
+LOG_DIR="$OUTPUTS_ROOT/logs/functional_conn"
 
 # Ensure log directory exists (this might fail if running on node, but good to have)
-mkdir -p "$ROOT_DIR/outputs/EFNY/logs/functional_conn"
+mkdir -p "$LOG_DIR"
 
 # Get subject from the list based on the array task ID
 # sed -n 'Np' prints the Nth line

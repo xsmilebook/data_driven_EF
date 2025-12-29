@@ -3,9 +3,12 @@ import sys
 from pathlib import Path
 import numpy as np
 
+from src.config_io import load_simple_yaml
+from src.path_config import load_paths_config, resolve_dataset_roots
+
 ## command
 # Example:
-# python -m src.functional_conn.compute_fc_schaefer --subject sub-THU20250819728LZQ --out data/interim/EFNY/functional_conn/rest/Schaefer100/sub-THU20250819728LZQ_Schaefer100_FC.csv
+# python -m src.functional_conn.compute_fc_schaefer --subject sub-THU20250819728LZQ --out data/interim/<DATASET>/functional_conn/rest/Schaefer100/sub-THU20250819728LZQ_Schaefer100_FC.csv
 
 def find_runs(func_dir: Path, run_ids: list[int]) -> list[Path]:
     files = []
@@ -62,16 +65,53 @@ def save_matrix(mat: np.ndarray, out_path: Path) -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     np.savetxt(out_path, mat, delimiter=",", fmt="%.6f")
 
+def _resolve_defaults(args) -> tuple[Path, Path, Path, Path]:
+    if not args.dataset:
+        raise ValueError("Missing --dataset (required when defaults are used).")
+    repo_root = Path(__file__).resolve().parents[2]
+    paths_cfg = load_paths_config(args.paths_config, repo_root=repo_root)
+    roots = resolve_dataset_roots(paths_cfg, dataset=args.dataset)
+    dataset_cfg_path = (
+        Path(args.dataset_config)
+        if args.dataset_config is not None
+        else (repo_root / "configs" / "datasets" / f"{args.dataset}.yaml")
+    )
+    dataset_cfg = load_simple_yaml(dataset_cfg_path)
+    files_cfg = dataset_cfg.get("files", {})
+
+    qc_rel = files_cfg.get("qc_rest_fd_file")
+    sublist_rel = files_cfg.get("sublist_file")
+    if not qc_rel:
+        raise ValueError("Missing files.qc_rest_fd_file in dataset config.")
+    if not sublist_rel:
+        raise ValueError("Missing files.sublist_file in dataset config.")
+
+    xcpd_dir = roots["interim_root"] / "MRI_data" / "xcpd_rest"
+    out_dir = roots["interim_root"] / "functional_conn" / "rest"
+    qc_file = roots["interim_root"] / qc_rel
+    sublist_file = roots["processed_root"] / sublist_rel
+    return xcpd_dir, out_dir, qc_file, sublist_file
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--xcpd-dir", default=str(Path(__file__).resolve().parents[2] / "data" / "EFNY" / "MRI_data" / "xcpd_rest"))
+    parser.add_argument("--xcpd-dir", default=None)
     parser.add_argument("--subject", required=True)
     parser.add_argument("--n-rois", type=int, default=100, help="Number of Schaefer ROIs (e.g. 100, 200, 400)")
-    parser.add_argument("--out-dir", default=str(Path(__file__).resolve().parents[2] / "data" / "EFNY" / "functional_conn"))
-    parser.add_argument("--qc-file", default=str(Path(__file__).resolve().parents[2] / "data" / "EFNY" / "table" / "qc" / "rest_fd_summary.csv"))
-    parser.add_argument("--valid-list", default=str(Path(__file__).resolve().parents[2] / "data" / "EFNY" / "table" / "sublist" / "rest_valid_sublist.txt"))
+    parser.add_argument("--out-dir", default=None)
+    parser.add_argument("--qc-file", default=None)
+    parser.add_argument("--valid-list", default=None)
+    parser.add_argument("--dataset", type=str, default=None)
+    parser.add_argument("--config", dest="paths_config", type=str, default="configs/paths.yaml")
+    parser.add_argument("--dataset-config", dest="dataset_config", type=str, default=None)
     args = parser.parse_args()
     args.subject = args.subject.strip()
+
+    if args.xcpd_dir is None or args.out_dir is None or args.qc_file is None or args.valid_list is None:
+        xcpd_dir, out_dir, qc_file, sublist_file = _resolve_defaults(args)
+        args.xcpd_dir = str(xcpd_dir)
+        args.out_dir = str(out_dir)
+        args.qc_file = str(qc_file)
+        args.valid_list = str(sublist_file)
     
     # Get valid runs from QC file
     qc_path = Path(args.qc_file)

@@ -7,9 +7,12 @@ import argparse
 import glob
 import os
 import re
+from pathlib import Path
 
 import openpyxl
 
+from src.config_io import load_simple_yaml
+from src.path_config import load_paths_config, resolve_dataset_roots
 
 def get_task_renaming_rules():
     """Return explicit sheet name renaming rules."""
@@ -231,13 +234,33 @@ def process_directory(directory_path, pattern="*.xlsx", dry_run=False):
         print(f"Total rename conflicts: {total_conflicts}")
 
 
+def _resolve_defaults(args):
+    if not args.dataset:
+        raise ValueError("Missing --dataset (required when defaults are used).")
+    repo_root = Path(__file__).resolve().parents[2]
+    paths_cfg = load_paths_config(args.paths_config, repo_root=repo_root)
+    roots = resolve_dataset_roots(paths_cfg, dataset=args.dataset)
+    dataset_cfg_path = (
+        Path(args.dataset_config)
+        if args.dataset_config is not None
+        else (repo_root / "configs" / "datasets" / f"{args.dataset}.yaml")
+    )
+    dataset_cfg = load_simple_yaml(dataset_cfg_path)
+    behavioral_cfg = dataset_cfg.get("behavioral", {})
+    app_data_rel = behavioral_cfg.get("app_data_dir")
+    if not app_data_rel:
+        raise ValueError("Missing behavioral.app_data_dir in dataset config.")
+    input_dir = roots["raw_root"] / app_data_rel
+    return input_dir
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Normalize Excel sheet names for app behavioral data."
     )
     parser.add_argument(
         "--input_dir",
-        default="data/raw/EFNY/behavior_data/cibr_app_data",
+        default=None,
         help="Directory containing Excel files.",
     )
     parser.add_argument(
@@ -250,8 +273,15 @@ def main():
         action="store_true",
         help="Print changes without saving files.",
     )
+    parser.add_argument("--dataset", type=str, default=None)
+    parser.add_argument("--config", dest="paths_config", type=str, default="configs/paths.yaml")
+    parser.add_argument("--dataset-config", dest="dataset_config", type=str, default=None)
 
     args = parser.parse_args()
+
+    if args.input_dir is None:
+        input_dir = _resolve_defaults(args)
+        args.input_dir = str(input_dir)
 
     if not os.path.exists(args.input_dir):
         print(f"Error: Directory does not exist: {args.input_dir}")

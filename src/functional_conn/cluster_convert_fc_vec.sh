@@ -7,6 +7,7 @@
 #SBATCH --partition=q_fat_c
 #SBATCH --output=outputs/EFNY/logs/fc_vector/%x_%A_%a.out
 #SBATCH --error=outputs/EFNY/logs/fc_vector/%x_%A_%a.err
+# NOTE: SBATCH log paths are static (no env expansion). Keep dataset-specific paths here.
 
 source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
 conda activate ML
@@ -18,9 +19,11 @@ INPUT_PATH="${INTERIM_ROOT}/functional_conn_z/rest"
 SUBLIST_FILE="${PROCESSED_ROOT}/table/sublist/sublist.txt"
 OUTPUT_PATH="${PROCESSED_ROOT}/fc_vector"
 DATASET_NAME="${DATASET}"
+LOG_DIR="${OUTPUTS_ROOT}/logs/fc_vector"
 
 # Create output directory if it doesn't exist
 mkdir -p "${OUTPUT_PATH}"
+mkdir -p "${LOG_DIR}"
 
 # Run the conversion script for different ROI numbers
 echo "Starting FC matrix to vector conversion for ${DATASET_NAME}"

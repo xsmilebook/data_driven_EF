@@ -43,6 +43,20 @@ python -m scripts.run_screen_head_motion --dataset EFNY --config configs/paths.y
 - `--fmriprep-dir`: 可选，会覆盖 dataset config 中的 `external_inputs.fmriprep_dir`
 - `--out`: 输出 CSV（含 `valid_subject` 与 `meanFD`）
 
+#### `preprocess_efny_demo.py`：清洗 demo 表并合并 QC
+```bash
+python -m scripts.run_preprocess_demo --dataset EFNY --config configs/paths.yaml
+```
+关键参数：
+- `--dataset`: 数据集名称（如 `EFNY`）
+- `--config`: 路径配置（`configs/paths.yaml`）
+- `--dataset-config`: 可选，默认 `configs/datasets/<DATASET>.yaml`
+- `--input/-i`: 可选，覆盖 demo 原始 CSV 路径
+- `--output/-o`: 可选，覆盖 demo 处理后 CSV 路径
+- `--qc-file/-q`: 可选，覆盖 QC CSV 路径
+- `--merged-output/-m`: 可选，覆盖合并输出 CSV 路径
+- `--log/-l`: 可选，覆盖 log 路径
+
 #### `generate_valid_sublists.py`：从 QC 表生成有效被试列表
 无命令行参数，直接运行：
 ```bash
@@ -127,6 +141,19 @@ python src/metric_compute/metrics_similarity_heatmap.py --csv <EFNY_metrics.csv>
 - `--method`: pearson/spearman/kendall
 - `--min-valid-ratio`: 单列有效数据占比阈值
 - `--min-pair-ratio`: 两列共同有效数据占比阈值
+
+#### `behavioral_metric_exploration.py`：行为指标探索性可视化
+```bash
+python -m scripts.run_behavioral_metric_exploration --dataset EFNY --config configs/paths.yaml
+```
+关键参数：
+- `--dataset`: 数据集名称（如 `EFNY`）
+- `--config`: 路径配置（`configs/paths.yaml`）
+- `--dataset-config`: 可选，默认 `configs/datasets/<DATASET>.yaml`
+- `--behavioral_csv`: 可选，覆盖行为数据 CSV 路径
+- `--output_dir`: 可选，覆盖图像输出目录
+- `--summary_dir`: 可选，覆盖 CSV 汇总输出目录
+- `--log`: 可选，覆盖 log 路径
 
 ## 脑-行为关联分析（`scripts/run_single_task.py`）
 

@@ -10,6 +10,10 @@ from datetime import datetime
 import logging
 import argparse
 import os
+from pathlib import Path
+
+from src.config_io import load_simple_yaml
+from src.path_config import load_paths_config, resolve_dataset_roots
 
 def setup_logging(log_file='preprocessing.log'):
     """Setup logging configuration."""
@@ -242,28 +246,81 @@ def preprocess_efny_data(input_file, output_file, qc_file=None, merged_output_fi
         logging.error(f"Failed to save output file: {e}")
         return False, []
 
+def _resolve_defaults(args):
+    if not args.dataset:
+        raise ValueError("Missing --dataset (required when defaults are used).")
+    repo_root = Path(__file__).resolve().parents[2]
+    paths_cfg = load_paths_config(args.paths_config, repo_root=repo_root)
+    roots = resolve_dataset_roots(paths_cfg, dataset=args.dataset)
+    dataset_cfg_path = (
+        Path(args.dataset_config)
+        if args.dataset_config is not None
+        else (repo_root / "configs" / "datasets" / f"{args.dataset}.yaml")
+    )
+    dataset_cfg = load_simple_yaml(dataset_cfg_path)
+    files_cfg = dataset_cfg.get("files", {})
+
+    demo_raw = files_cfg.get("demo_raw_file")
+    demo_processed = files_cfg.get("demo_processed_file")
+    qc_file = files_cfg.get("qc_rest_fd_file")
+    merged_output = files_cfg.get("covariates_file")
+
+    if not demo_raw:
+        raise ValueError("Missing files.demo_raw_file in dataset config.")
+    if not demo_processed:
+        raise ValueError("Missing files.demo_processed_file in dataset config.")
+    if not qc_file:
+        raise ValueError("Missing files.qc_rest_fd_file in dataset config.")
+    if not merged_output:
+        raise ValueError("Missing files.covariates_file in dataset config.")
+
+    input_path = roots["raw_root"] / demo_raw
+    output_path = roots["processed_root"] / demo_processed
+    qc_path = roots["interim_root"] / qc_file
+    merged_path = roots["processed_root"] / merged_output
+    log_path = roots["outputs_root"] / "logs" / "preprocess" / "preprocess_efny_demo.log"
+    return input_path, output_path, qc_path, merged_path, log_path
+
+
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(description='Preprocess EFNY demo data')
     parser.add_argument('--input', '-i', 
-                       default='data/raw/EFNY/table/demo/EFNY_demo_all.csv',
+                       default=None,
                        help='Input CSV file path')
     parser.add_argument('--output', '-o', 
-                       default='data/processed/EFNY/table/demo/EFNY_demo_processed.csv',
+                       default=None,
                        help='Output CSV file path')
     parser.add_argument('--qc-file', '-q',
-                       default='data/interim/EFNY/table/qc/rest_fd_summary.csv',
+                       default=None,
                        help='rsfMRI QC CSV file path for merging')
     parser.add_argument('--merged-output', '-m',
-                       default='data/processed/EFNY/table/demo/EFNY_demo_with_rsfmri.csv',
+                       default=None,
                        help='Merged output CSV file path')
     parser.add_argument('--no-merge', action='store_true',
                        help='Skip merging with QC data')
     parser.add_argument('--log', '-l', 
-                       default='outputs/EFNY/logs/preprocess/preprocess_efny_demo.log',
+                       default=None,
                        help='Log file path')
+    parser.add_argument('--dataset', type=str, default=None)
+    parser.add_argument('--config', dest='paths_config', type=str, default='configs/paths.yaml')
+    parser.add_argument('--dataset-config', dest='dataset_config', type=str, default=None)
     
     args = parser.parse_args()
+
+    if (
+        args.input is None
+        or args.output is None
+        or args.qc_file is None
+        or args.merged_output is None
+        or args.log is None
+    ):
+        input_path, output_path, qc_path, merged_path, log_path = _resolve_defaults(args)
+        args.input = str(input_path)
+        args.output = str(output_path)
+        args.qc_file = str(qc_path)
+        args.merged_output = str(merged_path)
+        args.log = str(log_path)
     
     setup_logging(args.log)
     
