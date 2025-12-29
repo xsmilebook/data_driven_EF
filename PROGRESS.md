@@ -54,7 +54,7 @@ Engineering-only refactor to standardize paths, entry points, and documentation 
 
 | Issue | Solution | Date |
 |-------|----------|------|
-| Mixed output roots (`data/EFNY`, `outputs/EFNY`) | Normalize to `data/raw`, `data/interim`, `data/processed`, `outputs` | 2025-12-29 |
+| Mixed output roots (legacy data root vs outputs) | Normalize to `data/raw`, `data/interim`, `data/processed`, `outputs` | 2025-12-29 |
 | Hard-coded cluster paths in bash scripts | Use `scripts/render_paths.py` to inject config-derived paths | 2025-12-29 |
 
 ## Notes
