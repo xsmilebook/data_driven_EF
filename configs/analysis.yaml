@@ -6,8 +6,25 @@
 preprocessing:
   # Subject-level exclusion threshold based on per-row missingness.
   max_missing_rate: 0.1
+  # Standardize X/Y domains before modeling.
+  standardize_domains: false
+  # Optional PCA components for X/Y (null disables PCA).
+  pca_components_X: null
+  pca_components_Y: null
 
 evaluation:
   # Outer CV splits for nested CV evaluation.
   cv_n_splits: 5
-
+  # Shuffle outer CV splits.
+  cv_shuffle: true
+  # Inner CV splits for hyperparameter selection.
+  inner_cv_splits: 3
+  # Shuffle inner CV splits.
+  inner_shuffle: true
+  # Optional seeds for outer/inner shuffles (null uses runtime defaults).
+  outer_shuffle_random_state: null
+  inner_shuffle_random_state: null
+  # Permutation iterations (used when permutation logic consumes it).
+  permutation_n_iters: 1000
+  # Score metric name (must match supported evaluation logic).
+  score_metric: mean_canonical_correlation

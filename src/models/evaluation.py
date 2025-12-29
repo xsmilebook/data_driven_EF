@@ -31,7 +31,8 @@ def run_nested_cv_evaluation(model: BaseBrainBehaviorModel,
                            inner_random_state: Optional[int] = None,
                            standardize_domains: bool = False,
                            pca_components_X: Optional[int] = None,
-                           pca_components_Y: Optional[int] = None) -> Dict[str, Any]:
+                           pca_components_Y: Optional[int] = None,
+                           score_metric: str = "mean_canonical_correlation") -> Dict[str, Any]:
     """
     运行嵌套交叉验证评估
     
@@ -152,7 +153,8 @@ def run_nested_cv_evaluation(model: BaseBrainBehaviorModel,
         random_state=outer_random_state,
     )
 
-    score_metric = "mean_canonical_correlation"
+    if score_metric != "mean_canonical_correlation":
+        raise ValueError(f"Unsupported score_metric: {score_metric}")
 
     outer_fold_results = []
     for outer_fold_idx, (train_out_idx, test_out_idx) in enumerate(outer_kf.split(X_values)):

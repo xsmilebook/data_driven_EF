@@ -38,6 +38,8 @@ Engineering-only refactor to standardize paths, entry points, and documentation 
 - Added example CLI blocks to `docs/workflow.md`.
 - Removed legacy JSON config support (`config.json` / `--config_file`) from modeling utilities.
 - Removed redundant `scripts/run_*` wrappers; documentation now points directly to `src` entry points.
+- Moved CV hyperparameter defaults into `configs/analysis.yaml` and wired them into `run_single_task.py`.
+- Added additional evaluation/preprocessing defaults (PCA, standardize, shuffle seeds, score metric, permutation iterations) and passed into nested CV.
 - Ran `py_compile` and `run_single_task --dry-run` after the updates.
 
 ## In progress

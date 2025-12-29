@@ -262,6 +262,24 @@ Examples:
         "--max_missing_rate", type=float, default=None,
         help="最大允许缺失率"
     )
+
+    parser.add_argument(
+        "--standardize_domains", dest="standardize_domains", action="store_true", default=None,
+        help="? X/Y ??????"
+    )
+    parser.add_argument(
+        "--no-standardize-domains", dest="standardize_domains", action="store_false", default=None,
+        help="?? X/Y ??????"
+    )
+
+    parser.add_argument(
+        "--pca_components_X", type=int, default=None,
+        help="X ? PCA ???????"
+    )
+    parser.add_argument(
+        "--pca_components_Y", type=int, default=None,
+        help="Y ? PCA ???????"
+    )
     
     # 评估参数
     parser.add_argument(
@@ -275,11 +293,48 @@ Examples:
     )
     
     parser.add_argument(
-        "--cv_shuffle", action="store_true", default=True,
-        help="是否打乱数据顺序"
+        "--cv_shuffle", dest="cv_shuffle", action="store_true", default=None,
+        help="????????"
     )
-    
-    # 输出参数
+    parser.add_argument(
+        "--no-cv-shuffle", dest="cv_shuffle", action="store_false", default=None,
+        help="???????"
+    )
+
+    parser.add_argument(
+        "--inner_cv_splits", type=int, default=None,
+        help="???????????????"
+    )
+
+    parser.add_argument(
+        "--inner_shuffle", dest="inner_shuffle", action="store_true", default=None,
+        help="??????????????"
+    )
+    parser.add_argument(
+        "--no-inner-shuffle", dest="inner_shuffle", action="store_false", default=None,
+        help="?????????????"
+    )
+
+    parser.add_argument(
+        "--outer_shuffle_random_state", type=int, default=None,
+        help="?????????????"
+    )
+
+    parser.add_argument(
+        "--inner_shuffle_random_state", type=int, default=None,
+        help="?????????????"
+    )
+
+    parser.add_argument(
+        "--permutation_n_iters", type=int, default=None,
+        help="?????????????"
+    )
+
+    parser.add_argument(
+        "--score_metric", type=str, default=None,
+        help="??????"
+    )
+
     parser.add_argument(
         "--output_dir", type=str, default=None,
         help="输出目录（默认使用项目结果目录）"
@@ -670,21 +725,33 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
             for p in param_candidates:
                 p['n_components'] = 1
 
+            outer_seed = (
+                args.outer_shuffle_random_state
+                if args.outer_shuffle_random_state is not None
+                else permutation_seed
+            )
+            inner_seed = (
+                args.inner_shuffle_random_state
+                if args.inner_shuffle_random_state is not None
+                else permutation_seed
+            )
+
             nested_results = run_nested_cv_evaluation(
                 base_model,
                 X_raw,
                 Y_perm,
                 confounds=confounds_k,
                 outer_cv_splits=args.cv_n_splits,
-                inner_cv_splits=3,
+                inner_cv_splits=args.inner_cv_splits,
                 param_grid=param_candidates,
                 outer_shuffle=args.cv_shuffle,
-                inner_shuffle=True,
-                outer_random_state=permutation_seed,
-                inner_random_state=permutation_seed,
-                standardize_domains=False,
-                pca_components_X=None,
-                pca_components_Y=None,
+                inner_shuffle=args.inner_shuffle,
+                outer_random_state=outer_seed,
+                inner_random_state=inner_seed,
+                standardize_domains=args.standardize_domains,
+                pca_components_X=args.pca_components_X,
+                pca_components_Y=args.pca_components_Y,
+                score_metric=args.score_metric,
             )
 
             k_score = float(np.asarray(nested_results.get('outer_mean_canonical_correlations', [np.nan]))[0])
@@ -715,21 +782,33 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
         C_raw = covariates.values if isinstance(covariates, pd.DataFrame) else covariates
 
         param_candidates = _build_nested_param_candidates(model)
+        outer_seed = (
+            args.outer_shuffle_random_state
+            if args.outer_shuffle_random_state is not None
+            else args.random_state
+        )
+        inner_seed = (
+            args.inner_shuffle_random_state
+            if args.inner_shuffle_random_state is not None
+            else args.random_state
+        )
+
         nested_results = run_nested_cv_evaluation(
             model,
             X_raw,
             Y_raw,
             confounds=C_raw,
             outer_cv_splits=args.cv_n_splits,
-            inner_cv_splits=3,
+            inner_cv_splits=args.inner_cv_splits,
             param_grid=param_candidates,
             outer_shuffle=args.cv_shuffle,
-            inner_shuffle=True,
-            outer_random_state=args.random_state,
-            inner_random_state=args.random_state,
-            standardize_domains=False,
-            pca_components_X=None,
-            pca_components_Y=None,
+            inner_shuffle=args.inner_shuffle,
+            outer_random_state=outer_seed,
+            inner_random_state=inner_seed,
+            standardize_domains=args.standardize_domains,
+            pca_components_X=args.pca_components_X,
+            pca_components_Y=args.pca_components_Y,
+            score_metric=args.score_metric,
         )
 
         cv_mean_corrs = np.asarray(nested_results.get('outer_mean_canonical_correlations', []), dtype=float)
@@ -802,6 +881,7 @@ def save_results_with_metadata(result, args):
         'cv_n_splits': args.cv_n_splits if args.run_cv else None,
         'random_state': args.random_state,
         'permutation_seed': seed if args.task_id > 0 else None,
+        'permutation_n_iters': args.permutation_n_iters,
         'output_root': str(results_root),
         'output_dir': str(output_dir),
         'output_file': str(output_path),
@@ -987,6 +1067,26 @@ def main():
         args.max_missing_rate = float(config.get("preprocessing.max_missing_rate", 0.1))
     if args.cv_n_splits is None:
         args.cv_n_splits = int(config.get("evaluation.cv_n_splits", 5))
+    if args.cv_shuffle is None:
+        args.cv_shuffle = bool(config.get("evaluation.cv_shuffle", True))
+    if args.inner_cv_splits is None:
+        args.inner_cv_splits = int(config.get("evaluation.inner_cv_splits", 3))
+    if args.inner_shuffle is None:
+        args.inner_shuffle = bool(config.get("evaluation.inner_shuffle", True))
+    if args.outer_shuffle_random_state is None:
+        args.outer_shuffle_random_state = config.get("evaluation.outer_shuffle_random_state")
+    if args.inner_shuffle_random_state is None:
+        args.inner_shuffle_random_state = config.get("evaluation.inner_shuffle_random_state")
+    if args.permutation_n_iters is None:
+        args.permutation_n_iters = int(config.get("evaluation.permutation_n_iters", 1000))
+    if args.score_metric is None:
+        args.score_metric = str(config.get("evaluation.score_metric", "mean_canonical_correlation"))
+    if args.standardize_domains is None:
+        args.standardize_domains = bool(config.get("preprocessing.standardize_domains", False))
+    if args.pca_components_X is None:
+        args.pca_components_X = config.get("preprocessing.pca_components_X")
+    if args.pca_components_Y is None:
+        args.pca_components_Y = config.get("preprocessing.pca_components_Y")
     
     logger.info("="*80)
     logger.info("EFNY Brain-Behavior Association Analysis Started")
