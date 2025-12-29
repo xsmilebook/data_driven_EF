@@ -27,6 +27,9 @@ Engineering-only refactor to standardize paths, entry points, and documentation 
 - Updated functional-connection plotting example to use `outputs/<DATASET>` path.
 - Added notes in SLURM scripts explaining static SBATCH log paths.
 - Added config-driven defaults for `compute_fc_schaefer.py` and removed EFNY-specific defaults.
+- Updated README usage for `compute_fc_schaefer.py` to include dataset/config defaults.
+- Updated workflow and EFNY dataset docs to reflect `data/raw`/`data/interim`/`data/processed`/`outputs` conventions.
+- Added README note about static SBATCH log paths.
 
 ## In progress
 

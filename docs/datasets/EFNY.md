@@ -6,7 +6,7 @@ Scope: EFNY-specific file conventions, preprocessing assumptions, and the intend
 
 ## 1) EFNY data location and conventions (dataset-specific)
 
-- Canonical data root: `data/EFNY/`
+- Canonical data roots: `data/raw/EFNY/`, `data/interim/EFNY/`, `data/processed/EFNY/`, and `outputs/EFNY/`.
 - Runtime artifacts: `data/` and `outputs/` are not version-controlled; paths below are expected locations used by scripts.
 - Subject identifiers: EFNY scripts commonly use `subid`/`subject_id`/`subject_code` depending on the source table; verify the exact column names in the script you are running.
 
@@ -14,9 +14,9 @@ Scope: EFNY-specific file conventions, preprocessing assumptions, and the intend
 
 ### 2.1 Inputs and outputs
 
-- Input directory (raw): `data/EFNY/behavior_data/cibr_app_data/`
+- Input directory (raw): `data/raw/EFNY/behavior_data/cibr_app_data/`
 - Input format: per-subject Excel workbooks (`*.xlsx`)
-- Output wide table (metrics): `data/EFNY/table/metrics/EFNY_beh_metrics.csv`
+- Output wide table (metrics): `data/processed/EFNY/table/metrics/EFNY_beh_metrics.csv`
 
 Within the behavioral metric pipeline, `subject_code` is derived from the filename by removing the suffix `_GameData.xlsx` (and `file_name` stores the original basename).
 
@@ -89,8 +89,8 @@ Scripts:
 
 Operational summary:
 
-- `batch_run_xcpd.sh` reads subject IDs from `data/EFNY/table/sublist/mri_sublist.txt` and submits one job per subject.
-- Each job runs xcp-d on rs-fMRI with 36P nuisance regression and band-pass filtering; outputs are written under `data/EFNY/MRI_data/xcpd_rest` (see script for exact version/flags).
+- `batch_run_xcpd.sh` reads subject IDs from `data/processed/EFNY/table/sublist/mri_sublist.txt` and submits one job per subject.
+- Each job runs xcp-d on rs-fMRI with 36P nuisance regression and band-pass filtering; outputs are written under `data/interim/EFNY/MRI_data/xcpd_rest` (see script for exact version/flags).
 
 ### 3.3 Head motion QC summary
 
@@ -101,7 +101,7 @@ Script:
 Operational summary:
 
 - Computes per-run frame count, mean framewise displacement (FD), and the proportion of frames with FD > 0.3.
-- Defines run- and subject-level validity flags and writes a QC summary table `rest_fd_summary.csv` (see script for the precise criteria).
+- Defines run- and subject-level validity flags and writes a QC summary table `data/interim/EFNY/table/qc/rest_fd_summary.csv` (see script for the precise criteria).
 
 ### 3.4 Demographics preprocessing and QC merge
 
@@ -149,7 +149,7 @@ Example substitutions:
 
 ## 5) Updating this document
 
-When EFNY preprocessing or file conventions change, update this document and add a short session note under `docs/notes/` describing:
+When EFNY preprocessing or file conventions change, update this document and add a short session note under `docs/sessions/` describing:
 
 - what changed,
 - why it changed,

@@ -79,17 +79,21 @@ python -m scripts.run_build_behavioral_data --dataset EFNY --config configs/path
 
 ### 2) 功能连接（FC）计算与向量化（`src/functional_conn`）
 
-#### `compute_fc_schaefer.py`：计算单被试 FC 矩阵（CSV）
+#### `compute_fc_schaefer.py`?????? FC ???CSV?
 ```bash
-python src/functional_conn/compute_fc_schaefer.py --subject <sub-xxx> --n-rois 100
+python src/functional_conn/compute_fc_schaefer.py --subject <sub-xxx> --n-rois 100 --dataset EFNY --config configs/paths.yaml
 ```
-关键参数：
-- `--xcpd-dir`: xcp-d 输出根目录
-- `--subject`: 被试 ID（如 `sub-xxx`）
-- `--n-rois`: Schaefer 分区数（100/200/400）
-- `--qc-file`: QC CSV（决定 valid runs）
-- `--valid-list`: 有效被试列表
-- `--out-dir`: 输出目录
+?????
+- `--xcpd-dir`: xcp-d ?????
+- `--subject`: ?? ID?? `sub-xxx`?
+- `--n-rois`: Schaefer ????100/200/400?
+- `--qc-file`: QC CSV??? valid runs?
+- `--valid-list`: ??????
+- `--out-dir`: ????
+- `--dataset`: ??????? `EFNY`?
+- `--config`: ?????`configs/paths.yaml`?
+- `--dataset-config`: ????? `configs/datasets/<DATASET>.yaml`
+
 
 #### `fisher_z_fc.py`：FC 做 Fisher-Z 变换（CSV）
 ```bash
