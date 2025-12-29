@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 from nilearn import plotting, datasets
 
 # command:
-# python  src\functional_conn\plot_fc_matrix.py --file D:\code\data_driven_EF\data\EFNY\avg_functional_conn_matrix\GroupAverage_Schaefer100_fisher_z.csv --out D:\code\data_driven_EF\data\EFNY\figures\functional_conn\GroupAverage_Schaefer100_fisher_z_yeo17.png --title "Group average fc(Schaefer 100)" --yeo17 --n-rois 100
+# Example:
+# python -m src.functional_conn.plot_fc_matrix --file data/EFNY/avg_functional_conn_matrix/GroupAverage_Schaefer100_fisher_z.csv --out outputs/EFNY/figures/functional_conn/GroupAverage_Schaefer100_fisher_z_yeo17.png --title "Group average fc (Schaefer 100)" --yeo17 --n-rois 100
 
 
 def load_matrix(path: Path) -> np.ndarray:

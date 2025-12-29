@@ -1,17 +1,18 @@
 #!/bin/bash
 #SBATCH --job-name=convert_fc_vectors_efny
+#SBATCH --chdir=/ibmgpfs/cuizaixu_lab/xuhaoshu/projects/data_driven_EF
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --partition=q_fat_c
-#SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/log/fc_vector/convert_fc_vectors_%A_%a.out
-#SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/log/fc_vector/convert_fc_vectors_%A_%a.err
+#SBATCH --output=outputs/EFNY/logs/fc_vector/%x_%A_%a.out
+#SBATCH --error=outputs/EFNY/logs/fc_vector/%x_%A_%a.err
 
 source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
 conda activate ML
 
 # Set up paths for EFNY dataset
-PROJECT_ROOT="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF"
+PROJECT_ROOT="/ibmgpfs/cuizaixu_lab/xuhaoshu/projects/data_driven_EF"
 INPUT_PATH="${PROJECT_ROOT}/data/EFNY/functional_conn_z/rest"
 SUBLIST_FILE="${PROJECT_ROOT}/data/EFNY/table/sublist/sublist.txt"
 OUTPUT_PATH="${PROJECT_ROOT}/data/EFNY/fc_vector"

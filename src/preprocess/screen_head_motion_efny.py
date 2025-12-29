@@ -6,7 +6,8 @@ from pathlib import Path
 import numpy as np
 
 # example:
-# python screen_head_motion_efny.py --fmriprep-dir /ibmgpfs/cuizaixu_lab/liyang/BrainProject25/Tsinghua_data/results/fmriprep_rest --out /ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/data/EFNY/table/rest_fd_summary.csv
+# Example:
+# python -m src.preprocess.screen_head_motion_efny --fmriprep-dir <FMRIPREP_ROOT> --out data/EFNY/table/qc/rest_fd_summary.csv
 
 def find_subject_id(p: Path) -> str:
     for part in p.parts:

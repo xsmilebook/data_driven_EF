@@ -18,7 +18,7 @@ class EFNYDataLoader:
     
     def __init__(
         self,
-        data_root: Union[str, Path] = "/ibmgpfs/cuizaixu_lab/xuhaoshu/code/data_driven_EF/data/EFNY",
+        data_root: Union[str, Path],
         brain_file: Optional[Union[str, Path]] = None,
         behavioral_file: Optional[Union[str, Path]] = None,
         sublist_file: Optional[Union[str, Path]] = None,
@@ -29,22 +29,26 @@ class EFNYDataLoader:
         Args:
             data_root: EFNY 数据根目录
         """
+        if not data_root:
+            raise ValueError("data_root is required (supply via config at script entry).")
         self.data_root = Path(data_root)
         self.brain_data_path = self._resolve_path(
             brain_file,
-            default_rel=Path("fc_vector") / "Schaefer100" / "EFNY_Schaefer100_FC_matrix.npy",
+            default_rel=Path(""),
         )
         self.behavioral_data_path = self._resolve_path(
             behavioral_file,
-            default_rel=Path("table") / "demo" / "EFNY_behavioral_data.csv",
+            default_rel=Path(""),
         )
         self.sublist_path = self._resolve_path(
             sublist_file,
-            default_rel=Path("table") / "sublist" / "sublist.txt",
+            default_rel=Path(""),
         )
 
     def _resolve_path(self, maybe_path: Optional[Union[str, Path]], default_rel: Path) -> Path:
         if maybe_path is None:
+            if str(default_rel) in {"", "."}:
+                raise ValueError("Missing required file path (supply via config at script entry).")
             return self.data_root / default_rel
 
         maybe_path = Path(maybe_path)
@@ -326,36 +330,23 @@ def create_synthetic_data(n_subjects: int = 200,
     brain_data = latent_factors @ brain_loadings + np.random.normal(0, 0.5, size=(n_subjects, n_brain_features))
     
     # 行为数据
-    behavioral_metrics = [
-        'SST_SSRT', 'CPT_d_prime', 'CPT_ACC', 'CPT_Reaction_Time',
-        'FLANKER_Contrast_ACC', 'FLANKER_Contrast_RT', 'ColorStroop_Contrast_ACC',
-        'ColorStroop_Contrast_RT', 'EmotionStroop_Contrast_ACC', 'EmotionStroop_Contrast_RT',
-        'Number1Back_ACC', 'Number1Back_Reaction_Time', 'Number2Back_ACC',
-        'Number2Back_Reaction_Time', 'Spatial1Back_ACC', 'Spatial1Back_Reaction_Time',
-        'Spatial2Back_ACC', 'Spatial2Back_Reaction_Time', 'Emotion1Back_ACC',
-        'Emotion1Back_Reaction_Time', 'Emotion2Back_ACC', 'Emotion2Back_Reaction_Time',
-        'KT_ACC', 'DCCS_ACC', 'DCCS_Reaction_Time', 'DCCS_Switch_Cost',
-        'EmotionSwitch_ACC', 'EmotionSwitch_Reaction_Time', 'DT_ACC',
-        'DT_Reaction_Time', 'DT_Switch_Cost'
-    ]
-    
-    selected_metrics = behavioral_metrics[:n_behavioral_measures]
+    selected_metrics = [f"metric_{i+1:03d}" for i in range(n_behavioral_measures)]
     behavioral_loadings = np.random.normal(0, 0.4, size=(n_latent, n_behavioral_measures))
     behavioral_data = latent_factors @ behavioral_loadings + np.random.normal(0, 0.3, size=(n_subjects, n_behavioral_measures))
     
-    # 协变量（EFNY标准：age, sex, meanFD）
-    age = np.random.normal(25, 5, size=n_subjects)
-    sex = np.random.choice([0, 1], size=n_subjects)
-    meanFD = np.random.normal(0.15, 0.05, size=n_subjects)
-    covariates = pd.DataFrame({'age': age, 'sex': sex, 'meanFD': meanFD})
+    # Generic covariates (dataset-agnostic)
+    cov_1 = np.random.normal(0, 1, size=n_subjects)
+    cov_2 = np.random.normal(0, 1, size=n_subjects)
+    cov_3 = np.random.normal(0, 1, size=n_subjects)
+    covariates = pd.DataFrame({'cov_1': cov_1, 'cov_2': cov_2, 'cov_3': cov_3})
     
     # 添加协变量效应
-    brain_data += np.outer(age, np.random.normal(0, 0.1, n_brain_features))
-    brain_data += np.outer(sex, np.random.normal(0, 0.2, n_brain_features))
-    brain_data += np.outer(meanFD, np.random.normal(0, 2, n_brain_features))
-    behavioral_data += np.outer(age, np.random.normal(0, 0.05, n_behavioral_measures))
-    behavioral_data += np.outer(sex, np.random.normal(0, 0.1, n_behavioral_measures))
-    behavioral_data += np.outer(meanFD, np.random.normal(0, 1, n_behavioral_measures))
+    brain_data += np.outer(cov_1, np.random.normal(0, 0.1, n_brain_features))
+    brain_data += np.outer(cov_2, np.random.normal(0, 0.2, n_brain_features))
+    brain_data += np.outer(cov_3, np.random.normal(0, 2, n_brain_features))
+    behavioral_data += np.outer(cov_1, np.random.normal(0, 0.05, n_behavioral_measures))
+    behavioral_data += np.outer(cov_2, np.random.normal(0, 0.1, n_behavioral_measures))
+    behavioral_data += np.outer(cov_3, np.random.normal(0, 1, n_behavioral_measures))
     
     brain_df = pd.DataFrame(brain_data, columns=[f'FC_{i}' for i in range(n_brain_features)])
     behavioral_df = pd.DataFrame(behavioral_data, columns=selected_metrics)

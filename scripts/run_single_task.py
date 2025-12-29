@@ -15,9 +15,21 @@ import pandas as pd
 import logging
 import json
 
-# 添加项目根目录到 Python 路径
-project_root = Path(__file__).resolve().parent.parent.parent
-sys.path.insert(0, str(project_root))
+def _ensure_repo_root_on_syspath() -> Path:
+    """
+    Ensure repository root is on sys.path.
+
+    Preferred invocation is `python -m scripts.run_single_task` from repo root.
+    This helper keeps `python scripts/run_single_task.py ...` working without
+    scattering sys.path hacks throughout the codebase.
+    """
+    repo_root = Path(__file__).resolve().parents[1]
+    if str(repo_root) not in sys.path:
+        sys.path.insert(0, str(repo_root))
+    return repo_root
+
+
+REPO_ROOT = _ensure_repo_root_on_syspath()
 
 from src.models.data_loader import EFNYDataLoader, create_synthetic_data
 from src.models.models import create_model, get_available_models
@@ -27,6 +39,8 @@ from src.models.utils import (
     save_results, save_large_artifacts, validate_data_shapes, check_data_quality,
     config
 )
+from src.config_io import load_simple_yaml
+from src.path_config import load_paths_config, resolve_dataset_roots
 
 
 def _infer_atlas_tag(brain_file: str) -> str:
@@ -74,6 +88,58 @@ def _impute_with_mean(arr: np.ndarray) -> np.ndarray:
     return out
 
 
+def _apply_yaml_configs(args) -> dict:
+    """
+    Load configs/paths.yaml + configs/datasets/<DATASET>.yaml and apply overrides
+    to the global ConfigManager.
+
+    Returns a small dict of resolved paths for logging/debugging.
+    """
+    paths_cfg = load_paths_config(args.paths_config, repo_root=REPO_ROOT)
+    roots = resolve_dataset_roots(paths_cfg, dataset=args.dataset)
+
+    dataset_cfg_path = (
+        Path(args.dataset_config)
+        if args.dataset_config is not None
+        else (REPO_ROOT / "configs" / "datasets" / f"{args.dataset}.yaml")
+    )
+    dataset_cfg = load_simple_yaml(dataset_cfg_path)
+    files = dataset_cfg.get("files", {})
+    if not isinstance(files, dict):
+        raise ValueError(f"Invalid dataset config: files must be a mapping ({dataset_cfg_path})")
+
+    overrides = {
+        "data": {
+            "root_dir": str(roots["data_root"]),
+            "brain_file": str(files.get("brain_file", "")),
+            "behavioral_file": str(files.get("behavioral_file", "")),
+            "sublist_file": str(files.get("sublist_file", "")),
+            "covariates_file": str(files.get("covariates_file", "")),
+        },
+        "output": {
+            "results_dir": str(roots["outputs_root"] / "results"),
+        },
+    }
+
+    if "preprocessing" in dataset_cfg:
+        overrides["preprocessing"] = dataset_cfg["preprocessing"]
+    if "behavioral" in dataset_cfg:
+        overrides["behavioral"] = dataset_cfg["behavioral"]
+
+    config.apply_overrides(overrides)
+
+    missing = [k for k in ("brain_file", "behavioral_file", "sublist_file") if not overrides["data"].get(k)]
+    if missing and not args.use_synthetic:
+        raise ValueError(f"Missing required dataset file keys in {dataset_cfg_path}: {missing}")
+
+    return {
+        "repo_root": roots["repo_root"],
+        "data_root": roots["data_root"],
+        "outputs_root": roots["outputs_root"],
+        "dataset_cfg_path": dataset_cfg_path,
+    }
+
+
 def parse_arguments():
     """解析命令行参数"""
     parser = argparse.ArgumentParser(
@@ -96,6 +162,33 @@ Examples:
         sbatch --wrap "python run_single_task.py --task_id $i --model_type adaptive_pls"
     done
         """
+    )
+
+    # Phase 5 standardized entry-point args
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        required=True,
+        help="Dataset name (must exist in configs/paths.yaml and configs/datasets/<DATASET>.yaml).",
+    )
+    parser.add_argument(
+        "--config",
+        dest="paths_config",
+        type=str,
+        default="configs/paths.yaml",
+        help="Centralized paths config (YAML).",
+    )
+    parser.add_argument(
+        "--dataset-config",
+        dest="dataset_config",
+        type=str,
+        default=None,
+        help="Optional dataset config override (defaults to configs/datasets/<DATASET>.yaml).",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Resolve configs and validate imports without reading data or writing outputs.",
     )
     
     # 核心参数
@@ -291,7 +384,7 @@ def load_data(args):
 
         # 协变量优先顺序：命令行 --covariates_path > config.data.covariates_file
         covariates_file = args.covariates_path or config.get('data.covariates_file')
-        covariate_columns = config.get('preprocessing.confound_variables', ['sex', 'age', 'meanFD'])
+        covariate_columns = config.get('preprocessing.confound_variables', [])
 
         try:
             covariates = data_loader.load_covariates_for_subjects(
@@ -520,7 +613,10 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
         Y_perm = Y_raw[permuted_indices]
 
         atlas_tag = _infer_atlas_tag(config.get('data.brain_file', ''))
-        results_root = Path(config.get('output.results_dir', str(get_results_dir())))
+        results_dir = config.get('output.results_dir')
+        if not results_dir:
+            raise ValueError("Missing config value: output.results_dir")
+        results_root = Path(results_dir)
         real_summary = _load_real_stepwise_summary(results_root, atlas_tag, args.model_type)
         real_scores_mean = real_summary.get('scores_mean')
         real_X_scores = real_summary.get('X_scores_mean')
@@ -647,7 +743,10 @@ def save_results_with_metadata(result, args):
     """保存结果和元数据"""
     logger = logging.getLogger(__name__)
 
-    results_root = Path(config.get('output.results_dir', str(get_results_dir())))
+    results_dir = config.get('output.results_dir')
+    if not results_dir:
+        raise ValueError("Missing config value: output.results_dir")
+    results_root = Path(results_dir)
     brain_file = config.get('data.brain_file', '')
     atlas_tag = _infer_atlas_tag(brain_file)
     analysis_type = 'perm' if args.task_id > 0 else 'real'
@@ -843,12 +942,24 @@ def main():
     """主函数"""
     # 解析参数
     args = parse_arguments()
-    
-    # 设置日志
+
+    resolved = _apply_yaml_configs(args)
+
+    # 设置日志（dry-run 不写文件）
     logger = setup_logging(
         log_level=args.log_level,
-        log_file=args.log_file
+        log_file=None if args.dry_run else args.log_file,
     )
+
+    logger.info(f"Dataset: {args.dataset}")
+    logger.info(f"Paths config: {args.paths_config}")
+    logger.info(f"Dataset config: {resolved['dataset_cfg_path']}")
+    logger.info(f"Resolved data_root: {resolved['data_root']}")
+    logger.info(f"Resolved outputs_root: {resolved['outputs_root']}")
+
+    if args.dry_run:
+        logger.info("Dry-run: configuration resolved and imports succeeded.")
+        return 0
     
     logger.info("="*80)
     logger.info("EFNY Brain-Behavior Association Analysis Started")
@@ -859,10 +970,10 @@ def main():
     
     try:
         t0 = time.time()
-        # 加载配置（如果提供）
+        # Backward-compatible JSON config (deprecated)
         if args.config_file:
             config.load_config(args.config_file)
-            logger.info(f"Configuration loaded from: {args.config_file}")
+            logger.info(f"Loaded legacy JSON config: {args.config_file}")
         
         # 步骤1: 加载数据
         logger.info("Step 1: Loading data...")

@@ -170,7 +170,7 @@ def main():
         )
 
     out = pd.DataFrame(rows).sort_values(["pearson_r", "max_abs_diff"], ascending=[True, False])
-    out_path = os.path.join("D:/code/data_driven_EF/data/EFNY/table/demo", "efny_vs_thu_metric_compare.csv")
+    out_path = os.path.join(root, "data", "EFNY", "table", "demo", "efny_vs_thu_metric_compare.csv")
     out.to_csv(out_path, index=False, encoding="utf-8")
     print(f"Wrote: {out_path}")
     print(out.head(30).to_string(index=False))

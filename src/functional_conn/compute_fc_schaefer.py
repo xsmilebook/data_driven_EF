@@ -4,7 +4,8 @@ from pathlib import Path
 import numpy as np
 
 ## command
-# python d:\code\data_driven_EF\src\FC_compute\compute_fc_schaefer100.py --subject sub-THU20250819728LZQ --out d:\code\data_driven_EF\data\EFNY\functional_conn\Schaefer100_FC.csv 
+# Example:
+# python -m src.functional_conn.compute_fc_schaefer --subject sub-THU20250819728LZQ --out data/EFNY/functional_conn/Schaefer100_FC.csv
 
 def find_runs(func_dir: Path, run_ids: list[int]) -> list[Path]:
     files = []

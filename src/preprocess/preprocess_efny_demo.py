@@ -246,21 +246,21 @@ def main():
     """Main function."""
     parser = argparse.ArgumentParser(description='Preprocess EFNY demo data')
     parser.add_argument('--input', '-i', 
-                       default='d:\\code\\data_driven_EF\\data\\EFNY\\table\\demo\\EFNY_demo_all.csv',
+                       default='data/EFNY/table/demo/EFNY_demo_all.csv',
                        help='Input CSV file path')
     parser.add_argument('--output', '-o', 
-                       default='d:\\code\\data_driven_EF\\data\\EFNY\\table\\demo\\EFNY_demo_processed.csv',
+                       default='outputs/EFNY/interim/demo/EFNY_demo_processed.csv',
                        help='Output CSV file path')
     parser.add_argument('--qc-file', '-q',
-                       default='d:\\code\\data_driven_EF\\data\\EFNY\\table\\qc\\rest_fd_summary.csv',
+                       default='data/EFNY/table/qc/rest_fd_summary.csv',
                        help='rsfMRI QC CSV file path for merging')
     parser.add_argument('--merged-output', '-m',
-                       default='d:\\code\\data_driven_EF\\data\\EFNY\\table\\demo\\EFNY_demo_with_rsfmri.csv',
+                       default='outputs/EFNY/processed/demo/EFNY_demo_with_rsfmri.csv',
                        help='Merged output CSV file path')
     parser.add_argument('--no-merge', action='store_true',
                        help='Skip merging with QC data')
     parser.add_argument('--log', '-l', 
-                       default='d:\\code\\data_driven_EF\\data\\EFNY\\log\\preprocess\\preprocess_efny_demo.log',
+                       default='outputs/EFNY/logs/preprocess/preprocess_efny_demo.log',
                        help='Log file path')
     
     args = parser.parse_args()

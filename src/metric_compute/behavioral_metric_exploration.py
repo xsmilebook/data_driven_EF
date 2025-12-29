@@ -66,9 +66,15 @@ def setup_logging(log_path):
 
 
 def load_task_prefixes(config_path):
-    """Load task prefixes from config.json."""
-    with open(config_path, "r", encoding="utf-8") as handle:
-        config = json.load(handle)
+    """Load task prefixes from a dataset config (YAML or legacy JSON)."""
+    config_path = Path(config_path)
+    if config_path.suffix.lower() in {".yaml", ".yml"}:
+        from src.config_io import load_simple_yaml
+
+        config = load_simple_yaml(config_path)
+    else:
+        with open(config_path, "r", encoding="utf-8") as handle:
+            config = json.load(handle)
 
     prefixes = config.get("behavioral", {}).get("task_prefixes", [])
     if not prefixes:
@@ -321,27 +327,27 @@ def main():
     )
     parser.add_argument(
         "--behavioral_csv",
-        default=r"d:\code\data_driven_EF\data\EFNY\table\demo\EFNY_behavioral_data.csv",
+        default="data/EFNY/table/demo/EFNY_behavioral_data.csv",
         help="Behavioral data CSV path.",
     )
     parser.add_argument(
         "--config",
-        default=r"d:\code\data_driven_EF\src\models\config.json",
-        help="Config JSON containing task prefixes.",
+        default="configs/datasets/EFNY.yaml",
+        help="Dataset config (YAML) containing behavioral.task_prefixes.",
     )
     parser.add_argument(
         "--output_dir",
-        default=r"d:\code\data_driven_EF\data\EFNY\results\behavior_data\figures\metric_exploration",
+        default="outputs/EFNY/figures/behavior_data/metric_exploration",
         help="Output directory for figures.",
     )
     parser.add_argument(
         "--log",
-        default=r"d:\code\data_driven_EF\data\EFNY\log\behavior_data\metric_exploration.log",
+        default="outputs/EFNY/logs/behavior_data/metric_exploration.log",
         help="Log file path.",
     )
     parser.add_argument(
         "--summary_dir",
-        default=r"d:\code\data_driven_EF\data\EFNY\results\behavior_data\metric_exploration",
+        default="outputs/EFNY/results/behavior_data/metric_exploration",
         help="Output directory for CSV summaries.",
     )
 

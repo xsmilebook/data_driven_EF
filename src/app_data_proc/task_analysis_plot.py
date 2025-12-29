@@ -83,12 +83,12 @@ def main():
     )
     parser.add_argument(
         "--output_dir",
-        default=r"d:\code\data_driven_EF\data\EFNY\results\behavior_data\task_analysis",
+        default="outputs/EFNY/results/behavior_data/task_analysis",
         help="Output directory containing summary CSVs.",
     )
     parser.add_argument(
         "--fig_dir",
-        default=r"d:\code\data_driven_EF\data\EFNY\results\behavior_data\task_analysis\figures",
+        default="outputs/EFNY/figures/behavior_data/task_analysis",
         help="Directory to save figures.",
     )
 

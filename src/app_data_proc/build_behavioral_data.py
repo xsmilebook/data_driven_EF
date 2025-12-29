@@ -186,16 +186,16 @@ def main():
     """Main function."""
     parser = argparse.ArgumentParser(description='Build behavioral data table by merging EFNY metrics with demographic data')
     parser.add_argument('--metrics', '-m', 
-                       default='d:\\code\\data_driven_EF\\data\\EFNY\\table\\metrics\\EFNY_beh_metrics.csv',
+                       default='data/EFNY/table/metrics/EFNY_beh_metrics.csv',
                        help='Input metrics CSV file path')
     parser.add_argument('--demo', '-d', 
-                       default='d:\\code\\data_driven_EF\\data\\EFNY\\table\\demo\\EFNY_demo_with_rsfmri.csv',
+                       default='data/EFNY/table/demo/EFNY_demo_with_rsfmri.csv',
                        help='Input demo CSV file path')
     parser.add_argument('--output', '-o', 
-                       default='d:\\code\\data_driven_EF\\data\\EFNY\\table\\demo\\EFNY_behavioral_data.csv',
+                       default='outputs/EFNY/processed/demo/EFNY_behavioral_data.csv',
                        help='Output CSV file path')
     parser.add_argument('--log', '-l', 
-                       default='d:\\code\\data_driven_EF\\data\\EFNY\\log\\preprocess\\build_behavioral_data.log',
+                       default='outputs/EFNY/logs/preprocess/build_behavioral_data.log',
                        help='Log file path')
     
     args = parser.parse_args()

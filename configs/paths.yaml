@@ -1,11 +1,12 @@
 project_root: .
 
+# Centralized filesystem roots.
+# All scripts should resolve paths relative to the repository root.
 data_root: data
 outputs_root: outputs
 
+# Dataset-specific roots (no absolute paths).
 datasets:
   EFNY:
-    raw: data/raw/EFNY
-    interim: data/interim/EFNY
-    processed: data/processed/EFNY
-    outputs: outputs/EFNY
+    data_root: data/EFNY
+    outputs_root: outputs/EFNY

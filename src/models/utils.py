@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """
 工具模块 - 日志配置、路径管理和通用工具函数
+
+Engineering-only notes (Phase 5):
+- This module must not hard-code dataset roots or create filesystem artifacts at import time.
+- All filesystem paths are supplied by script entry points via config files.
 """
 
 import logging
@@ -84,28 +88,30 @@ def get_project_root() -> Path:
 
 def get_data_dir() -> Path:
     """
-    获取数据目录
-    
-    Returns:
-        数据目录路径
+    Return the dataset data root directory from config.
+
+    Notes:
+    - This function does not create directories.
+    - Script entry points must populate `config['data']['root_dir']`.
     """
-    project_root = get_project_root()
-    data_dir = project_root / "data" / "EFNY"
-    data_dir.mkdir(parents=True, exist_ok=True)
-    return data_dir
+    root = config.get("data.root_dir", "")
+    if not root:
+        raise ValueError("Missing config value: data.root_dir")
+    return Path(root)
 
 
 def get_results_dir() -> Path:
     """
-    获取结果保存目录
-    
-    Returns:
-        结果目录路径
+    Return the results root directory from config.
+
+    Notes:
+    - This function does not create directories.
+    - Script entry points must populate `config['output']['results_dir']`.
     """
-    project_root = get_project_root()
-    results_dir = project_root / "results" / "models"
-    results_dir.mkdir(parents=True, exist_ok=True)
-    return results_dir
+    root = config.get("output.results_dir", "")
+    if not root:
+        raise ValueError("Missing config value: output.results_dir")
+    return Path(root)
 
 
 def create_timestamp() -> str:
@@ -418,15 +424,7 @@ class ConfigManager:
         """
         self.config_file = config_file
         self.config = self._load_default_config()
-        
-        # 默认加载同目录下的config.json（若存在）
-        try:
-            default_cfg = Path(__file__).resolve().parent / 'config.json'
-            if default_cfg.exists():
-                self.load_config(default_cfg)
-        except Exception:
-            pass
-        
+
         if config_file is not None:
             self.load_config(config_file)
     
@@ -434,24 +432,16 @@ class ConfigManager:
         """加载默认配置"""
         return {
             'data': {
-                'root_dir': str(get_data_dir()),
-                'brain_file': 'fc_vector/Schaefer400/EFNY_Schaefer400_FC_matrix.npy',
-                'behavioral_file': 'table/demo/EFNY_behavioral_data.csv',
-                'sublist_file': 'table/sublist/sublist.txt'
+                # Script entry points must supply dataset-specific roots and file paths.
+                'root_dir': '',
+                'brain_file': '',
+                'behavioral_file': '',
+                'sublist_file': '',
+                'covariates_file': ''
             },
             'behavioral': {
-                'selected_measures': [
-                    'SST_SSRT', 'CPT_d_prime', 'CPT_ACC', 'CPT_Reaction_Time',
-                    'FLANKER_Contrast_ACC', 'FLANKER_Contrast_RT', 'ColorStroop_Contrast_ACC',
-                    'ColorStroop_Contrast_RT', 'EmotionStroop_Contrast_ACC', 'EmotionStroop_Contrast_RT',
-                    'Number1Back_ACC', 'Number1Back_Reaction_Time', 'Number2Back_ACC',
-                    'Number2Back_Reaction_Time', 'Spatial1Back_ACC', 'Spatial1Back_Reaction_Time',
-                    'Spatial2Back_ACC', 'Spatial2Back_Reaction_Time', 'Emotion1Back_ACC',
-                    'Emotion1Back_Reaction_Time', 'Emotion2Back_ACC', 'Emotion2Back_Reaction_Time',
-                    'KT_ACC', 'DCCS_ACC', 'DCCS_Reaction_Time', 'DCCS_Switch_Cost',
-                    'EmotionSwitch_ACC', 'EmotionSwitch_Reaction_Time', 'DT_ACC',
-                    'DT_Reaction_Time', 'DT_Switch_Cost'
-                ]
+                # Dataset-specific selections must live in configs/datasets/<DATASET>.yaml.
+                'selected_measures': []
             },
             'model': {
                 'default_n_components': 5,
@@ -468,7 +458,8 @@ class ConfigManager:
                 'permutation_n_iters': 1000
             },
             'output': {
-                'results_dir': str(get_results_dir()),
+                # Script entry points must supply output roots.
+                'results_dir': '',
                 'save_formats': ['json', 'npz'],
                 'create_timestamp_subdirs': True
             },
@@ -505,6 +496,12 @@ class ConfigManager:
         except Exception as e:
             logger = logging.getLogger(__name__)
             logger.error(f"Error loading config file: {e}, using defaults")
+
+    def apply_overrides(self, overrides: Dict[str, Any]) -> None:
+        """Merge a config dict into the current config (recursive)."""
+        if not isinstance(overrides, dict):
+            raise TypeError("Config overrides must be a dict")
+        self._update_config_recursive(self.config, overrides)
     
     def _update_config_recursive(self, base_config: Dict, update_config: Dict) -> None:
         """递归更新配置"""
