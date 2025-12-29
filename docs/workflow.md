@@ -9,8 +9,6 @@ All runnable entry points under `scripts/` should accept:
 - `--dataset <DATASET_NAME>`
 - `--config <PATH_TO_CONFIGS_PATHS_YAML>`
 
-Prefer `python -m scripts.run_*` wrappers when available to keep entry points consistent.
-
 Example:
 
 ```bash
@@ -40,7 +38,7 @@ You can override this with `--results_root` when needed.
 Example:
 
 ```bash
-python -m scripts.run_summarize_real_perm_scores --dataset EFNY --config configs/paths.yaml --analysis_type both --atlas <atlas> --model_type <model>
+python -m src.result_summary.summarize_real_perm_scores --dataset EFNY --config configs/paths.yaml --analysis_type both --atlas <atlas> --model_type <model>
 ```
 
 ## Quick sanity check (dry-run)

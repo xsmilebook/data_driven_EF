@@ -52,7 +52,7 @@ Minimum verification before finishing a docs edit:
 - Consistency check against `PROJECT_STRUCTURE.md` (paths, responsibilities, and “do not touch” areas).
 - Link sanity: internal links and referenced paths should exist in the repo.
 - No “results-like” claims: remove or rephrase anything that reads like an observed effect unless it is explicitly documented as a plan or as a pipeline output.
-- Add/update a session note under `src/docs/` describing what changed and why (use `docs/notes/` for user ideas and free-form notes, not session logs).
+- Add/update a session note under `docs/sessions/` describing what changed and why (use `docs/notes/` for user ideas and free-form notes, not session logs).
 
 
 ## Project conventions (informational; do not change code)

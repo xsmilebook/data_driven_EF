@@ -34,7 +34,7 @@ python src/preprocess/get_mri_sublist.py --dir <fmriprep_rest_dir> --out <mri_su
 
 #### `screen_head_motion_efny.py`：统计 rest FD，并标注有效 run
 ```bash
-python -m scripts.run_screen_head_motion --dataset EFNY --config configs/paths.yaml
+python -m src.preprocess.screen_head_motion_efny --dataset EFNY --config configs/paths.yaml
 ```
 关键参数：
 - `--dataset`: 数据集名称（如 `EFNY`）
@@ -45,7 +45,7 @@ python -m scripts.run_screen_head_motion --dataset EFNY --config configs/paths.y
 
 #### `preprocess_efny_demo.py`：清洗 demo 表并合并 QC
 ```bash
-python -m scripts.run_preprocess_demo --dataset EFNY --config configs/paths.yaml
+python -m src.preprocess.preprocess_efny_demo --dataset EFNY --config configs/paths.yaml
 ```
 关键参数：
 - `--dataset`: 数据集名称（如 `EFNY`）
@@ -66,7 +66,7 @@ python src/preprocess/generate_valid_sublists.py
 
 #### `build_behavioral_data.py`：合并 demo 与 metrics，生成 `EFNY_behavioral_data.csv`
 ```bash
-python -m scripts.run_build_behavioral_data --dataset EFNY --config configs/paths.yaml
+python -m src.app_data_proc.build_behavioral_data --dataset EFNY --config configs/paths.yaml
 ```
 关键参数：
 - `--dataset`: 数据集名称（如 `EFNY`）
@@ -81,7 +81,7 @@ python -m scripts.run_build_behavioral_data --dataset EFNY --config configs/path
 
 #### `compute_fc_schaefer.py`?????? FC ???CSV?
 ```bash
-python -m scripts.run_compute_fc_schaefer --subject <sub-xxx> --n-rois 100 --dataset EFNY --config configs/paths.yaml
+python -m src.functional_conn.compute_fc_schaefer --subject <sub-xxx> --n-rois 100 --dataset EFNY --config configs/paths.yaml
 ```
 ?????
 - `--xcpd-dir`: xcp-d ?????
@@ -96,7 +96,7 @@ python -m scripts.run_compute_fc_schaefer --subject <sub-xxx> --n-rois 100 --dat
 
 #### `fisher_z_fc.py`?FC ? Fisher-Z ???CSV?
 ```bash
-python -m scripts.run_fisher_z_fc --subject <sub-xxx> --n-rois 100 --dataset EFNY --config configs/paths.yaml
+python -m src.functional_conn.fisher_z_fc --subject <sub-xxx> --n-rois 100 --dataset EFNY --config configs/paths.yaml
 ```
 ?????
 - `--in-dir`: FC ????
@@ -107,7 +107,7 @@ python -m scripts.run_fisher_z_fc --subject <sub-xxx> --n-rois 100 --dataset EFN
 #### `convert_fc_vector.py`?? FC_z ?????????npy?
 ???? dataset/config ?? `input_path`?`sublist_file` ? `output_path`?
 ```bash
-python -m scripts.run_convert_fc_vector --dataset EFNY --config configs/paths.yaml --n_rois 400
+python -m src.functional_conn.convert_fc_vector --dataset EFNY --config configs/paths.yaml --n_rois 400
 ```
 ?????
 - `--input_path`: ????? FC_z ????
@@ -119,7 +119,7 @@ python -m scripts.run_convert_fc_vector --dataset EFNY --config configs/paths.ya
 
 #### `compute_group_avg_fc.py`???? FC???????
 ```bash
-python -m scripts.run_compute_group_avg_fc --dataset EFNY --config configs/paths.yaml --visualize
+python -m src.functional_conn.compute_group_avg_fc --dataset EFNY --config configs/paths.yaml --visualize
 ```
 ?????
 - `--in-dir`: ????? `Schaefer*` ???
@@ -131,7 +131,7 @@ python -m scripts.run_compute_group_avg_fc --dataset EFNY --config configs/paths
 
 #### `plot_fc_matrix.py`????????? Yeo17 ???
 ```bash
-python -m scripts.run_plot_fc_matrix --file <matrix.csv> --title "..." --yeo17 --n-rois 100 --dataset EFNY --config configs/paths.yaml
+python -m src.functional_conn.plot_fc_matrix --file <matrix.csv> --title "..." --yeo17 --n-rois 100 --dataset EFNY --config configs/paths.yaml
 ```
 ?????
 - `--file`: ?? CSV
@@ -144,7 +144,7 @@ python -m scripts.run_plot_fc_matrix --file <matrix.csv> --title "..." --yeo17 -
 
 #### `compute_efny_metrics.py`?? app data ??????
 ```bash
-python -m scripts.run_compute_efny_metrics --dataset EFNY --config configs/paths.yaml
+python -m src.metric_compute.compute_efny_metrics --dataset EFNY --config configs/paths.yaml
 ```
 ?????
 - `--data-dir`: ????? app ????
@@ -153,7 +153,7 @@ python -m scripts.run_compute_efny_metrics --dataset EFNY --config configs/paths
 
 #### `metrics_similarity_heatmap.py`?????????
 ```bash
-python -m scripts.run_metrics_similarity_heatmap --dataset EFNY --config configs/paths.yaml --method pearson
+python -m src.metric_compute.metrics_similarity_heatmap --dataset EFNY --config configs/paths.yaml --method pearson
 ```
 ?????
 - `--csv`: ????????? CSV
@@ -165,7 +165,7 @@ python -m scripts.run_metrics_similarity_heatmap --dataset EFNY --config configs
 
 #### `behavioral_metric_exploration.py`：行为指标探索性可视化
 ```bash
-python -m scripts.run_behavioral_metric_exploration --dataset EFNY --config configs/paths.yaml
+python -m src.metric_compute.behavioral_metric_exploration --dataset EFNY --config configs/paths.yaml
 ```
 关键参数：
 - `--dataset`: 数据集名称（如 `EFNY`）
@@ -262,11 +262,11 @@ sbatch scripts/submit_hpc_perm.sh   # 置换运行（array=1-1000）
 ?????? `scripts/` ? thin wrapper ???????
 
 ```bash
-python -m scripts.run_summarize_real_perm_scores --dataset EFNY --config configs/paths.yaml --analysis_type both --atlas <atlas> --model_type <model>
-python -m scripts.run_summarize_real_loadings_scores --dataset EFNY --config configs/paths.yaml --atlas <atlas> --model_type <model>
-python -m scripts.run_summarize_perm_stepwise_pvalues --dataset EFNY --config configs/paths.yaml --atlas <atlas> --model_type <model>
-python -m scripts.run_visualize_loadings_similarity --dataset EFNY --config configs/paths.yaml --atlas <atlas> --model_type <model>
-python -m scripts.run_visualize_loadings_similarity_batch --dataset EFNY --config configs/paths.yaml --atlas <atlas> --model_type <model>
+python -m src.result_summary.summarize_real_perm_scores --dataset EFNY --config configs/paths.yaml --analysis_type both --atlas <atlas> --model_type <model>
+python -m src.result_summary.summarize_real_loadings_scores --dataset EFNY --config configs/paths.yaml --atlas <atlas> --model_type <model>
+python -m src.result_summary.summarize_perm_stepwise_pvalues --dataset EFNY --config configs/paths.yaml --atlas <atlas> --model_type <model>
+python -m src.result_summary.visualize_loadings_similarity --dataset EFNY --config configs/paths.yaml --atlas <atlas> --model_type <model>
+python -m src.result_summary.visualize_loadings_similarity_batch --dataset EFNY --config configs/paths.yaml --atlas <atlas> --model_type <model>
 ```
 
 ### `src/result_summary/summarize_real_perm_scores.py`
