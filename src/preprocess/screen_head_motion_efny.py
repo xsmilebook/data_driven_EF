@@ -7,7 +7,7 @@ import numpy as np
 
 # example:
 # Example:
-# python -m src.preprocess.screen_head_motion_efny --fmriprep-dir <FMRIPREP_ROOT> --out data/EFNY/table/qc/rest_fd_summary.csv
+# python -m src.preprocess.screen_head_motion_efny --fmriprep-dir <FMRIPREP_ROOT> --out data/interim/EFNY/table/qc/rest_fd_summary.csv
 
 def find_subject_id(p: Path) -> str:
     for part in p.parts:

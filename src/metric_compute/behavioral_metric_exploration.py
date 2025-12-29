@@ -327,7 +327,7 @@ def main():
     )
     parser.add_argument(
         "--behavioral_csv",
-        default="data/EFNY/table/demo/EFNY_behavioral_data.csv",
+        default="data/processed/EFNY/table/demo/EFNY_behavioral_data.csv",
         help="Behavioral data CSV path.",
     )
     parser.add_argument(

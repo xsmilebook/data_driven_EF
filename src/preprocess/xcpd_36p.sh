@@ -1,4 +1,5 @@
 #!/bin/bash
+#SBATCH --chdir=/ibmgpfs/cuizaixu_lab/xuhaoshu/projects/data_driven_EF
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
@@ -7,15 +8,20 @@
 module load singularity
 subj=$1
 
-fmriprep_Path=/ibmgpfs/cuizaixu_lab/liyang/BrainProject25/Tsinghua_data/results/fmriprep_rest
+eval "$(python -m scripts.render_paths --dataset EFNY --config configs/paths.yaml --format bash)"
+fmriprep_Path=${FMRIPREP_DIR}
+if [ -z "$fmriprep_Path" ]; then
+  echo "ERROR: FMRIPREP_DIR is not set. Configure external_inputs.fmriprep_dir in configs/datasets/EFNY.yaml" 1>&2
+  exit 1
+fi
 
-xcpd_Path=/ibmgpfs/cuizaixu_lab/xuhaoshu/projects/data_driven_EF/data/EFNY/MRI_data/xcpd_rest
+xcpd_Path=${INTERIM_ROOT}/MRI_data/xcpd_rest
 temp_dir=/ibmgpfs/cuizaixu_lab/xuhaoshu/trash/sub-${subj}
 mkdir -p $temp_dir
 
 fslic=/ibmgpfs/cuizaixu_lab/xulongzhou/tool/freesurfer
 templateflow=/ibmgpfs/cuizaixu_lab/xulongzhou/tool/templateflow
-wd=/ibmgpfs/cuizaixu_lab/xuhaoshu/projects/data_driven_EF/data/EFNY/wd/xcpd/sub-${subj}
+wd=${INTERIM_ROOT}/wd/xcpd/sub-${subj}
 mkdir -p $wd
 output=${xcpd_Path}
 

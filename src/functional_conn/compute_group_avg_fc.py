@@ -3,19 +3,12 @@ import sys
 from pathlib import Path
 import numpy as np
 
-# Try to import plotting function - delay import until needed
 def get_plot_function():
     try:
-        from plot_fc_matrix import plot_fc_matrix
+        from src.functional_conn.plot_fc_matrix import plot_fc_matrix
         return plot_fc_matrix
-    except ImportError:
-        # If running as script from another dir, add current dir to path
-        sys.path.append(str(Path(__file__).parent))
-        try:
-            from plot_fc_matrix import plot_fc_matrix
-            return plot_fc_matrix
-        except ImportError:
-            return None
+    except Exception:
+        return None
 
 def load_matrix(path: Path) -> np.ndarray:
     return np.loadtxt(path, delimiter=",")
@@ -99,10 +92,10 @@ def main():
     parser = argparse.ArgumentParser(description="Compute Group Average FC Matrix")
     
     root_dir = Path(__file__).resolve().parents[2]
-    default_in_dir = root_dir / "data" / "EFNY" / "functional_conn" / "rest"
-    default_sublist = root_dir / "data" / "EFNY" / "table" / "sublist" / "rest_valid_sublist.txt"
-    default_fig_dir = root_dir / "data" / "EFNY" / "figures" / "functional_conn"
-    default_out_dir = root_dir / "data" / "EFNY" / "avg_functional_conn_matrix"
+    default_in_dir = root_dir / "data" / "interim" / "EFNY" / "functional_conn" / "rest"
+    default_sublist = root_dir / "data" / "processed" / "EFNY" / "table" / "sublist" / "rest_valid_sublist.txt"
+    default_fig_dir = root_dir / "outputs" / "EFNY" / "figures" / "functional_conn"
+    default_out_dir = root_dir / "data" / "processed" / "EFNY" / "avg_functional_conn_matrix"
     
     parser.add_argument("--sublist", default=str(default_sublist), help="Path to subject list file")
     parser.add_argument("--in-dir", default=str(default_in_dir), help="Root directory containing FC matrices (e.g., rest or task folder)")

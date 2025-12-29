@@ -1,17 +1,9 @@
 import argparse
-import sys
 from pathlib import Path
 
 import pandas as pd
 
-HERE = Path(__file__).resolve()
-SRC_ROOT = HERE.parents[1]
-REPO_ROOT = HERE.parents[2]
-for p in (SRC_ROOT, REPO_ROOT):
-    if str(p) not in sys.path:
-        sys.path.insert(0, str(p))
-
-from metric_compute.efny.main import DEFAULT_TASK_CONFIG, normalize_task_name
+from src.metric_compute.efny.main import DEFAULT_TASK_CONFIG, normalize_task_name
 
 
 def build_report(metrics_csv, data_dir, output_csv=None):
@@ -75,17 +67,17 @@ def main():
     )
     parser.add_argument(
         '--metrics_csv',
-        default='data/EFNY/table/metrics/EFNY_beh_metrics.csv',
+        default='data/processed/EFNY/table/metrics/EFNY_beh_metrics.csv',
         help='Metrics CSV produced by the EFNY behavioral pipeline.',
     )
     parser.add_argument(
         '--data_dir',
-        default='data/EFNY/behavior_data/cibr_app_data',
+        default='data/raw/EFNY/behavior_data/cibr_app_data',
         help='Directory containing per-subject GameData Excel files.',
     )
     parser.add_argument(
         '--output_csv',
-        default='data/EFNY/results/behavior_data/behavior_metrics_missing_report.csv',
+        default='outputs/EFNY/results/behavior_data/behavior_metrics_missing_report.csv',
         help='Where to save the missing-metrics report CSV.',
     )
     args = parser.parse_args()

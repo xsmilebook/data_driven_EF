@@ -12,11 +12,12 @@ source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
 conda activate ML
 
 # Set up paths for EFNY dataset
-PROJECT_ROOT="/ibmgpfs/cuizaixu_lab/xuhaoshu/projects/data_driven_EF"
-INPUT_PATH="${PROJECT_ROOT}/data/EFNY/functional_conn_z/rest"
-SUBLIST_FILE="${PROJECT_ROOT}/data/EFNY/table/sublist/sublist.txt"
-OUTPUT_PATH="${PROJECT_ROOT}/data/EFNY/fc_vector"
-DATASET_NAME="EFNY"
+eval "$(python -m scripts.render_paths --dataset EFNY --config configs/paths.yaml --format bash)"
+PROJECT_ROOT="${PROJECT_DIR}"
+INPUT_PATH="${INTERIM_ROOT}/functional_conn_z/rest"
+SUBLIST_FILE="${PROCESSED_ROOT}/table/sublist/sublist.txt"
+OUTPUT_PATH="${PROCESSED_ROOT}/fc_vector"
+DATASET_NAME="${DATASET}"
 
 # Create output directory if it doesn't exist
 mkdir -p "${OUTPUT_PATH}"

@@ -134,7 +134,7 @@ class EFNYDataLoader:
         """加载协变量表（通常来自 demo/EFNY_behavioral_data.csv）。"""
         cov_path = self._resolve_path(
             covariates_file,
-            default_rel=Path("table") / "demo" / "EFNY_behavioral_data.csv",
+            default_rel=Path(""),
         )
 
         logger.info(f"Loading covariates data from: {cov_path}")

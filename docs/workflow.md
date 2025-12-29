@@ -10,6 +10,7 @@ All runnable entry points under `scripts/` should accept:
 - `--config <PATH_TO_CONFIGS_PATHS_YAML>`
 
 Dataset-specific assumptions are configured in `configs/datasets/<DATASET>.yaml`.
+Dataset-agnostic analysis defaults may be configured in `configs/analysis.yaml`.
 
 ## Data/outputs conventions
 

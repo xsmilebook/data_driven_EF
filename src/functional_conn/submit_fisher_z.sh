@@ -12,8 +12,9 @@
 source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
 conda activate ML
 
-ROOT_DIR="/ibmgpfs/cuizaixu_lab/xuhaoshu/projects/data_driven_EF"
-SUBLIST="$ROOT_DIR/data/EFNY/table/sublist/rest_valid_sublist.txt"
+eval "$(python -m scripts.render_paths --dataset EFNY --config configs/paths.yaml --format bash)"
+ROOT_DIR="${PROJECT_DIR}"
+SUBLIST="$PROCESSED_ROOT/table/sublist/rest_valid_sublist.txt"
 SCRIPT="$ROOT_DIR/src/functional_conn/fisher_z_fc.py"
 
 mkdir -p "$ROOT_DIR/outputs/EFNY/logs/functional_conn_z"
@@ -28,7 +29,7 @@ for ROIS in 100 200 400; do
     python "$SCRIPT" \
         --subject "$SUBJECT" \
         --n-rois $ROIS \
-        --in-dir "$ROOT_DIR/data/EFNY/functional_conn/rest" \
-        --out-dir "$ROOT_DIR/data/EFNY/functional_conn_z/rest"
+        --in-dir "$INTERIM_ROOT/functional_conn/rest" \
+        --out-dir "$INTERIM_ROOT/functional_conn_z/rest"
 done
 

@@ -237,7 +237,7 @@ def main():
     )
     parser.add_argument(
         "--input_dir",
-        default="data/EFNY/behavior_data/cibr_app_data",
+        default="data/raw/EFNY/behavior_data/cibr_app_data",
         help="Directory containing Excel files.",
     )
     parser.add_argument(

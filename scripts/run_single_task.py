@@ -104,6 +104,10 @@ def _apply_yaml_configs(args) -> dict:
         else (REPO_ROOT / "configs" / "datasets" / f"{args.dataset}.yaml")
     )
     dataset_cfg = load_simple_yaml(dataset_cfg_path)
+    analysis_cfg_path = Path(args.analysis_config) if args.analysis_config else None
+    analysis_cfg = {}
+    if analysis_cfg_path is not None and analysis_cfg_path.exists():
+        analysis_cfg = load_simple_yaml(analysis_cfg_path)
     files = dataset_cfg.get("files", {})
     if not isinstance(files, dict):
         raise ValueError(f"Invalid dataset config: files must be a mapping ({dataset_cfg_path})")
@@ -129,6 +133,12 @@ def _apply_yaml_configs(args) -> dict:
         overrides["preprocessing"] = dataset_cfg["preprocessing"]
     if "behavioral" in dataset_cfg:
         overrides["behavioral"] = dataset_cfg["behavioral"]
+    if isinstance(analysis_cfg, dict) and analysis_cfg:
+        if "preprocessing" in analysis_cfg:
+            overrides.setdefault("preprocessing", {})
+            overrides["preprocessing"].update(analysis_cfg["preprocessing"])
+        if "evaluation" in analysis_cfg:
+            overrides["evaluation"] = analysis_cfg["evaluation"]
 
     config.apply_overrides(overrides)
 
@@ -143,6 +153,7 @@ def _apply_yaml_configs(args) -> dict:
         "processed_root": roots["processed_root"],
         "outputs_root": roots["outputs_root"],
         "dataset_cfg_path": dataset_cfg_path,
+        "analysis_cfg_path": analysis_cfg_path,
     }
 
 
@@ -190,6 +201,13 @@ Examples:
         type=str,
         default=None,
         help="Optional dataset config override (defaults to configs/datasets/<DATASET>.yaml).",
+    )
+    parser.add_argument(
+        "--analysis-config",
+        dest="analysis_config",
+        type=str,
+        default="configs/analysis.yaml",
+        help="Optional analysis defaults config (YAML).",
     )
     parser.add_argument(
         "--dry-run",
@@ -241,7 +259,7 @@ Examples:
     
     # 预处理参数
     parser.add_argument(
-        "--max_missing_rate", type=float, default=0.1,
+        "--max_missing_rate", type=float, default=None,
         help="最大允许缺失率"
     )
     
@@ -252,7 +270,7 @@ Examples:
     )
     
     parser.add_argument(
-        "--cv_n_splits", type=int, default=5,
+        "--cv_n_splits", type=int, default=None,
         help="交叉验证折数"
     )
     
@@ -960,6 +978,8 @@ def main():
     logger.info(f"Dataset: {args.dataset}")
     logger.info(f"Paths config: {args.paths_config}")
     logger.info(f"Dataset config: {resolved['dataset_cfg_path']}")
+    if resolved.get("analysis_cfg_path") is not None:
+        logger.info(f"Analysis config: {resolved['analysis_cfg_path']}")
     logger.info(f"Resolved raw_root: {resolved['raw_root']}")
     logger.info(f"Resolved interim_root: {resolved['interim_root']}")
     logger.info(f"Resolved processed_root: {resolved['processed_root']}")
@@ -968,6 +988,11 @@ def main():
     if args.dry_run:
         logger.info("Dry-run: configuration resolved and imports succeeded.")
         return 0
+
+    if args.max_missing_rate is None:
+        args.max_missing_rate = float(config.get("preprocessing.max_missing_rate", 0.1))
+    if args.cv_n_splits is None:
+        args.cv_n_splits = int(config.get("evaluation.cv_n_splits", 5))
     
     logger.info("="*80)
     logger.info("EFNY Brain-Behavior Association Analysis Started")
