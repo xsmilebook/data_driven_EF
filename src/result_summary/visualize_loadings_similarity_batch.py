@@ -1,20 +1,28 @@
 import argparse
-import sys
 from pathlib import Path
 
 from src.result_summary.visualize_loadings_similarity import run_for_result_dir
+from src.result_summary.cli_utils import resolve_results_root
 
 
 def parse_args():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--results_root", type=str, required=True)
+    ap.add_argument("--results_root", type=str, default=None)
+    ap.add_argument("--dataset", type=str, default=None)
+    ap.add_argument("--config", dest="paths_config", type=str, default="configs/paths.yaml")
+    ap.add_argument("--dataset-config", dest="dataset_config", type=str, default=None)
     ap.add_argument("--atlas", type=str, required=True)
     return ap.parse_args()
 
 
 def main():
     args = parse_args()
-    results_root = Path(args.results_root)
+    results_root = resolve_results_root(
+        results_root=args.results_root,
+        dataset=args.dataset,
+        paths_config=args.paths_config,
+        dataset_config=args.dataset_config,
+    )
     base = results_root / "real" / args.atlas
     if not base.exists():
         raise FileNotFoundError(f"real atlas path not found: {base}")

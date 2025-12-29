@@ -14,11 +14,11 @@ Engineering-only refactor to standardize paths, entry points, and documentation 
 - Added dataset-agnostic `configs/analysis.yaml` and wired defaults into `scripts/run_single_task.py`.
 - Removed residual `sys.path` hacks in `src/` where feasible.
 - Documented sessions and updated `docs/workflow.md`, `docs/README.md`, and `docs/data_dictionary.md`.
+- Standardized result summary scripts to infer `results_root` from `--dataset/--config` with default `outputs/<DATASET>/results`.
+- Updated `README.md` to reflect standardized CLI and config usage.
 
 ## In progress
 
-- Standardize `results_root` to `outputs/<DATASET>/results` across summary scripts and docs.
-- Update `README.md` to reflect the new standardized CLI and config usage.
 - Add thin `scripts/` entry points for commonly used tools under `src/app_data_proc/`.
 
 ## Next up
@@ -38,4 +38,3 @@ Engineering-only refactor to standardize paths, entry points, and documentation 
 
 - Only refactor scope is active; feature development resumes after refactor completion.
 - Keep session logs under `docs/sessions/` for each AI-assisted change set.
-

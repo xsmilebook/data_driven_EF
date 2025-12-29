@@ -21,6 +21,14 @@ Dataset-agnostic analysis defaults may be configured in `configs/analysis.yaml`.
 
 Some external inputs (e.g., fMRIPrep outputs) may live outside the repository; configure these as absolute paths under `external_inputs` in `configs/datasets/<DATASET>.yaml`.
 
+## Results root
+
+Summary scripts under `src/result_summary/` default to:
+
+- `outputs/<DATASET>/results`
+
+You can override this with `--results_root` when needed.
+
 ## Quick sanity check (dry-run)
 
 From the repository root:

@@ -1,12 +1,12 @@
 import argparse
 import json
-import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 from src.models.utils import load_results
+from src.result_summary.cli_utils import resolve_results_root
 
 
 def _corr_vector(result: dict) -> np.ndarray:
@@ -68,7 +68,10 @@ def iter_result_files(results_root: Path, analysis_type: str, atlas: str | None,
 
 def parse_args():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--results_root", type=str, required=True)
+    ap.add_argument("--results_root", type=str, default=None)
+    ap.add_argument("--dataset", type=str, default=None)
+    ap.add_argument("--config", dest="paths_config", type=str, default="configs/paths.yaml")
+    ap.add_argument("--dataset-config", dest="dataset_config", type=str, default=None)
     ap.add_argument("--analysis_type", type=str, default="both", choices=["real", "perm", "both"])
     ap.add_argument("--atlas", type=str, default=None)
     ap.add_argument("--model_type", type=str, default=None)
@@ -84,7 +87,12 @@ def parse_args():
 
 def main():
     args = parse_args()
-    results_root = Path(args.results_root)
+    results_root = resolve_results_root(
+        results_root=args.results_root,
+        dataset=args.dataset,
+        paths_config=args.paths_config,
+        dataset_config=args.dataset_config,
+    )
     if not results_root.exists():
         raise FileNotFoundError(f"results_root not found: {results_root}")
 

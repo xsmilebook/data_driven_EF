@@ -122,23 +122,25 @@ python src/metric_compute/metrics_similarity_heatmap.py --csv <EFNY_metrics.csv>
 - `--min-valid-ratio`: 单列有效数据占比阈值
 - `--min-pair-ratio`: 两列共同有效数据占比阈值
 
-## 脑-行为关联分析（`src/scripts/run_single_task.py`）
+## 脑-行为关联分析（`scripts/run_single_task.py`）
 
 该入口脚本支持：真实分析（`task_id=0`）与单次置换（`task_id>=1`）。
 
 ### 1) 最常用命令
 ```bash
 # 真实数据
-python src/scripts/run_single_task.py --task_id 0 --model_type adaptive_pls --config_file src/models/config.json
+python -m scripts.run_single_task --dataset EFNY --config configs/paths.yaml --analysis-config configs/analysis.yaml --task_id 0 --model_type adaptive_pls
 
 # 单次置换（种子由 task_id 决定，便于 HPC array）
-python src/scripts/run_single_task.py --task_id 1 --model_type adaptive_pls --config_file src/models/config.json
+python -m scripts.run_single_task --dataset EFNY --config configs/paths.yaml --analysis-config configs/analysis.yaml --task_id 1 --model_type adaptive_pls
 ```
 
 ### 2) 关键参数速查
 - `--task_id`: 0=真实；1..N=置换
 - `--model_type`: `adaptive_pls` / `adaptive_scca` / `adaptive_rcca`
-- `--config_file`: 配置文件（建议使用 `src/models/config.json`）
+- `--config`: 路径配置（`configs/paths.yaml`）
+- `--dataset`: 数据集名称（如 `EFNY`）
+- `--analysis-config`: 分析默认配置（`configs/analysis.yaml`，可选）
 - `--random_state`: 随机种子（真实重复跑时常用）
 - `--covariates_path`: 可选，协变量 CSV（需包含 `age/sex/meanFD`）
 - `--cv_n_splits`: 外层 CV 折数（默认 5）
@@ -150,7 +152,7 @@ python src/scripts/run_single_task.py --task_id 1 --model_type adaptive_pls --co
 
 查看完整参数：
 ```bash
-python src/scripts/run_single_task.py --help
+python -m scripts.run_single_task --help
 ```
 
 ### 3) 嵌套交叉验证（推荐框架）
@@ -197,8 +199,8 @@ python src/scripts/run_single_task.py --help
 建议使用 submit_hpc_* 批量运行 real 与 perm（real 也需要多次运行以获得稳健中位数统计）。
 仓库提供了 2 个示例提交脚本（可按需要改 `MODEL_TYPE`、array 范围、log 路径等）：
 ```bash
-sbatch src/scripts/submit_hpc_real.sh   # 多次真实运行（array=0-10）
-sbatch src/scripts/submit_hpc_perm.sh   # 置换运行（array=1-1000）
+sbatch scripts/submit_hpc_real.sh   # 多次真实运行（array=0-10）
+sbatch scripts/submit_hpc_perm.sh   # 置换运行（array=1-1000）
 ```
 
 ## 结果汇总（real/perm 扫描）
@@ -207,11 +209,11 @@ sbatch src/scripts/submit_hpc_perm.sh   # 置换运行（array=1-1000）
 扫描 `results_root/real` 与 `results_root/perm`，提取每次运行的相关向量并输出 CSV。
 
 ```bash
-python src/result_summary/summarize_real_perm_scores.py --results_root <results_root> --analysis_type both --atlas <atlas> --model_type <model>
+python -m src.result_summary.summarize_real_perm_scores --dataset EFNY --config configs/paths.yaml --analysis_type both --atlas <atlas> --model_type <model>
 ```
 
 关键参数：
-- `--results_root`: 结果根目录
+- `--results_root`: 结果根目录（可选；默认 `outputs/<DATASET>/results`）
 - `--analysis_type`: real / perm / both
 - `--atlas`: 可选过滤
 - `--model_type`: 可选过滤
@@ -228,7 +230,7 @@ python src/result_summary/summarize_real_perm_scores.py --results_root <results_
 汇总 real 的外层 fold loadings 与相关分数，输出 mean/median 结果（默认写入 `results_root/summary/<atlas>`）。
 
 ```bash
-python src/result_summary/summarize_real_loadings_scores.py --results_root <results_root> --atlas <atlas> --model_type <model>
+python -m src.result_summary.summarize_real_loadings_scores --dataset EFNY --config configs/paths.yaml --atlas <atlas> --model_type <model>
 ```
 
 关键参数：
@@ -238,13 +240,13 @@ python src/result_summary/summarize_real_loadings_scores.py --results_root <resu
 汇总 perm 的 stepwise 分数并计算右尾单侧 p 值（对 real 中位数，默认写入 `results_root/summary/<atlas>`）。
 
 ```bash
-python src/result_summary/summarize_perm_stepwise_pvalues.py --results_root <results_root> --atlas <atlas> --model_type <model>
+python -m src.result_summary.summarize_perm_stepwise_pvalues --dataset EFNY --config configs/paths.yaml --atlas <atlas> --model_type <model>
 ```
 
 ## 输出位置（约定）
 
 常用输出：
-- QC / 表格：`data/EFNY/table/...`
-- FC 矩阵与向量：`data/EFNY/functional_conn...`
-- 脑-行为关联：默认写入 `results/real/...` 与 `results/perm/...`（可用 `--output_dir` 改写）
+- QC / 中间结果：`data/interim/<DATASET>/...`
+- 表格与处理后产物：`data/processed/<DATASET>/...`
+- 脑-行为关联结果：`outputs/<DATASET>/results/...`（可用 `--output_dir` 改写）
 - 大型数组（如每折 `X_scores/Y_scores`）会保存到同目录的 `artifacts/`，JSON/NPZ 内仅保留索引与路径
