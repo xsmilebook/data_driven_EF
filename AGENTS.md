@@ -33,6 +33,7 @@ The AI must not:
 - Separate dataset-specific assumptions (e.g., EFNY file conventions) from general workflow statements.
 - When describing implementation details, reference the authoritative script/module path; avoid paraphrasing that could diverge from code.
 - Avoid embedding large tables of computed results in documentation unless they are directly produced by the pipeline and can be regenerated.
+- Keep `PLAN.md` and `PROGRESS.md` current for refactor scope changes and completion status.
 
 ## How changes should be proposed
 
