@@ -5,8 +5,12 @@
 
 files:
   # Paths are resolved relative to `datasets.<DATASET>.processed_root` in `configs/paths.yaml`.
+  # Atlas selection is encoded in this path (Schaefer100/200/400).
+  # Swap the atlas name in both directory and filename to switch resolution.
+  # Default atlas: Schaefer400.
   brain_file: fc_vector/Schaefer400/EFNY_Schaefer400_FC_matrix.npy
   behavioral_file: table/demo/EFNY_behavioral_data.csv
+  behavioral_metrics_file: table/metrics/EFNY_beh_metrics.csv
   sublist_file: table/sublist/sublist.txt
   covariates_file: table/demo/EFNY_demo_with_rsfmri.csv
 
@@ -16,6 +20,7 @@ preprocessing:
 behavioral:
   # Optional: set to an explicit list to restrict Y; leave empty to use all metrics in the table.
   selected_measures: []
+  app_data_dir: behavior_data/cibr_app_data
   task_prefixes: [GNG, FLANKER, SST, ColorStroop, EmotionStroop, CPT, DCCS, DT, EmotionSwitch, KT, oneback_number, twoback_number, oneback_spatial, twoback_spatial, oneback_emotion, twoback_emotion]
 
 external_inputs:

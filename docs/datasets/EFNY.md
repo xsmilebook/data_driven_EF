@@ -133,6 +133,20 @@ Some modeling components assume that brain features, behavioral features, and su
 
 If alignment is not guaranteed, treat the run as invalid until the inputs are explicitly aligned.
 
+### 4.3 Atlas selection for FC features (Schaefer)
+
+The FC feature path encodes the atlas choice. Supported resolutions are Schaefer100, Schaefer200, and Schaefer400. To switch atlas resolution, update the `brain_file` entry in `configs/datasets/EFNY.yaml` by replacing the atlas name in both the directory and filename.
+
+Path pattern:
+
+- `fc_vector/<Atlas>/EFNY_<Atlas>_FC_matrix.npy`
+
+Example substitutions:
+
+- `fc_vector/Schaefer100/EFNY_Schaefer100_FC_matrix.npy`
+- `fc_vector/Schaefer200/EFNY_Schaefer200_FC_matrix.npy`
+- `fc_vector/Schaefer400/EFNY_Schaefer400_FC_matrix.npy`
+
 ## 5) Updating this document
 
 When EFNY preprocessing or file conventions change, update this document and add a short session note under `docs/notes/` describing:

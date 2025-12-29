@@ -9,6 +9,10 @@ import numpy as np
 import logging
 import argparse
 import os
+from pathlib import Path
+
+from src.config_io import load_simple_yaml
+from src.path_config import load_paths_config, resolve_dataset_roots
 
 def setup_logging(log_file='behavioral_data_processing.log'):
     """Setup logging configuration."""
@@ -182,24 +186,65 @@ def build_behavioral_data(metrics_file, demo_file, output_file, keep_complete_on
         logging.error(f"Failed to save output file: {e}")
         return False
 
+def _resolve_defaults(args):
+    if not args.dataset:
+        raise ValueError("Missing --dataset (required when defaults are used).")
+    repo_root = Path(__file__).resolve().parents[2]
+    paths_cfg = load_paths_config(args.paths_config, repo_root=repo_root)
+    roots = resolve_dataset_roots(paths_cfg, dataset=args.dataset)
+    dataset_cfg_path = (
+        Path(args.dataset_config)
+        if args.dataset_config is not None
+        else (repo_root / "configs" / "datasets" / f"{args.dataset}.yaml")
+    )
+    dataset_cfg = load_simple_yaml(dataset_cfg_path)
+    files_cfg = dataset_cfg.get("files", {})
+
+    metrics_rel = files_cfg.get("behavioral_metrics_file")
+    demo_rel = files_cfg.get("covariates_file")
+    output_rel = files_cfg.get("behavioral_file")
+    if not metrics_rel:
+        raise ValueError("Missing files.behavioral_metrics_file in dataset config.")
+    if not demo_rel:
+        raise ValueError("Missing files.covariates_file in dataset config.")
+    if not output_rel:
+        raise ValueError("Missing files.behavioral_file in dataset config.")
+
+    metrics_path = roots["processed_root"] / metrics_rel
+    demo_path = roots["processed_root"] / demo_rel
+    output_path = roots["processed_root"] / output_rel
+    log_path = roots["outputs_root"] / "logs" / "preprocess" / "build_behavioral_data.log"
+    return metrics_path, demo_path, output_path, log_path
+
+
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(description='Build behavioral data table by merging EFNY metrics with demographic data')
     parser.add_argument('--metrics', '-m', 
-                       default='data/processed/EFNY/table/metrics/EFNY_beh_metrics.csv',
+                       default=None,
                        help='Input metrics CSV file path')
     parser.add_argument('--demo', '-d', 
-                       default='data/processed/EFNY/table/demo/EFNY_demo_with_rsfmri.csv',
+                       default=None,
                        help='Input demo CSV file path')
     parser.add_argument('--output', '-o', 
-                       default='data/processed/EFNY/table/demo/EFNY_behavioral_data.csv',
+                       default=None,
                        help='Output CSV file path')
     parser.add_argument('--log', '-l', 
-                       default='outputs/EFNY/logs/preprocess/build_behavioral_data.log',
+                       default=None,
                        help='Log file path')
+    parser.add_argument('--dataset', type=str, default=None)
+    parser.add_argument('--config', dest='paths_config', type=str, default='configs/paths.yaml')
+    parser.add_argument('--dataset-config', dest='dataset_config', type=str, default=None)
     
     args = parser.parse_args()
     
+    if args.metrics is None or args.demo is None or args.output is None or args.log is None:
+        metrics_path, demo_path, output_path, log_path = _resolve_defaults(args)
+        args.metrics = str(metrics_path)
+        args.demo = str(demo_path)
+        args.output = str(output_path)
+        args.log = str(log_path)
+
     setup_logging(args.log)
     
     # Check if input files exist

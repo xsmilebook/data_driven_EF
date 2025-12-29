@@ -34,10 +34,13 @@ python src/preprocess/get_mri_sublist.py --dir <fmriprep_rest_dir> --out <mri_su
 
 #### `screen_head_motion_efny.py`：统计 rest FD，并标注有效 run
 ```bash
-python src/preprocess/screen_head_motion_efny.py --fmriprep-dir <fmriprep_rest_dir> --out <rest_fd_summary.csv>
+python -m scripts.run_screen_head_motion --dataset EFNY --config configs/paths.yaml
 ```
 关键参数：
-- `--fmriprep-dir`: fmriprep rest 目录
+- `--dataset`: 数据集名称（如 `EFNY`）
+- `--config`: 路径配置（`configs/paths.yaml`）
+- `--dataset-config`: 可选，默认 `configs/datasets/<DATASET>.yaml`
+- `--fmriprep-dir`: 可选，会覆盖 dataset config 中的 `external_inputs.fmriprep_dir`
 - `--out`: 输出 CSV（含 `valid_subject` 与 `meanFD`）
 
 #### `generate_valid_sublists.py`：从 QC 表生成有效被试列表
@@ -49,13 +52,16 @@ python src/preprocess/generate_valid_sublists.py
 
 #### `build_behavioral_data.py`：合并 demo 与 metrics，生成 `EFNY_behavioral_data.csv`
 ```bash
-python src/preprocess/build_behavioral_data.py --metrics <EFNY_metrics.csv> --demo <EFNY_demo_with_rsfmri.csv> --output <EFNY_behavioral_data.csv>
+python -m scripts.run_build_behavioral_data --dataset EFNY --config configs/paths.yaml
 ```
 关键参数：
-- `--metrics/-m`: 行为 metrics 表
-- `--demo/-d`: demo 表
-- `--output/-o`: 输出路径
-- `--log/-l`: log 路径
+- `--dataset`: 数据集名称（如 `EFNY`）
+- `--config`: 路径配置（`configs/paths.yaml`）
+- `--dataset-config`: 可选，默认 `configs/datasets/<DATASET>.yaml`
+- `--metrics/-m`: 可选，覆盖 metrics CSV 路径
+- `--demo/-d`: 可选，覆盖 demo CSV 路径
+- `--output/-o`: 可选，覆盖输出路径
+- `--log/-l`: 可选，覆盖 log 路径
 
 ### 2) 功能连接（FC）计算与向量化（`src/functional_conn`）
 

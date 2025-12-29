@@ -5,10 +5,12 @@ Plot task coverage summaries from EFNY_behavioral_data.csv outputs.
 
 import argparse
 import os
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from src.path_config import load_paths_config, resolve_dataset_roots
 
 def apply_plot_style():
     """Increase font sizes for all plots."""
@@ -77,22 +79,40 @@ def plot_sex_dist(sex_df, ax):
     ax.grid(axis="y", alpha=0.3)
 
 
+def _resolve_defaults(args):
+    if not args.dataset:
+        raise ValueError("Missing --dataset (required when defaults are used).")
+    repo_root = Path(__file__).resolve().parents[2]
+    paths_cfg = load_paths_config(args.paths_config, repo_root=repo_root)
+    roots = resolve_dataset_roots(paths_cfg, dataset=args.dataset)
+    output_dir = roots["outputs_root"] / "results" / "behavior_data" / "task_analysis"
+    fig_dir = roots["outputs_root"] / "figures" / "behavior_data" / "task_analysis"
+    return output_dir, fig_dir
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Plot task coverage summaries from EFNY_behavioral_data.csv outputs."
     )
     parser.add_argument(
         "--output_dir",
-        default="outputs/EFNY/results/behavior_data/task_analysis",
+        default=None,
         help="Output directory containing summary CSVs.",
     )
     parser.add_argument(
         "--fig_dir",
-        default="outputs/EFNY/figures/behavior_data/task_analysis",
+        default=None,
         help="Directory to save figures.",
     )
+    parser.add_argument("--dataset", type=str, default=None)
+    parser.add_argument("--config", dest="paths_config", type=str, default="configs/paths.yaml")
 
     args = parser.parse_args()
+
+    if args.output_dir is None or args.fig_dir is None:
+        output_dir, fig_dir = _resolve_defaults(args)
+        args.output_dir = str(output_dir)
+        args.fig_dir = str(fig_dir)
 
     task_missing_path = os.path.join(args.output_dir, "task_missing_counts.csv")
     task_count_path = os.path.join(args.output_dir, "task_count_distribution.csv")

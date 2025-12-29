@@ -5,9 +5,11 @@ import sys
 from pathlib import Path
 import numpy as np
 
-# example:
+from src.config_io import load_simple_yaml
+from src.path_config import load_paths_config, resolve_dataset_roots
+
 # Example:
-# python -m src.preprocess.screen_head_motion_efny --fmriprep-dir <FMRIPREP_ROOT> --out data/interim/EFNY/table/qc/rest_fd_summary.csv
+# python -m src.preprocess.screen_head_motion_efny --dataset EFNY --config configs/paths.yaml
 
 def find_subject_id(p: Path) -> str:
     for part in p.parts:
@@ -173,17 +175,50 @@ def write_csv(rows: list[dict], out_path: Path) -> None:
             writer.writerow(r)
 
 
+def _resolve_defaults(args) -> tuple[Path, Path]:
+    if not args.dataset:
+        raise ValueError("Missing --dataset (required when --fmriprep-dir is not provided).")
+    repo_root = Path(__file__).resolve().parents[2]
+    paths_cfg = load_paths_config(args.paths_config, repo_root=repo_root)
+    roots = resolve_dataset_roots(paths_cfg, dataset=args.dataset)
+    dataset_cfg_path = (
+        Path(args.dataset_config)
+        if args.dataset_config is not None
+        else (repo_root / "configs" / "datasets" / f"{args.dataset}.yaml")
+    )
+    dataset_cfg = load_simple_yaml(dataset_cfg_path)
+    external_inputs = dataset_cfg.get("external_inputs", {})
+    fmriprep_dir = ""
+    if isinstance(external_inputs, dict):
+        fmriprep_dir = str(external_inputs.get("fmriprep_dir", "") or "")
+    if not fmriprep_dir:
+        raise ValueError("Missing fmriprep_dir in dataset config and no --fmriprep-dir provided.")
+
+    out_default = roots["interim_root"] / "table" / "qc" / "rest_fd_summary.csv"
+    return Path(fmriprep_dir), out_default
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--fmriprep-dir", required=True)
-    parser.add_argument("--out", default="rest_fd_summary.csv")
+    parser.add_argument("--fmriprep-dir", default=None)
+    parser.add_argument("--out", default=None)
+    parser.add_argument("--dataset", type=str, default=None)
+    parser.add_argument("--config", dest="paths_config", type=str, default="configs/paths.yaml")
+    parser.add_argument("--dataset-config", dest="dataset_config", type=str, default=None)
     args = parser.parse_args()
-    fdir = Path(args.fmriprep_dir)
+
+    if args.fmriprep_dir:
+        fdir = Path(args.fmriprep_dir)
+        out_path = Path(args.out) if args.out else Path("rest_fd_summary.csv")
+    else:
+        fdir, out_default = _resolve_defaults(args)
+        out_path = Path(args.out) if args.out else out_default
+
     if not fdir.exists():
         print(f"Input directory not found: {fdir}", file=sys.stderr)
         return
     rows = collect_rows(fdir)
-    write_csv(rows, Path(args.out))
+    write_csv(rows, out_path)
     eligible = sum(1 for r in rows if r.get("valid_subject") == "1")
     excluded = len(rows) - eligible
     print(f"excluded={excluded}")

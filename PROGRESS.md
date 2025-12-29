@@ -16,14 +16,18 @@ Engineering-only refactor to standardize paths, entry points, and documentation 
 - Documented sessions and updated `docs/workflow.md`, `docs/README.md`, and `docs/data_dictionary.md`.
 - Standardized result summary scripts to infer `results_root` from `--dataset/--config` with default `outputs/<DATASET>/results`.
 - Updated `README.md` to reflect standardized CLI and config usage.
+- Updated `PLAN.md` with atlas selection guidance for Schaefer100/200/400 via FC matrix path patterns.
+- Documented atlas selection guidance in `configs/datasets/EFNY.yaml` and `docs/datasets/EFNY.md`.
+- Added config-driven defaults to `src/preprocess/screen_head_motion_efny.py` and a thin entry point `scripts/run_screen_head_motion.py`.
+- Added config-driven defaults and thin entry points for app-data processing utilities (behavioral data build, task analysis, missing-metrics report).
 
 ## In progress
 
-- Add thin `scripts/` entry points for commonly used tools under `src/app_data_proc/`.
+- None.
 
 ## Next up
 
-- Add `--dataset/--config` support to `src/result_summary/*` scripts and infer `results_root` when not provided.
+- Add thin `scripts/` entry points for other frequently used tools as needed.
 - Ensure remaining preprocessing and FC scripts read external input roots from configs where applicable.
 - Run `py_compile` and dry-run checks after each batch of changes.
 
