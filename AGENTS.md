@@ -4,21 +4,28 @@ Operational rules for AI-assisted work in `data_driven_EF`.
 
 This repository treats `PROJECT_STRUCTURE.md` as the source of truth for the stable layout. Do not propose structural changes unless explicitly requested.
 
-## What the AI may modify (default)
+## What the AI may modify
 
-Unless a user request explicitly expands scope, the AI may only:
+Default scope is documentation-only. Engineering changes are permitted only when explicitly requested by the user for a specific task.
 
-- Edit Markdown documentation under `docs/` (including `docs/report/` and `docs/datasets/`).
-- Add new Markdown documentation files under `docs/` when consolidation or clarification is needed.
+- Documentation (default): Markdown under `docs/` and this file (`AGENTS.md`).
+- Engineering (only when requested): `src/**`, `scripts/**`, and `configs/**`, limited to packaging/imports, config wiring, and filesystem path handling. Do not change scientific/analysis logic unless the user explicitly requests it.
 
 ## What is forbidden (hard constraints)
 
 The AI must not:
 
-- Modify any code, configuration, or scripts under `src/`, `scripts/`, `configs/`, or `tests/`.
+- Modify code/config/scripts outside an explicit user request and stated scope.
 - Modify or generate runtime artifacts under `data/` or `outputs/` (including adding, deleting, renaming, or rewriting files).
 - Change directory names or the directory structure defined by `PROJECT_STRUCTURE.md`.
 - Invent results, numerical findings, or performance claims. Hypotheses and planned analyses must be labeled as such.
+
+## Engineering conventions (when code changes are requested)
+
+- Treat `src/` as importable code; prefer `python -m scripts.<entry>` for execution.
+- Avoid ad-hoc `sys.path` hacks; if unavoidable, keep them in script entry points only and document why.
+- All filesystem paths must come from configuration under `configs/`; do not introduce absolute paths or dataset-specific constants inside `src/**`.
+- Keep diffs minimal and reviewable; avoid refactors unrelated to the stated task.
 
 ## Documentation rules
 
@@ -43,7 +50,7 @@ Minimum verification before finishing a docs edit:
 - Consistency check against `PROJECT_STRUCTURE.md` (paths, responsibilities, and “do not touch” areas).
 - Link sanity: internal links and referenced paths should exist in the repo.
 - No “results-like” claims: remove or rephrase anything that reads like an observed effect unless it is explicitly documented as a plan or as a pipeline output.
-- Add/update a session note under `docs/sessions/` describing what changed and why.
+- Add/update a session note under `docs/sessions/` describing what changed and why (use `docs/notes/` for user ideas and free-form notes, not session logs).
 
 
 ## Project conventions (informational; do not change code)

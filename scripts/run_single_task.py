@@ -110,7 +110,11 @@ def _apply_yaml_configs(args) -> dict:
 
     overrides = {
         "data": {
-            "root_dir": str(roots["data_root"]),
+            # For modeling, inputs are expected under data/processed/<DATASET>/ by default.
+            "root_dir": str(roots["processed_root"]),
+            "raw_root": str(roots["raw_root"]),
+            "interim_root": str(roots["interim_root"]),
+            "processed_root": str(roots["processed_root"]),
             "brain_file": str(files.get("brain_file", "")),
             "behavioral_file": str(files.get("behavioral_file", "")),
             "sublist_file": str(files.get("sublist_file", "")),
@@ -134,7 +138,9 @@ def _apply_yaml_configs(args) -> dict:
 
     return {
         "repo_root": roots["repo_root"],
-        "data_root": roots["data_root"],
+        "raw_root": roots["raw_root"],
+        "interim_root": roots["interim_root"],
+        "processed_root": roots["processed_root"],
         "outputs_root": roots["outputs_root"],
         "dataset_cfg_path": dataset_cfg_path,
     }
@@ -164,7 +170,7 @@ Examples:
         """
     )
 
-    # Phase 5 standardized entry-point args
+    # Standardized entry-point args
     parser.add_argument(
         "--dataset",
         type=str,
@@ -954,7 +960,9 @@ def main():
     logger.info(f"Dataset: {args.dataset}")
     logger.info(f"Paths config: {args.paths_config}")
     logger.info(f"Dataset config: {resolved['dataset_cfg_path']}")
-    logger.info(f"Resolved data_root: {resolved['data_root']}")
+    logger.info(f"Resolved raw_root: {resolved['raw_root']}")
+    logger.info(f"Resolved interim_root: {resolved['interim_root']}")
+    logger.info(f"Resolved processed_root: {resolved['processed_root']}")
     logger.info(f"Resolved outputs_root: {resolved['outputs_root']}")
 
     if args.dry_run:

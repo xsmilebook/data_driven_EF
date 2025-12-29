@@ -29,7 +29,8 @@ This document defines the stable folder structure and responsibilities of each d
   - methods.md: paper-level methodology
   - datasets/: dataset-specific notes
   - report/: research planning and summaries
-  - sessions/: development logs
+  - sessions/: AI/development session logs (one per session)
+  - notes/: user notes and free-form ideas
 
 ## Rules for AI-assisted modification
 - Do not modify data/ or outputs/

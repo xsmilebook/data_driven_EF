@@ -1,6 +1,6 @@
 # Workflow (engineering)
 
-This document describes the Phase 5 standardized invocation pattern for script entry points under the frozen repository structure defined in `PROJECT_STRUCTURE.md`.
+This document describes the standardized invocation pattern for script entry points under the frozen repository structure defined in `PROJECT_STRUCTURE.md`.
 
 ## Standard CLI pattern
 
@@ -10,6 +10,15 @@ All runnable entry points under `scripts/` should accept:
 - `--config <PATH_TO_CONFIGS_PATHS_YAML>`
 
 Dataset-specific assumptions are configured in `configs/datasets/<DATASET>.yaml`.
+
+## Data/outputs conventions
+
+- `data/raw/<DATASET>/`: raw inputs (not produced by pipeline scripts)
+- `data/interim/<DATASET>/`: intermediate products (e.g., preprocessing outputs such as MRI- and connectivity-stage derivatives)
+- `data/processed/<DATASET>/`: processed, reusable data products (e.g., tables, vectorized FC features)
+- `outputs/<DATASET>/`: run artifacts (results, figures, logs)
+
+Some external inputs (e.g., fMRIPrep outputs) may live outside the repository; configure these as absolute paths under `external_inputs` in `configs/datasets/<DATASET>.yaml`.
 
 ## Quick sanity check (dry-run)
 

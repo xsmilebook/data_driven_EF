@@ -2,7 +2,7 @@
 """
 工具模块 - 日志配置、路径管理和通用工具函数
 
-Engineering-only notes (Phase 5):
+Engineering-only notes:
 - This module must not hard-code dataset roots or create filesystem artifacts at import time.
 - All filesystem paths are supplied by script entry points via config files.
 """

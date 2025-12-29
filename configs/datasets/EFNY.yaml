@@ -4,7 +4,7 @@
 # Core library code under `src/` must remain dataset-agnostic.
 
 files:
-  # Paths are resolved relative to `datasets.<DATASET>.data_root` in `configs/paths.yaml`.
+  # Paths are resolved relative to `datasets.<DATASET>.processed_root` in `configs/paths.yaml`.
   brain_file: fc_vector/Schaefer400/EFNY_Schaefer400_FC_matrix.npy
   behavioral_file: table/demo/EFNY_behavioral_data.csv
   sublist_file: table/sublist/sublist.txt
@@ -17,3 +17,7 @@ behavioral:
   # Optional: set to an explicit list to restrict Y; leave empty to use all metrics in the table.
   selected_measures: []
   task_prefixes: [GNG, FLANKER, SST, ColorStroop, EmotionStroop, CPT, DCCS, DT, EmotionSwitch, KT, oneback_number, twoback_number, oneback_spatial, twoback_spatial, oneback_emotion, twoback_emotion]
+
+external_inputs:
+  # fMRIPrep outputs may live outside this repo; allow absolute paths here.
+  fmriprep_dir: /ibmgpfs/cuizaixu_lab/liyang/BrainProject25/Tsinghua_data/results/fmriprep_rest

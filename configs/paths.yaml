@@ -8,5 +8,7 @@ outputs_root: outputs
 # Dataset-specific roots (no absolute paths).
 datasets:
   EFNY:
-    data_root: data/EFNY
+    raw_root: data/raw/EFNY
+    interim_root: data/interim/EFNY
+    processed_root: data/processed/EFNY
     outputs_root: outputs/EFNY
