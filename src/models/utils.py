@@ -415,18 +415,9 @@ def check_data_quality(X: np.ndarray, Y: np.ndarray,
 class ConfigManager:
     """配置管理器"""
     
-    def __init__(self, config_file: Optional[Union[str, Path]] = None):
-        """
-        初始化配置管理器
-        
-        Args:
-            config_file: 配置文件路径
-        """
-        self.config_file = config_file
+    def __init__(self) -> None:
+        """初始化配置管理器"""
         self.config = self._load_default_config()
-
-        if config_file is not None:
-            self.load_config(config_file)
     
     def _load_default_config(self) -> Dict[str, Any]:
         """加载默认配置"""
@@ -469,34 +460,6 @@ class ConfigManager:
             }
         }
     
-    def load_config(self, config_file: Union[str, Path]) -> None:
-        """
-        从文件加载配置
-        
-        Args:
-            config_file: 配置文件路径
-        """
-        config_file = Path(config_file)
-        
-        if not config_file.exists():
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Config file not found: {config_file}, using defaults")
-            return
-        
-        try:
-            with open(config_file, 'r', encoding='utf-8') as f:
-                user_config = json.load(f)
-            
-            # 递归更新配置
-            self._update_config_recursive(self.config, user_config)
-            
-            logger = logging.getLogger(__name__)
-            logger.info(f"Configuration loaded from: {config_file}")
-            
-        except Exception as e:
-            logger = logging.getLogger(__name__)
-            logger.error(f"Error loading config file: {e}, using defaults")
-
     def apply_overrides(self, overrides: Dict[str, Any]) -> None:
         """Merge a config dict into the current config (recursive)."""
         if not isinstance(overrides, dict):

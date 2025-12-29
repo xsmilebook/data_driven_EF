@@ -36,6 +36,7 @@ Engineering-only refactor to standardize paths, entry points, and documentation 
 - Updated `docs/workflow.md` to recommend `scripts.run_*` wrappers.
 - Added README usage blocks for result_summary script wrappers.
 - Added example CLI blocks to `docs/workflow.md`.
+- Removed legacy JSON config support (`config.json` / `--config_file`) from modeling utilities.
 - Ran `py_compile` and `run_single_task --dry-run` after the updates.
 
 ## In progress

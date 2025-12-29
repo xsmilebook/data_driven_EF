@@ -80,7 +80,7 @@ def load_task_prefixes(config_path):
 
     prefixes = config.get("behavioral", {}).get("task_prefixes", [])
     if not prefixes:
-        raise ValueError("Missing behavioral.task_prefixes in config.json")
+        raise ValueError("Missing behavioral.task_prefixes in dataset config")
     return prefixes
 
 

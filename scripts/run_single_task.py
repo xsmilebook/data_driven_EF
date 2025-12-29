@@ -67,7 +67,7 @@ def _build_behavioral_matrix(df: pd.DataFrame) -> tuple[pd.DataFrame, list]:
         if len(candidate_cols) == 0:
             raise ValueError(
                 "No selected_measures found in behavioral table. "
-                "Please update config.json: behavioral.selected_measures to match EFNY_beh_metrics.csv column names."
+                "Please update configs/datasets/<DATASET>.yaml: behavioral.selected_measures to match EFNY_beh_metrics.csv column names."
             )
     else:
         candidate_cols = [c for c in df.columns if c not in exclude]
@@ -308,12 +308,6 @@ Examples:
         help="日志文件路径"
     )
     
-    # 配置参数
-    parser.add_argument(
-        "--config_file", type=str, default=None,
-        help="配置文件路径"
-    )
-    
     parser.add_argument(
         "--random_state", type=int, default=42,
         help="随机种子"
@@ -357,7 +351,7 @@ def extract_covariates_from_behavioral_data(behavioral_data, subject_ids, covari
     else:
         raise ValueError(
             "Covariates not found in behavioral table. "
-            "Please pass --covariates_path or set data.covariates_file in config.json."
+            "Please pass --covariates_path or set files.covariates_file in configs/datasets/<DATASET>.yaml."
         )
 
 
@@ -387,7 +381,7 @@ def load_data(args):
             else:
                 raise ValueError(
                     "No selected_measures found in synthetic behavioral data. "
-                    "Please update config.json behavioral.selected_measures or disable selection (set to [])."
+                    "Please update configs/datasets/<DATASET>.yaml behavioral.selected_measures or disable selection (set to [])."
                 )
     else:
         logger.info("Loading real EFNY data using config paths")
@@ -1003,31 +997,35 @@ def main():
     
     try:
         t0 = time.time()
-        # Backward-compatible JSON config (deprecated)
-        if args.config_file:
-            config.load_config(args.config_file)
-            logger.info(f"Loaded legacy JSON config: {args.config_file}")
-        
-        # 步骤1: 加载数据
+
+        # Step 1: Load data
         logger.info("Step 1: Loading data...")
         brain_data, behavioral_data, covariates, subject_ids = load_data(args)
 
-        behavioral_metric_columns = behavioral_data.columns.tolist() if isinstance(behavioral_data, pd.DataFrame) else None
-        covariate_columns = covariates.columns.tolist() if isinstance(covariates, pd.DataFrame) else None
+        behavioral_metric_columns = (
+            behavioral_data.columns.tolist()
+            if isinstance(behavioral_data, pd.DataFrame)
+            else None
+        )
+        covariate_columns = (
+            covariates.columns.tolist()
+            if isinstance(covariates, pd.DataFrame)
+            else None
+        )
         requested_behavioral_measures = config.get('behavioral.selected_measures', [])
-        
-        # 步骤2: 预处理
+
+        # Step 2: Preprocess data
         logger.info("Step 2: Preprocessing data...")
         brain_clean, behavioral_clean = preprocess_data(brain_data, behavioral_data, covariates, args)
-        
-        # 验证数据
+
+        # Validate shapes
         validate_data_shapes(brain_clean, behavioral_clean)
-        
-        # 步骤3: 创建模型
+
+        # Step 3: Create model
         logger.info("Step 3: Creating model...")
         model = create_model_instance(args)
-        
-        # 步骤4: 运行分析
+
+        # Step 4: Run analysis
         logger.info("Step 4: Running analysis...")
         result = run_analysis(model, brain_clean, behavioral_clean, covariates, args)
 
@@ -1036,18 +1034,16 @@ def main():
         result['metadata']['behavioral_metric_columns'] = behavioral_metric_columns
         result['metadata']['requested_behavioral_measures'] = requested_behavioral_measures
         result['metadata']['covariate_columns'] = covariate_columns
-        
-        # 步骤5: 保存结果
+
+        # Step 5: Save results
         logger.info("Step 5: Saving results...")
-        saved_files = save_results_with_metadata(result, args)
-        
-        logger.info("="*80)
+        save_results_with_metadata(result, args)
+
+        logger.info("=" * 80)
         logger.info("Analysis completed successfully!")
-        logger.info("="*80)
-        
-        # 返回成功状态码
+        logger.info("=" * 80)
         return 0
-        
+
     except Exception as e:
         logger.error(f"Analysis failed: {e}")
         logger.exception("Full traceback:")
