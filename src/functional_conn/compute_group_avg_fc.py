@@ -3,6 +3,9 @@ import sys
 from pathlib import Path
 import numpy as np
 
+from src.config_io import load_simple_yaml
+from src.path_config import load_paths_config, resolve_dataset_roots
+
 def get_plot_function():
     try:
         from src.functional_conn.plot_fc_matrix import plot_fc_matrix
@@ -16,6 +19,30 @@ def load_matrix(path: Path) -> np.ndarray:
 def save_matrix(mat: np.ndarray, out_path: Path) -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     np.savetxt(out_path, mat, delimiter=",", fmt="%.6f")
+
+def _resolve_defaults(args) -> tuple[Path, Path, Path]:
+    if not args.dataset:
+        raise ValueError("Missing --dataset (required when defaults are used).")
+    repo_root = Path(__file__).resolve().parents[2]
+    paths_cfg = load_paths_config(args.paths_config, repo_root=repo_root)
+    roots = resolve_dataset_roots(paths_cfg, dataset=args.dataset)
+    dataset_cfg_path = (
+        Path(args.dataset_config)
+        if args.dataset_config is not None
+        else (repo_root / "configs" / "datasets" / f"{args.dataset}.yaml")
+    )
+    dataset_cfg = load_simple_yaml(dataset_cfg_path)
+    files_cfg = dataset_cfg.get("files", {})
+
+    sublist_rel = files_cfg.get("rest_valid_sublist_file") or files_cfg.get("sublist_file")
+    if not sublist_rel:
+        raise ValueError("Missing files.rest_valid_sublist_file or files.sublist_file in dataset config.")
+
+    in_dir = roots["interim_root"] / "functional_conn" / "rest"
+    sublist_path = roots["processed_root"] / sublist_rel
+    out_dir = roots["processed_root"] / "avg_functional_conn_matrix"
+    fig_dir = roots["outputs_root"] / "figures" / "functional_conn"
+    return in_dir, sublist_path, out_dir, fig_dir
 
 def process_atlas(sublist_path: Path, atlas_folder: Path, out_dir: Path, fig_dir: Path, 
                   out_name: str, visualize: bool, atlas_name: str) -> None:
@@ -90,28 +117,33 @@ def process_atlas(sublist_path: Path, atlas_folder: Path, out_dir: Path, fig_dir
 
 def main():
     parser = argparse.ArgumentParser(description="Compute Group Average FC Matrix")
-    
-    root_dir = Path(__file__).resolve().parents[2]
-    default_in_dir = root_dir / "data" / "interim" / "EFNY" / "functional_conn" / "rest"
-    default_sublist = root_dir / "data" / "processed" / "EFNY" / "table" / "sublist" / "rest_valid_sublist.txt"
-    default_fig_dir = root_dir / "outputs" / "EFNY" / "figures" / "functional_conn"
-    default_out_dir = root_dir / "data" / "processed" / "EFNY" / "avg_functional_conn_matrix"
-    
-    parser.add_argument("--sublist", default=str(default_sublist), help="Path to subject list file")
-    parser.add_argument("--in-dir", default=str(default_in_dir), help="Root directory containing FC matrices (e.g., rest or task folder)")
-    parser.add_argument("--out-dir", default=str(default_out_dir), help="Output directory for average matrices")
+
+    parser.add_argument("--sublist", default=None, help="Path to subject list file")
+    parser.add_argument("--in-dir", default=None, help="Root directory containing FC matrices (e.g., rest or task folder)")
+    parser.add_argument("--out-dir", default=None, help="Output directory for average matrices")
+    parser.add_argument("--fig-dir", default=None, help="Output directory for figures")
     parser.add_argument("--n-rois", type=int, help="Specific Schaefer resolution to process (e.g. 100, 200, 400). If not specified, processes all found atlases.")
     parser.add_argument("--atlas", help="Specific atlas name to process (e.g., Schaefer100). If not specified, processes all found atlases.")
     parser.add_argument("--out-name", default="GroupAverage", help="Base name for output file")
     parser.add_argument("--visualize", action="store_true", default=True, help="Generate visualization for the group average")
     parser.add_argument("--condition", default="rest", help="Condition name (rest, task, etc.) - used for output naming")
+    parser.add_argument("--dataset", type=str, default=None)
+    parser.add_argument("--config", dest="paths_config", type=str, default="configs/paths.yaml")
+    parser.add_argument("--dataset-config", dest="dataset_config", type=str, default=None)
     
     args = parser.parse_args()
-    
+
+    if args.sublist is None or args.in_dir is None or args.out_dir is None or args.fig_dir is None:
+        in_dir, sublist_path, out_dir, fig_dir = _resolve_defaults(args)
+        args.in_dir = str(in_dir)
+        args.sublist = str(sublist_path)
+        args.out_dir = str(out_dir)
+        args.fig_dir = str(fig_dir)
+
     sublist_path = Path(args.sublist)
     in_dir = Path(args.in_dir)
     out_dir = Path(args.out_dir)
-    fig_dir = Path(default_fig_dir)
+    fig_dir = Path(args.fig_dir)
     
     if not sublist_path.exists():
         print(f"Error: Subject list not found at {sublist_path}", file=sys.stderr)

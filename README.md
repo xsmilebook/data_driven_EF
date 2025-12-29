@@ -81,7 +81,7 @@ python -m scripts.run_build_behavioral_data --dataset EFNY --config configs/path
 
 #### `compute_fc_schaefer.py`?????? FC ???CSV?
 ```bash
-python src/functional_conn/compute_fc_schaefer.py --subject <sub-xxx> --n-rois 100 --dataset EFNY --config configs/paths.yaml
+python -m scripts.run_compute_fc_schaefer --subject <sub-xxx> --n-rois 100 --dataset EFNY --config configs/paths.yaml
 ```
 ?????
 - `--xcpd-dir`: xcp-d ?????
@@ -94,57 +94,74 @@ python src/functional_conn/compute_fc_schaefer.py --subject <sub-xxx> --n-rois 1
 - `--config`: ?????`configs/paths.yaml`?
 - `--dataset-config`: ????? `configs/datasets/<DATASET>.yaml`
 
-
-#### `fisher_z_fc.py`：FC 做 Fisher-Z 变换（CSV）
+#### `fisher_z_fc.py`?FC ? Fisher-Z ???CSV?
 ```bash
-python src/functional_conn/fisher_z_fc.py --subject <sub-xxx> --n-rois 100
+python -m scripts.run_fisher_z_fc --subject <sub-xxx> --n-rois 100 --dataset EFNY --config configs/paths.yaml
 ```
-关键参数：
-- `--in-dir`: FC 输入目录
-- `--out-dir`: Z 后输出目录
+?????
+- `--in-dir`: FC ????
+- `--out-dir`: Z ?????
 - `--subject`, `--n-rois`
+- `--dataset`, `--config`
 
-#### `convert_fc_vector.py`：将 FC_z 矩阵下三角向量化（npy）
-该脚本参数较多（输入/输出/被试列表/atlas 分辨率等），建议直接查看：
+#### `convert_fc_vector.py`?? FC_z ?????????npy?
+???? dataset/config ?? `input_path`?`sublist_file` ? `output_path`?
 ```bash
-python src/functional_conn/convert_fc_vector.py --help
+python -m scripts.run_convert_fc_vector --dataset EFNY --config configs/paths.yaml --n_rois 400
 ```
+?????
+- `--input_path`: ????? FC_z ????
+- `--sublist_file`: ?????????
+- `--output_path`: ???????????
+- `--dataset_name`: ??????????? dataset ??
+- `--n_rois`: 100/200/400
+- `--dataset`, `--config`, `--dataset-config`
 
-#### `compute_group_avg_fc.py`：组平均 FC（可选可视化）
+#### `compute_group_avg_fc.py`???? FC???????
 ```bash
-python src/functional_conn/compute_group_avg_fc.py --in-dir <fc_dir> --sublist <rest_valid_sublist.txt> --visualize
+python -m scripts.run_compute_group_avg_fc --dataset EFNY --config configs/paths.yaml --visualize
 ```
-关键参数：
-- `--in-dir`: 包含 `Schaefer*` 子目录
-- `--sublist`: 被试列表
-- `--atlas` / `--n-rois`: 指定 atlas
-- `--out-dir`: 输出目录
+?????
+- `--in-dir`: ????? `Schaefer*` ???
+- `--sublist`: ???????
+- `--atlas` / `--n-rois`: ?? atlas
+- `--out-dir`: ???????
+- `--fig-dir`: ?????????
+- `--dataset`, `--config`, `--dataset-config`
 
-#### `plot_fc_matrix.py`：矩阵可视化（支持 Yeo17 排序）
+#### `plot_fc_matrix.py`????????? Yeo17 ???
 ```bash
-python src/functional_conn/plot_fc_matrix.py --file <matrix.csv> --out <out.png> --title "..." --yeo17 --n-rois 100
+python -m scripts.run_plot_fc_matrix --file <matrix.csv> --title "..." --yeo17 --n-rois 100 --dataset EFNY --config configs/paths.yaml
 ```
-关键参数：
-- `--file`: 输入 CSV
-- `--out`: 输出 PNG
-- `--yeo17`: 以 Yeo17 网络排序并加边界线（需要 `--n-rois`）
+?????
+- `--file`: ?? CSV
+- `--out`: ????? PNG
+- `--yeo17`: ?? Yeo17 ??????? `--n-rois`?
+- `--dataset`, `--config`???? `--out` ????
 
+### 3) ?????`src/metric_compute`?
 ### 3) 行为指标（`src/metric_compute`）
 
-#### `compute_efny_metrics.py`：从 app data 计算行为指标
-该脚本没有命令行参数，路径在脚本顶部常量中定义（`DATA_DIR` / `TASK_CSV` / `OUT_CSV`）。
+#### `compute_efny_metrics.py`?? app data ??????
 ```bash
-python src/metric_compute/compute_efny_metrics.py
+python -m scripts.run_compute_efny_metrics --dataset EFNY --config configs/paths.yaml
 ```
+?????
+- `--data-dir`: ????? app ????
+- `--out-csv`: ??????? metrics CSV
+- `--dataset`, `--config`, `--dataset-config`
 
-#### `metrics_similarity_heatmap.py`：行为指标相关热图
+#### `metrics_similarity_heatmap.py`?????????
 ```bash
-python src/metric_compute/metrics_similarity_heatmap.py --csv <EFNY_metrics.csv> --task-csv <EFNY_task.csv> --out-png <out.png>
+python -m scripts.run_metrics_similarity_heatmap --dataset EFNY --config configs/paths.yaml --method pearson
 ```
-关键参数：
+?????
+- `--csv`: ????????? CSV
+- `--out-png`: ??????? PNG
 - `--method`: pearson/spearman/kendall
-- `--min-valid-ratio`: 单列有效数据占比阈值
-- `--min-pair-ratio`: 两列共同有效数据占比阈值
+- `--min-valid-ratio`: ??????????
+- `--min-pair-ratio`: ????????????
+- `--dataset`, `--config`, `--dataset-config`
 
 #### `behavioral_metric_exploration.py`：行为指标探索性可视化
 ```bash
@@ -241,6 +258,16 @@ sbatch scripts/submit_hpc_perm.sh   # 置换运行（array=1-1000）
 ```
 
 ## 结果汇总（real/perm 扫描）
+
+?????? `scripts/` ? thin wrapper ???????
+
+```bash
+python -m scripts.run_summarize_real_perm_scores --dataset EFNY --config configs/paths.yaml --analysis_type both --atlas <atlas> --model_type <model>
+python -m scripts.run_summarize_real_loadings_scores --dataset EFNY --config configs/paths.yaml --atlas <atlas> --model_type <model>
+python -m scripts.run_summarize_perm_stepwise_pvalues --dataset EFNY --config configs/paths.yaml --atlas <atlas> --model_type <model>
+python -m scripts.run_visualize_loadings_similarity --dataset EFNY --config configs/paths.yaml --atlas <atlas> --model_type <model>
+python -m scripts.run_visualize_loadings_similarity_batch --dataset EFNY --config configs/paths.yaml --atlas <atlas> --model_type <model>
+```
 
 ### `src/result_summary/summarize_real_perm_scores.py`
 扫描 `results_root/real` 与 `results_root/perm`，提取每次运行的相关向量并输出 CSV。

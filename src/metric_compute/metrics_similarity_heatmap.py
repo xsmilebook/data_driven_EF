@@ -5,6 +5,9 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+from src.config_io import load_simple_yaml
+from src.path_config import load_paths_config, resolve_dataset_roots
+
 TASK_DIMENSIONS = {
     "GNG": "inhibition",
     "FLANKER": "inhibition",
@@ -229,17 +232,45 @@ def plot_heatmap(mat: pd.DataFrame, out_path: Path, title: str, boundaries: list
     fig.savefig(out_path, dpi=300, bbox_inches='tight')
     plt.close(fig)
 
+def _resolve_defaults(args) -> tuple[Path, Path]:
+    if not args.dataset:
+        raise ValueError("Missing --dataset (required when defaults are used).")
+    repo_root = Path(__file__).resolve().parents[2]
+    paths_cfg = load_paths_config(args.paths_config, repo_root=repo_root)
+    roots = resolve_dataset_roots(paths_cfg, dataset=args.dataset)
+    dataset_cfg_path = (
+        Path(args.dataset_config)
+        if args.dataset_config is not None
+        else (repo_root / "configs" / "datasets" / f"{args.dataset}.yaml")
+    )
+    dataset_cfg = load_simple_yaml(dataset_cfg_path)
+    files_cfg = dataset_cfg.get("files", {})
+
+    behavioral_rel = files_cfg.get("behavioral_file")
+    if not behavioral_rel:
+        raise ValueError("Missing files.behavioral_file in dataset config.")
+
+    csv_path = roots["processed_root"] / behavioral_rel
+    out_path = roots["outputs_root"] / "figures" / "behavior_data" / "metrics_similarity_heatmap.png"
+    return csv_path, out_path
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    repo_root = Path(__file__).resolve().parents[2]
-    default_csv = repo_root / "data" / "EFNY" / "table" / "demo" / "EFNY_behavioral_data.csv"
-    default_png = repo_root / "outputs" / "EFNY" / "figures" / "metrics" / "EFNY_metrics_similarity_heatmap.png"
-    parser.add_argument("--csv", default=str(default_csv))
-    parser.add_argument("--out-png", default=str(default_png))
+    parser.add_argument("--csv", default=None)
+    parser.add_argument("--out-png", default=None)
     parser.add_argument("--method", default="pearson", choices=["pearson", "spearman", "kendall"])
     parser.add_argument("--min-valid-ratio", type=float, default=0.5)
     parser.add_argument("--min-pair-ratio", type=float, default=0.5)
+    parser.add_argument("--dataset", type=str, default=None)
+    parser.add_argument("--config", dest="paths_config", type=str, default="configs/paths.yaml")
+    parser.add_argument("--dataset-config", dest="dataset_config", type=str, default=None)
     args = parser.parse_args()
+
+    if args.csv is None or args.out_png is None:
+        csv_path, out_path = _resolve_defaults(args)
+        args.csv = str(csv_path)
+        args.out_png = str(out_path)
+
     csv_path = Path(args.csv)
     if not csv_path.exists():
         print(f"Not found: {csv_path}", file=sys.stderr)

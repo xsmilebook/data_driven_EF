@@ -1,14 +1,53 @@
-import os
+import argparse
+from pathlib import Path
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
-DATA_DIR = os.path.join(ROOT, 'data', 'EFNY', 'behavior_data', 'cibr_app_data')
-TABLE_DIR = os.path.join(ROOT, 'data', 'EFNY', 'table', 'metrics')
-OUT_CSV = os.path.join(TABLE_DIR, 'EFNY_beh_metrics.csv')
+from src.config_io import load_simple_yaml
+from src.path_config import load_paths_config, resolve_dataset_roots
+
+def _resolve_defaults(args) -> tuple[Path, Path]:
+    if not args.dataset:
+        raise ValueError("Missing --dataset (required when defaults are used).")
+    repo_root = Path(__file__).resolve().parents[2]
+    paths_cfg = load_paths_config(args.paths_config, repo_root=repo_root)
+    roots = resolve_dataset_roots(paths_cfg, dataset=args.dataset)
+    dataset_cfg_path = (
+        Path(args.dataset_config)
+        if args.dataset_config is not None
+        else (repo_root / "configs" / "datasets" / f"{args.dataset}.yaml")
+    )
+    dataset_cfg = load_simple_yaml(dataset_cfg_path)
+    behavioral_cfg = dataset_cfg.get("behavioral", {})
+    files_cfg = dataset_cfg.get("files", {})
+
+    app_data_rel = behavioral_cfg.get("app_data_dir")
+    metrics_rel = files_cfg.get("behavioral_metrics_file")
+    if not app_data_rel:
+        raise ValueError("Missing behavioral.app_data_dir in dataset config.")
+    if not metrics_rel:
+        raise ValueError("Missing files.behavioral_metrics_file in dataset config.")
+
+    data_dir = roots["raw_root"] / app_data_rel
+    out_csv = roots["processed_root"] / metrics_rel
+    return data_dir, out_csv
+
 
 def main():
-    from efny.main import run_raw
+    from src.metric_compute.efny.main import run_raw
 
-    run_raw(data_dir=DATA_DIR, out_csv=OUT_CSV)
+    parser = argparse.ArgumentParser(description="Compute EFNY behavioral metrics.")
+    parser.add_argument("--data-dir", default=None, help="Input app-data directory.")
+    parser.add_argument("--out-csv", default=None, help="Output metrics CSV path.")
+    parser.add_argument("--dataset", type=str, default=None)
+    parser.add_argument("--config", dest="paths_config", type=str, default="configs/paths.yaml")
+    parser.add_argument("--dataset-config", dest="dataset_config", type=str, default=None)
+    args = parser.parse_args()
+
+    if args.data_dir is None or args.out_csv is None:
+        data_dir, out_csv = _resolve_defaults(args)
+        args.data_dir = str(data_dir)
+        args.out_csv = str(out_csv)
+
+    run_raw(data_dir=args.data_dir, out_csv=args.out_csv)
 
 if __name__ == '__main__':
     main()

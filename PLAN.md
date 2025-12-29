@@ -48,19 +48,28 @@ Example substitutions:
 
 ## Feature roadmap and development phases
 
-### Phase A: Path and entry-point standardization (current)
+### Phase A: Path and entry-point standardization (completed)
 - Standardize path resolution and external inputs.
 - Normalize intermediate and processed outputs to `data/interim` and `data/processed`.
 - Make summary scripts accept `--dataset/--config` to infer `results_root`.
  - Document atlas selection via FC matrix path patterns (Schaefer100/200/400).
 
-### Phase B: Documentation and workflow alignment
+### Phase B: Documentation and workflow alignment (completed)
 - Update `README.md` and `docs/workflow.md` to reflect standardized CLI patterns.
 - Ensure `docs/data_dictionary.md` and `docs/datasets/EFNY.md` match the refactored paths.
 
-### Phase C: Import hygiene and thin entry points
+### Phase C: Import hygiene and thin entry points (completed)
 - Remove residual `sys.path` hacks inside `src/**`.
 - Add thin `scripts/` entry points for frequently used `src/**` tools.
+
+## Current action items (from create-plan)
+
+- [x] Inventory runnable `src/**` modules without `scripts/` entry points.
+- [x] Add thin `scripts/` wrappers for missing entry points.
+- [x] Sweep for residual non-config path defaults or dataset-specific constants in `src/**` and fix them.
+- [x] Update `README.md` and `docs/workflow.md` to reflect new entry points or path changes.
+- [x] Update `PLAN.md` to mark Phase A/B/C items as completed where applicable.
+- [x] Run `python -m py_compile` on modified modules and `python -m scripts.run_single_task --dataset EFNY --config configs/paths.yaml --dry-run`.
 
 ## Testing and deployment strategy
 

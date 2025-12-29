@@ -9,6 +9,8 @@ All runnable entry points under `scripts/` should accept:
 - `--dataset <DATASET_NAME>`
 - `--config <PATH_TO_CONFIGS_PATHS_YAML>`
 
+Prefer `python -m scripts.run_*` wrappers when available to keep entry points consistent.
+
 Dataset-specific assumptions are configured in `configs/datasets/<DATASET>.yaml`.
 Dataset-agnostic analysis defaults may be configured in `configs/analysis.yaml`.
 

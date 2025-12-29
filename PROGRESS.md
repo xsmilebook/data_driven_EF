@@ -30,6 +30,12 @@ Engineering-only refactor to standardize paths, entry points, and documentation 
 - Updated README usage for `compute_fc_schaefer.py` to include dataset/config defaults.
 - Updated workflow and EFNY dataset docs to reflect `data/raw`/`data/interim`/`data/processed`/`outputs` conventions.
 - Added README note about static SBATCH log paths.
+- Added config-driven defaults for metrics similarity heatmaps, EFNY metrics computation, group-average FC, Fisher-Z FC, and vectorization.
+- Added thin `scripts/` entry points for remaining runnable utilities (functional_conn, metric_compute, result_summary, app_data_proc).
+- Updated README to reflect new standardized CLI usage for FC and behavioral tools.
+- Updated `docs/workflow.md` to recommend `scripts.run_*` wrappers.
+- Added README usage blocks for result_summary script wrappers.
+- Ran `py_compile` and `run_single_task --dry-run` after the updates.
 
 ## In progress
 

@@ -1,8 +1,11 @@
-import os
+import argparse
 import re
+from pathlib import Path
 import pandas as pd
 import numpy as np
 
+from src.config_io import load_simple_yaml
+from src.path_config import load_paths_config, resolve_dataset_roots
 
 def efny_subject_to_thu_subject(subject_code: str) -> str:
     """
@@ -44,13 +47,51 @@ def to_num(s: pd.Series) -> pd.Series:
     return pd.to_numeric(s, errors="coerce")
 
 
-def main():
-    root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
-    efny_csv = os.path.join(root, "data", "EFNY", "table", "metrics", "EFNY_beh_metrics.csv")
-    thu_csv = os.path.join(root, "data", "EFNY", "table", "metrics", "THU_app_results.csv")
+def _resolve_defaults(args) -> tuple[Path, Path, Path]:
+    if not args.dataset:
+        raise ValueError("Missing --dataset (required when defaults are used).")
+    repo_root = Path(__file__).resolve().parents[2]
+    paths_cfg = load_paths_config(args.paths_config, repo_root=repo_root)
+    roots = resolve_dataset_roots(paths_cfg, dataset=args.dataset)
+    dataset_cfg_path = (
+        Path(args.dataset_config)
+        if args.dataset_config is not None
+        else (repo_root / "configs" / "datasets" / f"{args.dataset}.yaml")
+    )
+    dataset_cfg = load_simple_yaml(dataset_cfg_path)
+    files_cfg = dataset_cfg.get("files", {})
 
-    efny = pd.read_csv(efny_csv)
-    thu = pd.read_csv(thu_csv, na_values=["NA", "NaN", "nan", ""])
+    efny_rel = files_cfg.get("behavioral_metrics_file")
+    thu_rel = files_cfg.get("thu_metrics_file")
+    if not efny_rel:
+        raise ValueError("Missing files.behavioral_metrics_file in dataset config.")
+    if not thu_rel:
+        raise ValueError("Missing files.thu_metrics_file in dataset config.")
+
+    efny_csv = roots["processed_root"] / efny_rel
+    thu_csv = roots["processed_root"] / thu_rel
+    out_csv = roots["outputs_root"] / "results" / "behavior_data" / "efny_vs_thu_metric_compare.csv"
+    return efny_csv, thu_csv, out_csv
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Compare EFNY metrics with THU app results.")
+    parser.add_argument("--efny-csv", default=None)
+    parser.add_argument("--thu-csv", default=None)
+    parser.add_argument("--out-csv", default=None)
+    parser.add_argument("--dataset", type=str, default=None)
+    parser.add_argument("--config", dest="paths_config", type=str, default="configs/paths.yaml")
+    parser.add_argument("--dataset-config", dest="dataset_config", type=str, default=None)
+    args = parser.parse_args()
+
+    if args.efny_csv is None or args.thu_csv is None or args.out_csv is None:
+        efny_csv, thu_csv, out_csv = _resolve_defaults(args)
+        args.efny_csv = str(efny_csv)
+        args.thu_csv = str(thu_csv)
+        args.out_csv = str(out_csv)
+
+    efny = pd.read_csv(args.efny_csv)
+    thu = pd.read_csv(args.thu_csv, na_values=["NA", "NaN", "nan", ""])
 
     efny["subject"] = efny["subject_code"].map(efny_subject_to_thu_subject)
     efny = efny[efny["subject"].notna()].copy()
@@ -170,7 +211,8 @@ def main():
         )
 
     out = pd.DataFrame(rows).sort_values(["pearson_r", "max_abs_diff"], ascending=[True, False])
-    out_path = os.path.join(root, "data", "EFNY", "table", "demo", "efny_vs_thu_metric_compare.csv")
+    out_path = Path(args.out_csv)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     out.to_csv(out_path, index=False, encoding="utf-8")
     print(f"Wrote: {out_path}")
     print(out.head(30).to_string(index=False))

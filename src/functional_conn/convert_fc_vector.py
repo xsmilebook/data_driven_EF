@@ -20,6 +20,9 @@ from pathlib import Path
 import logging
 from typing import List, Optional, Dict
 
+from src.config_io import load_simple_yaml
+from src.path_config import load_paths_config, resolve_dataset_roots
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -247,28 +250,28 @@ Examples:
     parser.add_argument(
         "--input_path",
         type=str,
-        required=True,
+        required=False,
         help="Path to directory containing Fisher Z FC matrices (e.g., /path/to/dataset/functional_conn_z/rest)"
     )
     
     parser.add_argument(
         "--sublist_file",
         type=str,
-        required=True,
+        required=False,
         help="Path to subject list file (sublist.txt)"
     )
     
     parser.add_argument(
         "--output_path",
         type=str,
-        required=True,
+        required=False,
         help="Path to output directory for vector matrices (e.g., /path/to/dataset/fc_vector)"
     )
     
     parser.add_argument(
         "--dataset_name",
         type=str,
-        required=True,
+        required=False,
         choices=['ABCD', 'CCNP', 'HCPD', 'PNC', 'EFNY', 'CUSTOM'],
         help="Name of the dataset"
     )
@@ -286,8 +289,33 @@ Examples:
         action="store_true",
         help="Enable verbose logging"
     )
+    parser.add_argument("--dataset", type=str, default=None)
+    parser.add_argument("--config", dest="paths_config", type=str, default="configs/paths.yaml")
+    parser.add_argument("--dataset-config", dest="dataset_config", type=str, default=None)
     
     args = parser.parse_args()
+
+    if args.input_path is None or args.sublist_file is None or args.output_path is None or args.dataset_name is None:
+        if not args.dataset:
+            raise ValueError("Missing --dataset (required when defaults are used).")
+        repo_root = Path(__file__).resolve().parents[2]
+        paths_cfg = load_paths_config(args.paths_config, repo_root=repo_root)
+        roots = resolve_dataset_roots(paths_cfg, dataset=args.dataset)
+        dataset_cfg_path = (
+            Path(args.dataset_config)
+            if args.dataset_config is not None
+            else (repo_root / "configs" / "datasets" / f"{args.dataset}.yaml")
+        )
+        dataset_cfg = load_simple_yaml(dataset_cfg_path)
+        files_cfg = dataset_cfg.get("files", {})
+        sublist_rel = files_cfg.get("sublist_file")
+        if not sublist_rel:
+            raise ValueError("Missing files.sublist_file in dataset config.")
+
+        args.input_path = args.input_path or str(roots["interim_root"] / "functional_conn_z" / "rest")
+        args.sublist_file = args.sublist_file or str(roots["processed_root"] / sublist_rel)
+        args.output_path = args.output_path or str(roots["processed_root"] / "fc_vector")
+        args.dataset_name = args.dataset_name or args.dataset
     
     # Set logging level
     if args.verbose:

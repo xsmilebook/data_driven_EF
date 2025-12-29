@@ -5,6 +5,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from nilearn import plotting, datasets
 
+from src.path_config import load_paths_config, resolve_dataset_roots
+
 # command:
 # Example:
 # python -m src.functional_conn.plot_fc_matrix --file data/processed/EFNY/avg_functional_conn_matrix/GroupAverage_Schaefer100_fisher_z.csv --out outputs/<DATASET>/figures/functional_conn/GroupAverage_Schaefer100_fisher_z_yeo17.png --title "Group average fc (Schaefer 100)" --yeo17 --n-rois 100
@@ -204,16 +206,14 @@ def plot_fc_matrix(mat: np.ndarray, out_path: Path, title: str = None,
 
 def main():
     parser = argparse.ArgumentParser(description="Visualize Functional Connectivity Matrix")
-    
-    # Default paths
-    root_dir = Path(__file__).resolve().parents[2]
-    default_out_dir = root_dir / "data" / "EFNY" / "figures" / "functional_conn"
-    
+
     parser.add_argument("--file", required=True, help="Path to the input FC matrix (CSV)")
     parser.add_argument("--out", help="Path to output image file. If not provided, saves to default figures dir with same basename.")
     parser.add_argument("--title", help="Title of the plot")
     parser.add_argument("--yeo17", action="store_true", help="Map to Yeo17 networks and group ROIs by network")
     parser.add_argument("--n-rois", type=int, help="Number of ROIs in Schaefer atlas (needed for Yeo17 mapping)")
+    parser.add_argument("--dataset", type=str, default=None)
+    parser.add_argument("--config", dest="paths_config", type=str, default="configs/paths.yaml")
     
     args = parser.parse_args()
     
@@ -272,10 +272,15 @@ def main():
     if args.out:
         out_path = Path(args.out)
     else:
-        # Construct default output path
+        if not args.dataset:
+            print("Missing --dataset when --out is not provided.", file=sys.stderr)
+            sys.exit(1)
+        repo_root = Path(__file__).resolve().parents[2]
+        paths_cfg = load_paths_config(args.paths_config, repo_root=repo_root)
+        roots = resolve_dataset_roots(paths_cfg, dataset=args.dataset)
         suffix = "_yeo17" if args.yeo17 else ""
         filename = inp_path.stem + suffix + ".png"
-        out_path = default_out_dir / filename
+        out_path = roots["outputs_root"] / "figures" / "functional_conn" / filename
         
     print(f"Plotting matrix from {inp_path}...")
     plot_fc_matrix(mat, out_path, plot_title, network_boundaries, network_labels)

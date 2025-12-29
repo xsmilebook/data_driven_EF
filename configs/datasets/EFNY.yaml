@@ -14,7 +14,9 @@ files:
   qc_rest_fd_file: table/qc/rest_fd_summary.csv
   behavioral_file: table/demo/EFNY_behavioral_data.csv
   behavioral_metrics_file: table/metrics/EFNY_beh_metrics.csv
+  thu_metrics_file: table/metrics/THU_app_results.csv
   sublist_file: table/sublist/sublist.txt
+  rest_valid_sublist_file: table/sublist/rest_valid_sublist.txt
   covariates_file: table/demo/EFNY_demo_with_rsfmri.csv
 
 preprocessing:
