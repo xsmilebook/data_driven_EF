@@ -265,20 +265,20 @@ Examples:
 
     parser.add_argument(
         "--standardize_domains", dest="standardize_domains", action="store_true", default=None,
-        help="? X/Y ??????"
+        help="Standardize X/Y domains"
     )
     parser.add_argument(
         "--no-standardize-domains", dest="standardize_domains", action="store_false", default=None,
-        help="?? X/Y ??????"
+        help="Do not standardize X/Y domains"
     )
 
     parser.add_argument(
         "--pca_components_X", type=int, default=None,
-        help="X ? PCA ???????"
+        help="PCA components for X (optional)"
     )
     parser.add_argument(
         "--pca_components_Y", type=int, default=None,
-        help="Y ? PCA ???????"
+        help="PCA components for Y (optional)"
     )
     
     # 评估参数
@@ -294,45 +294,45 @@ Examples:
     
     parser.add_argument(
         "--cv_shuffle", dest="cv_shuffle", action="store_true", default=None,
-        help="????????"
+        help="Shuffle data before outer CV splits"
     )
     parser.add_argument(
         "--no-cv-shuffle", dest="cv_shuffle", action="store_false", default=None,
-        help="???????"
+        help="Do not shuffle data before outer CV splits"
     )
 
     parser.add_argument(
         "--inner_cv_splits", type=int, default=None,
-        help="???????????????"
+        help="Inner CV splits for hyperparameter selection"
     )
 
     parser.add_argument(
         "--inner_shuffle", dest="inner_shuffle", action="store_true", default=None,
-        help="??????????????"
+        help="Shuffle data before inner CV splits"
     )
     parser.add_argument(
         "--no-inner-shuffle", dest="inner_shuffle", action="store_false", default=None,
-        help="?????????????"
+        help="Do not shuffle data before inner CV splits"
     )
 
     parser.add_argument(
         "--outer_shuffle_random_state", type=int, default=None,
-        help="?????????????"
+        help="Random seed for outer CV shuffle"
     )
 
     parser.add_argument(
         "--inner_shuffle_random_state", type=int, default=None,
-        help="?????????????"
+        help="Random seed for inner CV shuffle"
     )
 
     parser.add_argument(
         "--permutation_n_iters", type=int, default=None,
-        help="?????????????"
+        help="Permutation iterations (if used)"
     )
 
     parser.add_argument(
         "--score_metric", type=str, default=None,
-        help="??????"
+        help="Score metric name"
     )
 
     parser.add_argument(

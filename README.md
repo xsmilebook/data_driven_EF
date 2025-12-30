@@ -79,88 +79,87 @@ python -m src.app_data_proc.build_behavioral_data --dataset EFNY --config config
 
 ### 2) 功能连接（FC）计算与向量化（`src/functional_conn`）
 
-#### `compute_fc_schaefer.py`?????? FC ???CSV?
+#### `compute_fc_schaefer.py`: single-subject FC matrix (CSV)
 ```bash
 python -m src.functional_conn.compute_fc_schaefer --subject <sub-xxx> --n-rois 100 --dataset EFNY --config configs/paths.yaml
 ```
-?????
-- `--xcpd-dir`: xcp-d ?????
-- `--subject`: ?? ID?? `sub-xxx`?
-- `--n-rois`: Schaefer ????100/200/400?
-- `--qc-file`: QC CSV??? valid runs?
-- `--valid-list`: ??????
-- `--out-dir`: ????
-- `--dataset`: ??????? `EFNY`?
-- `--config`: ?????`configs/paths.yaml`?
-- `--dataset-config`: ????? `configs/datasets/<DATASET>.yaml`
+Key args:
+- `--xcpd-dir`: xcp-d output root
+- `--subject`: subject ID (e.g., `sub-xxx`)
+- `--n-rois`: Schaefer parcels (100/200/400)
+- `--qc-file`: QC CSV (valid runs)
+- `--valid-list`: valid subject list
+- `--out-dir`: output dir
+- `--dataset`: dataset name (e.g., `EFNY`)
+- `--config`: paths config (`configs/paths.yaml`)
+- `--dataset-config`: optional, default `configs/datasets/<DATASET>.yaml`
 
-#### `fisher_z_fc.py`?FC ? Fisher-Z ???CSV?
+#### `fisher_z_fc.py`: Fisher-Z transform FC (CSV)
 ```bash
 python -m src.functional_conn.fisher_z_fc --subject <sub-xxx> --n-rois 100 --dataset EFNY --config configs/paths.yaml
 ```
-?????
-- `--in-dir`: FC ????
-- `--out-dir`: Z ?????
+Key args:
+- `--in-dir`: FC input dir
+- `--out-dir`: Z output dir
 - `--subject`, `--n-rois`
 - `--dataset`, `--config`
 
-#### `convert_fc_vector.py`?? FC_z ?????????npy?
-???? dataset/config ?? `input_path`?`sublist_file` ? `output_path`?
+#### `convert_fc_vector.py`: vectorize FC_z lower triangle (npy)
+Defaults infer `input_path`, `sublist_file`, and `output_path` from dataset/config.
 ```bash
 python -m src.functional_conn.convert_fc_vector --dataset EFNY --config configs/paths.yaml --n_rois 400
 ```
-?????
-- `--input_path`: ????? FC_z ????
-- `--sublist_file`: ?????????
-- `--output_path`: ???????????
-- `--dataset_name`: ??????????? dataset ??
+Key args:
+- `--input_path`: override FC_z input
+- `--sublist_file`: override subject list
+- `--output_path`: override vector output
+- `--dataset_name`: override dataset name in outputs
 - `--n_rois`: 100/200/400
 - `--dataset`, `--config`, `--dataset-config`
 
-#### `compute_group_avg_fc.py`???? FC???????
+#### `compute_group_avg_fc.py`: group-average FC (optional visualization)
 ```bash
 python -m src.functional_conn.compute_group_avg_fc --dataset EFNY --config configs/paths.yaml --visualize
 ```
-?????
-- `--in-dir`: ????? `Schaefer*` ???
-- `--sublist`: ???????
-- `--atlas` / `--n-rois`: ?? atlas
-- `--out-dir`: ???????
-- `--fig-dir`: ?????????
+Key args:
+- `--in-dir`: input dir containing `Schaefer*`
+- `--sublist`: subject list
+- `--atlas` / `--n-rois`: atlas selection
+- `--out-dir`: output dir
+- `--fig-dir`: figure output dir
 - `--dataset`, `--config`, `--dataset-config`
 
-#### `plot_fc_matrix.py`????????? Yeo17 ???
+#### `plot_fc_matrix.py`: matrix visualization (Yeo17 ordering)
 ```bash
 python -m src.functional_conn.plot_fc_matrix --file <matrix.csv> --title "..." --yeo17 --n-rois 100 --dataset EFNY --config configs/paths.yaml
 ```
-?????
-- `--file`: ?? CSV
-- `--out`: ????? PNG
-- `--yeo17`: ?? Yeo17 ??????? `--n-rois`?
-- `--dataset`, `--config`???? `--out` ????
+Key args:
+- `--file`: input CSV
+- `--out`: output PNG (optional)
+- `--yeo17`: Yeo17 ordering (needs `--n-rois`)
+- `--dataset`, `--config` (required when `--out` is omitted)
 
-### 3) ?????`src/metric_compute`?
-### 3) 行为指标（`src/metric_compute`）
+### 3) Behavioral metrics (`src/metric_compute`)
 
-#### `compute_efny_metrics.py`?? app data ??????
+#### `compute_efny_metrics.py`: compute behavioral metrics from app data
 ```bash
 python -m src.metric_compute.compute_efny_metrics --dataset EFNY --config configs/paths.yaml
 ```
-?????
-- `--data-dir`: ????? app ????
-- `--out-csv`: ??????? metrics CSV
+Key args:
+- `--data-dir`: override app-data directory
+- `--out-csv`: override metrics CSV output
 - `--dataset`, `--config`, `--dataset-config`
 
-#### `metrics_similarity_heatmap.py`?????????
+#### `metrics_similarity_heatmap.py`: metrics similarity heatmap
 ```bash
 python -m src.metric_compute.metrics_similarity_heatmap --dataset EFNY --config configs/paths.yaml --method pearson
 ```
-?????
-- `--csv`: ????????? CSV
-- `--out-png`: ??????? PNG
+Key args:
+- `--csv`: override behavioral CSV
+- `--out-png`: override PNG output
 - `--method`: pearson/spearman/kendall
-- `--min-valid-ratio`: ??????????
-- `--min-pair-ratio`: ????????????
+- `--min-valid-ratio`: per-column valid ratio threshold
+- `--min-pair-ratio`: pairwise valid ratio threshold
 - `--dataset`, `--config`, `--dataset-config`
 
 #### `behavioral_metric_exploration.py`：行为指标探索性可视化
@@ -259,7 +258,7 @@ sbatch scripts/submit_hpc_perm.sh   # 置换运行（array=1-1000）
 
 ## 结果汇总（real/perm 扫描）
 
-?????? `scripts/` ? thin wrapper ???????
+Examples call directly into `src` modules.
 
 ```bash
 python -m src.result_summary.summarize_real_perm_scores --dataset EFNY --config configs/paths.yaml --analysis_type both --atlas <atlas> --model_type <model>
