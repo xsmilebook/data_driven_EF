@@ -14,3 +14,8 @@ This directory contains human-readable documentation for the `data_driven_EF` pr
 
 - `docs/sessions/`: chronological session logs (AI/development sessions).
 - `docs/notes/`: user notes and free-form ideas (not a session log).
+
+## Logs
+
+- All runtime logs are stored under the repository root `logs/` folder.
+- Organize log files by dataset and task (e.g., `logs/EFNY/real_adaptive_pls/`).

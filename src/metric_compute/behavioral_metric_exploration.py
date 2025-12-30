@@ -342,7 +342,7 @@ def _resolve_defaults(args):
 
     behavioral_csv = roots["processed_root"] / behavioral_rel
     output_dir = roots["outputs_root"] / "figures" / "behavior_data" / "metric_exploration"
-    log_path = roots["outputs_root"] / "logs" / "behavior_data" / "metric_exploration.log"
+    log_path = roots["logs_root"] / args.dataset / "behavior_data" / "metric_exploration.log"
     summary_dir = roots["outputs_root"] / "results" / "behavior_data" / "metric_exploration"
     return behavioral_csv, output_dir, log_path, summary_dir, dataset_cfg_path
 

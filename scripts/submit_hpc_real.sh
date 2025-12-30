@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=efny_real_adaptive_pls      # jobname
 #SBATCH --chdir=/ibmgpfs/cuizaixu_lab/xuhaoshu/projects/data_driven_EF
-#SBATCH --output=outputs/EFNY/logs/real_adaptive_pls/%x_%A_%a.out
-#SBATCH --error=outputs/EFNY/logs/real_adaptive_pls/%x_%A_%a.err
+#SBATCH --output=logs/EFNY/real_adaptive_pls/%x_%A_%a.out
+#SBATCH --error=logs/EFNY/real_adaptive_pls/%x_%A_%a.err
 #SBATCH --partition=q_fat
 #SBATCH --cpus-per-task=1
 #SBATCH --array=0-10                    # 11 runs of real-data analysis
@@ -18,7 +18,7 @@ DATASET="EFNY"
 
 TASK_TYPE="real"
 
-mkdir -p ${project_dir}/outputs/EFNY/logs/real_${MODEL_TYPE}
+mkdir -p ${project_dir}/logs/EFNY/real_${MODEL_TYPE}
 
 echo "Starting REAL run $SLURM_ARRAY_TASK_ID at $(date)"
 echo "Model: $MODEL_TYPE"
@@ -31,7 +31,7 @@ python -m scripts.run_single_task \
     --output_prefix efny_real_${MODEL_TYPE}_run_${SLURM_ARRAY_TASK_ID} \
     --random_state $((RANDOM_STATE_BASE + SLURM_ARRAY_TASK_ID)) \
     --log_level INFO \
-    --log_file ${project_dir}/outputs/EFNY/logs/real_${MODEL_TYPE}/run_${SLURM_ARRAY_TASK_ID}.log
+    --log_file ${project_dir}/logs/EFNY/real_${MODEL_TYPE}/run_${SLURM_ARRAY_TASK_ID}.log
 
 if [ $? -eq 0 ]; then
     echo "Real run $SLURM_ARRAY_TASK_ID completed successfully at $(date)"

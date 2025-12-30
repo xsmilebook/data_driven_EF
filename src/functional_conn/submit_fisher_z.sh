@@ -6,8 +6,8 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --partition=q_fat
 #SBATCH --array=1-508%508
-#SBATCH --output=outputs/EFNY/logs/functional_conn_z/%x_%A_%a.out
-#SBATCH --error=outputs/EFNY/logs/functional_conn_z/%x_%A_%a.err
+#SBATCH --output=logs/EFNY/functional_conn_z/%x_%A_%a.out
+#SBATCH --error=logs/EFNY/functional_conn_z/%x_%A_%a.err
 # NOTE: SBATCH log paths are static (no env expansion). Keep dataset-specific paths here.
 
 source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
@@ -17,7 +17,7 @@ eval "$(python -m scripts.render_paths --dataset EFNY --config configs/paths.yam
 ROOT_DIR="${PROJECT_DIR}"
 SUBLIST="$PROCESSED_ROOT/table/sublist/rest_valid_sublist.txt"
 SCRIPT="$ROOT_DIR/src/functional_conn/fisher_z_fc.py"
-LOG_DIR="$OUTPUTS_ROOT/logs/functional_conn_z"
+LOG_DIR="$LOGS_ROOT/${DATASET}/functional_conn_z"
 
 mkdir -p "$LOG_DIR"
 

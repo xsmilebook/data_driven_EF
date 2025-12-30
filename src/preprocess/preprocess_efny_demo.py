@@ -278,7 +278,7 @@ def _resolve_defaults(args):
     output_path = roots["processed_root"] / demo_processed
     qc_path = roots["interim_root"] / qc_file
     merged_path = roots["processed_root"] / merged_output
-    log_path = roots["outputs_root"] / "logs" / "preprocess" / "preprocess_efny_demo.log"
+    log_path = roots["logs_root"] / args.dataset / "preprocess" / "preprocess_efny_demo.log"
     return input_path, output_path, qc_path, merged_path, log_path
 
 

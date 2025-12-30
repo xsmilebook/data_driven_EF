@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=efny_perm_adaptive_pls      # jobname
 #SBATCH --chdir=/ibmgpfs/cuizaixu_lab/xuhaoshu/projects/data_driven_EF
-#SBATCH --output=outputs/EFNY/logs/perm_adaptive_pls/%x_%A_%a.out
-#SBATCH --error=outputs/EFNY/logs/perm_adaptive_pls/%x_%A_%a.err
+#SBATCH --output=logs/EFNY/perm_adaptive_pls/%x_%A_%a.out
+#SBATCH --error=logs/EFNY/perm_adaptive_pls/%x_%A_%a.err
 #SBATCH --partition=q_fat_c
 #SBATCH --cpus-per-task=1
 #SBATCH --array=1-1000                    # permutation tasks
@@ -15,7 +15,7 @@ paths_config="${project_dir}/configs/paths.yaml"
 MODEL_TYPE="adaptive_pls"
 RANDOM_STATE=42
 
-mkdir -p ${project_dir}/outputs/EFNY/logs/perm_${MODEL_TYPE}
+mkdir -p ${project_dir}/logs/EFNY/perm_${MODEL_TYPE}
 
 echo "Starting PERM task $SLURM_ARRAY_TASK_ID at $(date)"
 echo "Model: $MODEL_TYPE"
@@ -28,7 +28,7 @@ python -m scripts.run_single_task \
     --output_prefix efny_perm_${MODEL_TYPE} \
     --random_state $RANDOM_STATE \
     --log_level INFO \
-    --log_file ${project_dir}/outputs/EFNY/logs/perm_${MODEL_TYPE}/task_${SLURM_ARRAY_TASK_ID}.log
+    --log_file ${project_dir}/logs/EFNY/perm_${MODEL_TYPE}/task_${SLURM_ARRAY_TASK_ID}.log
 
 if [ $? -eq 0 ]; then
     echo "Permutation task $SLURM_ARRAY_TASK_ID completed successfully at $(date)"

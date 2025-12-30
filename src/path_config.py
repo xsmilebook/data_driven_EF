@@ -26,6 +26,7 @@ def resolve_dataset_roots(paths_cfg: dict[str, Any], *, dataset: str) -> dict[st
     interim_root = _resolve_path(repo_root, ds.get("interim_root"))
     processed_root = _resolve_path(repo_root, ds.get("processed_root"))
     outputs_root = _resolve_path(repo_root, ds.get("outputs_root"))
+    logs_root = _resolve_path(repo_root, paths_cfg.get("logs_root", "logs"))
 
     return {
         "repo_root": repo_root,
@@ -33,6 +34,7 @@ def resolve_dataset_roots(paths_cfg: dict[str, Any], *, dataset: str) -> dict[st
         "interim_root": interim_root,
         "processed_root": processed_root,
         "outputs_root": outputs_root,
+        "logs_root": logs_root,
     }
 
 
@@ -41,4 +43,3 @@ def _resolve_path(repo_root: Path, value: Any) -> Path:
         raise ValueError("Missing required path value")
     p = Path(str(value))
     return p if p.is_absolute() else (repo_root / p)
-

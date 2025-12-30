@@ -4,6 +4,7 @@ project_root: .
 # All scripts should resolve paths relative to the repository root.
 data_root: data
 outputs_root: outputs
+logs_root: logs
 
 # Dataset-specific roots (no absolute paths).
 datasets:

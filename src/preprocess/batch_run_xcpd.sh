@@ -2,7 +2,7 @@
 
 eval "$(python -m scripts.render_paths --dataset EFNY --config configs/paths.yaml --format bash)"
 SUBLIST_FILE="${PROCESSED_ROOT}/table/sublist/mri_sublist.txt"
-LOG_DIR="${OUTPUTS_ROOT}/logs/xcpd"
+LOG_DIR="${LOGS_ROOT}/${DATASET}/xcpd"
 mkdir -p "${LOG_DIR}"
 
 for subj in `cat ${SUBLIST_FILE}`

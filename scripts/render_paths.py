@@ -57,6 +57,7 @@ def main() -> int:
     lines.append(_bash_export("INTERIM_ROOT", str(roots["interim_root"])))
     lines.append(_bash_export("PROCESSED_ROOT", str(roots["processed_root"])))
     lines.append(_bash_export("OUTPUTS_ROOT", str(roots["outputs_root"])))
+    lines.append(_bash_export("LOGS_ROOT", str(roots["logs_root"])))
     if fmriprep_dir:
         lines.append(_bash_export("FMRIPREP_DIR", fmriprep_dir))
 
@@ -66,4 +67,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

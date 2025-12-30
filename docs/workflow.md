@@ -58,7 +58,7 @@ Submission scripts:
 - `scripts/submit_hpc_real.sh`
 - `scripts/submit_hpc_perm.sh`
 
-They set `#SBATCH --chdir` to the cluster project root and write SLURM stdout/stderr plus per-task logs under `outputs/<DATASET>/logs/...`.
+They set `#SBATCH --chdir` to the cluster project root and write SLURM stdout/stderr plus per-task logs under `logs/<DATASET>/...`.
 Note: SLURM `#SBATCH --output/--error` paths are static and cannot expand environment variables, so they remain dataset-specific in the script headers.
 
 Example:

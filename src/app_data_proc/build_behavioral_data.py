@@ -213,7 +213,7 @@ def _resolve_defaults(args):
     metrics_path = roots["processed_root"] / metrics_rel
     demo_path = roots["processed_root"] / demo_rel
     output_path = roots["processed_root"] / output_rel
-    log_path = roots["outputs_root"] / "logs" / "preprocess" / "build_behavioral_data.log"
+    log_path = roots["logs_root"] / args.dataset / "preprocess" / "build_behavioral_data.log"
     return metrics_path, demo_path, output_path, log_path
 
 
