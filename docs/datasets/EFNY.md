@@ -6,8 +6,8 @@ Scope: EFNY-specific file conventions, preprocessing assumptions, and the intend
 
 ## 1) EFNY data location and conventions (dataset-specific)
 
-- Canonical data roots: `data/raw/EFNY/`, `data/interim/EFNY/`, `data/processed/EFNY/`, and `outputs/EFNY/`.
-- Runtime artifacts: `data/` and `outputs/` are not version-controlled; paths below are expected locations used by scripts.
+- Canonical data roots: `data/raw/EFNY/`, `data/interim/EFNY/`, `data/processed/EFNY/`, `outputs/EFNY/`, and `logs/EFNY/`.
+- Runtime artifacts: `data/`, `outputs/`, and `logs/` are not version-controlled; paths below are expected locations used by scripts.
 - Subject identifiers: EFNY scripts commonly use `subid`/`subject_id`/`subject_code` depending on the source table; verify the exact column names in the script you are running.
 
 ## 2) Behavioral data and EF metrics (dataset-specific)

@@ -23,7 +23,8 @@ Dataset-agnostic analysis defaults may be configured in `configs/analysis.yaml`.
 - `data/raw/<DATASET>/`: raw inputs (not produced by pipeline scripts)
 - `data/interim/<DATASET>/`: intermediate products (e.g., preprocessing outputs such as MRI- and connectivity-stage derivatives)
 - `data/processed/<DATASET>/`: processed, reusable data products (e.g., tables, vectorized FC features)
-- `outputs/<DATASET>/`: run artifacts (results, figures, logs)
+- `outputs/<DATASET>/`: run artifacts (results, figures)
+- `logs/<DATASET>/`: runtime logs (script logs, SLURM stdout/stderr)
 
 Some external inputs (e.g., fMRIPrep outputs) may live outside the repository; configure these as absolute paths under `external_inputs` in `configs/datasets/<DATASET>.yaml`.
 
