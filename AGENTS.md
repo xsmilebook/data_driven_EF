@@ -27,4 +27,6 @@ This repository treats `PROJECT_STRUCTURE.md` as the source of truth for the sta
 ## Documentation conventions
 
 - Use precise, scientific language.
+- Write all `docs/` content in Chinese; keep filenames in English.
+- Keep repository root folder names in English.
 - Separate dataset-specific notes under `docs/datasets/`.

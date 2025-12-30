@@ -1,109 +1,109 @@
-# Research plan: data-driven executive function modes (multi-dataset design)
+# 研究计划：数据驱动的执行功能模式（多数据集设计）
 
-This document defines the current research plan and the repository-level design assumptions for the EF (executive function) project. It is written to be consistent with the modular project structure defined in `PROJECT_STRUCTURE.md`.
+本文件定义当前研究计划与项目层面的设计假设，并与 `PROJECT_STRUCTURE.md` 的模块化结构一致。
 
-Status: EFNY is the current working dataset. ABCD support is treated as a planned extension and is not assumed to be implemented unless explicitly documented elsewhere.
+状态：EFNY 为当前工作数据集。ABCD 支持属于规划扩展，除非在其他文档中明确说明，否则不视为已实现。
 
-## 1) Scientific motivation and scope
+## 1) 科学动机与范围
 
-Executive function (EF) is commonly operationalized using composite scores and latent factors derived from multiple tasks. A recurring limitation of this approach is that (i) aggregation can obscure task- and condition-specific variance that may be neurobiologically informative, and (ii) psychologically defined factors do not necessarily map cleanly onto a single neural system.
+执行功能（EF）通常通过多任务的综合分数或潜在因子进行表征。该类方法存在两点局限：(i) 聚合可能掩盖任务/条件层面的差异性；(ii) 心理学因子不一定对应单一神经系统。
 
-This project adopts a data-driven, multivariate approach that relates fine-grained behavioral features to whole-brain functional connectivity (FC) features. The aim is to identify reproducible covariance modes linking neuroimaging and behavior, while enforcing strict out-of-sample evaluation to reduce overfitting and information leakage.
+本项目采用数据驱动的多变量方法，关联细粒度行为特征与全脑功能连接（FC）特征。目标是在严格的样本外评估下识别可复现的脑-行为协变模式，降低过拟合与信息泄露风险。
 
-This plan specifies hypotheses and analysis logic; it does not contain empirical results.
+本计划描述假设与分析逻辑，不包含任何经验性结果。
 
-## 2) Project architecture (modular, multi-dataset)
+## 2) 项目架构（模块化、多数据集）
 
-### 2.1 Dataset-agnostic workflow layers
+### 2.1 数据集无关的工作层
 
-The repository is organized such that general logic is reusable across datasets, while dataset-specific differences are isolated (see `PROJECT_STRUCTURE.md`):
+仓库组织遵循：通用逻辑可跨数据集复用，数据集差异隔离管理（参见 `PROJECT_STRUCTURE.md`）：
 
-1) **Behavioral feature construction**: read raw behavioral records, apply task-specific preprocessing/QC, and export a subject-by-feature table.
-2) **Neuroimaging preprocessing/QC**: preprocess resting-state fMRI, screen data quality, and export subject-level QC summaries.
-3) **FC feature construction**: build connectome-derived features (e.g., vectorized FC, atlas-specific representations).
-4) **Modeling and evaluation**: estimate multivariate brain–behavior associations using nested cross-validation; compute permutation-based significance where applicable.
-5) **Result organization and summaries**: write fold-level artifacts and dataset/model summaries to runtime output directories (not version-controlled).
+1) **行为特征构建**：读取原始行为记录，执行任务级预处理/QC，输出被试×特征表。
+2) **神经影像预处理/QC**：预处理静息态 fMRI，筛查质量，输出被试级 QC 汇总。
+3) **FC 特征构建**：生成连接组特征（如向量化 FC、不同 atlas 的表示）。
+4) **建模与评估**：在嵌套交叉验证下估计脑-行为关系；必要时进行置换检验。
+5) **结果组织与汇总**：将折级产物与数据集/模型级汇总写入运行目录（不纳入版本控制）。
 
-### 2.2 Dataset-specific layer (current: EFNY)
+### 2.2 数据集专用层（当前：EFNY）
 
-Dataset-specific assumptions (file naming, subject ID conventions, table schemas, QC thresholds) are documented under `docs/datasets/`. For EFNY, use:
+数据集专用假设（命名约定、被试 ID 规则、表结构、QC 阈值）集中记录在 `docs/datasets/`。EFNY 见：
 
 - `docs/datasets/EFNY.md`
 
-## 3) Current dataset focus: EFNY
+## 3) 当前数据集重点：EFNY
 
-### 3.1 EFNY overview (inputs and derived tables)
+### 3.1 EFNY 概述（输入与衍生表）
 
-EFNY analyses are built from:
+EFNY 分析依赖以下输入与衍生表：
 
-- **Behavioral tasks** recorded as per-subject Excel workbooks, converted to a wide behavioral metrics table.
-- **Resting-state fMRI** processed with an established pipeline, accompanied by subject- and run-level motion/QC summaries.
-- **Subject lists and alignment tables** used to ensure consistent inclusion across modalities.
+- **行为任务**：按被试 Excel 工作簿记录，转换为行为指标宽表。
+- **静息态 fMRI**：经既有流程预处理，并配套被试级/运行级 QC 汇总。
+- **被试列表与对齐表**：用于跨模态一致纳入。
 
-The exact input/output paths and QC logic are dataset-specific and are therefore maintained in `docs/datasets/EFNY.md` (with script references treated as authoritative).
+具体输入/输出路径与 QC 逻辑为数据集特定内容，详见 `docs/datasets/EFNY.md`（脚本路径为权威来源）。
 
-### 3.2 Key validity requirements (EFNY)
+### 3.2 关键有效性要求（EFNY）
 
-All EFNY modeling runs are considered valid only if the following conditions are met:
+EFNY 的建模结果在以下条件满足时才可视为有效：
 
-- **Cross-modality alignment**: FC features, behavioral features, and subject lists refer to the same subjects and are aligned consistently (preferably by explicit ID-based joins rather than row-order assumptions).
-- **Leakage control**: any preprocessing that uses information from data distributions (imputation, standardization, confound regression, PCA) is fit on training splits only and applied to held-out splits.
-- **Traceability**: fold-level artifacts required for downstream summaries are saved deterministically and can be regenerated from raw inputs and configs.
+- **跨模态对齐**：FC 特征、行为特征与被试列表指向同一被试集合，且顺序一致（优先使用显式 ID 合并，而非行序假设）。
+- **泄露控制**：所有依赖数据分布的预处理（缺失填补、标准化、混杂回归、PCA）仅在训练折拟合并应用到测试折。
+- **可追溯性**：下游汇总所需的折级产物可由原始输入与配置确定性重建。
 
-## 4) Modeling strategy (dataset-agnostic principles)
+## 4) 建模策略（数据集无关）
 
-### 4.1 Target estimands
+### 4.1 目标估计量
 
-The primary estimand is the out-of-sample association between a multivariate brain feature representation (X) and a multivariate behavioral representation (Y), quantified using test-set canonical correlations and related summary statistics derived from fitted multivariate models.
+核心估计量为：多变量脑特征 X 与多变量行为特征 Y 的样本外关联强度，以测试集上的典型相关及其汇总统计衡量。
 
-### 4.2 Models
+### 4.2 模型
 
-The repository supports adaptive multivariate models (e.g., adaptive PLS / sparse CCA / regularized CCA) with hyperparameter selection performed strictly inside inner cross-validation. Model family selection and tuning are treated as part of the analysis plan and must be fully nested.
+当前支持自适应多变量模型（如 adaptive PLS / sparse CCA / regularized CCA），超参数选择严格置于内层交叉验证之内。模型家族选择与调参视为分析计划的一部分，必须完全嵌套。
 
-### 4.3 Evaluation and inference
+### 4.3 评估与推断
 
-- **Nested cross-validation** provides an unbiased estimate of generalization performance under a fixed modeling protocol.
-- **Permutation testing** (when used) must preserve the evaluation protocol and avoid reusing information across permutations in a way that changes the effective model selection procedure.
+- **嵌套交叉验证** 提供固定建模协议下的无偏泛化估计。
+- **置换检验**（如使用）需保持相同评估协议，避免在置换过程中改变模型选择流程。
 
-Any reported association strength must be tied to an explicit evaluation definition (e.g., outer-fold test-set correlation) and should include uncertainty summaries across folds.
+任何报告的关联强度需绑定明确的评估定义（如外层测试集相关），并应包含跨折的不确定性汇总。
 
-## 5) Planned analyses (EFNY)
+## 5) 计划分析（EFNY）
 
-### 5.1 Primary analysis
+### 5.1 主要分析
 
-1) Construct EFNY behavioral metrics (Y) and FC-derived features (X), harmonized to a shared subject set.
-2) Fit multivariate association models under nested cross-validation.
-3) Save fold-level artifacts required for interpretability (e.g., loadings/weights) and for summary scripts.
+1) 构建 EFNY 行为指标（Y）与 FC 特征（X），并对齐到同一被试集合。
+2) 在嵌套交叉验证下拟合多变量关联模型。
+3) 保存解释性与汇总所需的折级产物（如 loadings/weights）。
 
-### 5.2 Sensitivity analyses (pre-registered logic)
+### 5.2 敏感性分析（预注册逻辑）
 
-These analyses are intended to assess robustness rather than to optimize outcomes:
+以下分析用于稳健性评估，而非优化结果：
 
-- Alternative confound sets (e.g., demographic covariates and motion/QC summaries).
-- Alternative atlas/feature representations (if supported by the existing pipeline and configuration).
-- Alternative missing-data handling strategies, provided they are implemented without leakage (fit on training splits only).
+- 备选混杂变量集合（如人口学变量与运动/QC 汇总）。
+- 备选 atlas/特征表示（在既有流程与配置支持的前提下）。
+- 备选缺失值处理策略（必须在训练折拟合并应用到测试折）。
 
-### 5.3 Developmental and subgroup analyses (optional, hypothesis-driven)
+### 5.3 发展与亚组分析（可选，基于假设）
 
-If scientifically justified and sample size permits, EFNY analyses may be extended to:
+若科学动机充分且样本量允许，可扩展为：
 
-- Age-stratified or sliding-window evaluations to test whether brain–behavior covariance structure changes across development.
-- Group comparisons, provided group definitions are pre-specified and confounding is handled explicitly.
+- 基于年龄分层或滑动窗口的评估，以检验脑-行为协变结构的年龄变化。
+- 组间比较（需预先定义分组并明确混杂控制方案）。
 
-These extensions require careful control of multiplicity and should be framed as confirmatory only when justified by pre-defined hypotheses.
+上述扩展需要严格控制多重比较，并仅在预设假设条件下作为确认性分析。
 
-## 6) Future extension: ABCD (planned, not assumed)
+## 6) 未来扩展：ABCD（计划中，非默认）
 
-ABCD integration is planned as a dataset adapter layer that conforms to the same dataset-agnostic workflow:
+ABCD 集成计划采用同一数据集无关流程：
 
-- ABCD-specific ingestion, QC, and feature definitions must be documented under `docs/datasets/ABCD.md` (to be created when work begins).
-- ABCD-specific configs should live under `configs/datasets/` as described in `PROJECT_STRUCTURE.md`.
-- Cross-dataset comparisons should be performed only after within-dataset pipelines are validated and harmonization decisions are explicitly documented.
+- ABCD 专用摄取、QC 与特征定义记录于 `docs/datasets/ABCD.md`（开始工作时创建）。
+- ABCD 的配置置于 `configs/datasets/` 并与 `PROJECT_STRUCTURE.md` 一致。
+- 跨数据集比较仅在单数据集流程验证后进行，且需明确记录协调策略。
 
-Until ABCD documentation and configs exist, ABCD should be treated as “out of scope” for execution and as “planned” for design discussions only.
+在 ABCD 文档与配置尚未建立前，ABCD 仅用于设计讨论，不应视为可执行内容。
 
-## 7) Reproducibility and reporting
+## 7) 可复现性与报告
 
-- All runtime outputs are written to `data/` or `outputs/` (including `outputs/<DATASET>/logs/`) and are not committed.
-- Documentation changes must not claim outcomes; observed values belong in versioned run logs or external result archives, referenced with dates and run identifiers.
-- Each AI-assisted documentation session should create or update a brief note under `docs/sessions/` describing the change rationale and affected files.
+- 所有运行产物写入 `data/` 或 `outputs/`（含 `outputs/<DATASET>/logs/`），不纳入版本控制。
+- 文档变更不得包含结果性表述；观察值应记录在运行日志或外部结果档案，并注明日期与运行标识。
+- 每次 AI 辅助的文档修改都应在 `docs/sessions/` 记录变更原因与涉及文件。
