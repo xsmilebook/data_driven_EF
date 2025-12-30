@@ -35,10 +35,11 @@ This document defines the stable folder structure and responsibilities of each d
   - methods.md: paper-level methodology
   - datasets/: dataset-specific notes
   - report/: research planning and summaries
-  - sessions/: AI/development session logs (one per session)
+  - sessions/: AI/development session logs (one file per day, organized by yy/mm/dd.md)
   - notes/: user notes and free-form ideas
+  - logs/: runtime logs (not tracked by git)
 
 ## Rules for AI-assisted modification
-- Do not modify data/ or outputs/
+- Do not modify data/ or outputs/ without explicit instruction
 - Do not change directory names without explicit instruction
 - If src/ logic changes, update docs/workflow.md accordingly
