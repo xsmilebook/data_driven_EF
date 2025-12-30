@@ -104,6 +104,6 @@ Until ABCD documentation and configs exist, ABCD should be treated as “out of 
 
 ## 7) Reproducibility and reporting
 
-- All runtime outputs are written to `data/`, `outputs/`, or `logs/` and are not committed.
+- All runtime outputs are written to `data/` or `outputs/` (including `outputs/<DATASET>/logs/`) and are not committed.
 - Documentation changes must not claim outcomes; observed values belong in versioned run logs or external result archives, referenced with dates and run identifiers.
-- Each AI-assisted documentation session should create or update a brief note under `docs/notes/` describing the change rationale and affected files.
+- Each AI-assisted documentation session should create or update a brief note under `docs/sessions/` describing the change rationale and affected files.

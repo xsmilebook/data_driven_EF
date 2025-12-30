@@ -21,12 +21,20 @@ This document defines the stable folder structure and responsibilities of each d
 
 - data/
   Raw and processed datasets. Never modified by git.
+  - external/: third-party inputs not produced by the pipeline
   - raw/: original inputs (not produced by pipeline scripts)
   - interim/: intermediate derivatives
   - processed/: reusable, cleaned outputs
 
 - outputs/
   Run artifacts (results, figures, logs). Not tracked by git.
+  - <DATASET>/logs/: runtime logs (script logs, SLURM stdout/stderr)
+
+- notebooks/
+  Exploratory analysis notebooks. Not tracked by git.
+
+- models/
+  Serialized model artifacts. Not tracked by git.
 
 - docs/
   Human- and AI-readable documentation.
@@ -34,10 +42,9 @@ This document defines the stable folder structure and responsibilities of each d
   - workflow.md: reproducible pipeline
   - methods.md: paper-level methodology
   - datasets/: dataset-specific notes
-  - report/: research planning and summaries
+  - reports/: research planning and summaries
   - sessions/: AI/development session logs (one file per day, organized by yy/mm/dd.md)
   - notes/: user notes and free-form ideas
-  - logs/: runtime logs (not tracked by git)
 
 ## Rules for AI-assisted modification
 - Do not modify data/ or outputs/ without explicit instruction

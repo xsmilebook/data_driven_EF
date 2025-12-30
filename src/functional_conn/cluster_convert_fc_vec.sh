@@ -5,8 +5,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --partition=q_fat_c
-#SBATCH --output=logs/EFNY/fc_vector/%x_%A_%a.out
-#SBATCH --error=logs/EFNY/fc_vector/%x_%A_%a.err
+#SBATCH --output=outputs/EFNY/logs/fc_vector/%x_%A_%a.out
+#SBATCH --error=outputs/EFNY/logs/fc_vector/%x_%A_%a.err
 # NOTE: SBATCH log paths are static (no env expansion). Keep dataset-specific paths here.
 
 source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate

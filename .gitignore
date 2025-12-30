@@ -10,8 +10,11 @@ data/processed/
 # ===== outputs (do not commit, allow final if you want) =====
 outputs/
 
-# logs & tmp
-logs/
+# notebooks & models (runtime artifacts)
+notebooks/
+models/
+
+# tmp
 tmp/
 *.log
 

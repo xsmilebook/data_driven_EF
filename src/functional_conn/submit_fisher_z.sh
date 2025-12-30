@@ -6,8 +6,8 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --partition=q_fat
 #SBATCH --array=1-508%508
-#SBATCH --output=logs/EFNY/functional_conn_z/%x_%A_%a.out
-#SBATCH --error=logs/EFNY/functional_conn_z/%x_%A_%a.err
+#SBATCH --output=outputs/EFNY/logs/functional_conn_z/%x_%A_%a.out
+#SBATCH --error=outputs/EFNY/logs/functional_conn_z/%x_%A_%a.err
 # NOTE: SBATCH log paths are static (no env expansion). Keep dataset-specific paths here.
 
 source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate

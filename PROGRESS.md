@@ -40,6 +40,7 @@ Engineering-only refactor to standardize paths, entry points, and documentation 
 - Removed redundant `scripts/run_*` wrappers; documentation now points directly to `src` entry points.
 - Moved CV hyperparameter defaults into `configs/analysis.yaml` and wired them into `run_single_task.py`.
 - Added additional evaluation/preprocessing defaults (PCA, standardize, shuffle seeds, score metric, permutation iterations) and passed into nested CV.
+- Updated directory layout docs to add `notebooks/` and `models/`, move `docs/report` to `docs/reports`, and nest runtime logs under `outputs/<DATASET>/logs/`.
 - Ran `py_compile` and `run_single_task --dry-run` after the updates.
 
 ## In progress

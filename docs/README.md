@@ -8,7 +8,7 @@ This directory contains human-readable documentation for the `data_driven_EF` pr
 - `docs/methods.md`: methodological write-up (paper-facing; may be incomplete).
 - `docs/data_dictionary.md`: glossary / column-level descriptions (work in progress).
 - `docs/datasets/`: dataset-specific documentation (e.g., EFNY).
-- `docs/report/`: research planning and summaries.
+- `docs/reports/`: research planning and summaries.
 
 ## Notes vs sessions
 
@@ -17,5 +17,5 @@ This directory contains human-readable documentation for the `data_driven_EF` pr
 
 ## Logs
 
-- All runtime logs are stored under the repository root `logs/` folder.
-- Organize log files by dataset and task (e.g., `logs/EFNY/real_adaptive_pls/`).
+- All runtime logs are stored under `outputs/<DATASET>/logs/`.
+- Organize log files by dataset and task (e.g., `outputs/EFNY/logs/real_adaptive_pls/`).

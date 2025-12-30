@@ -24,7 +24,7 @@ Dataset-agnostic analysis defaults may be configured in `configs/analysis.yaml`.
 - `data/interim/<DATASET>/`: intermediate products (e.g., preprocessing outputs such as MRI- and connectivity-stage derivatives)
 - `data/processed/<DATASET>/`: processed, reusable data products (e.g., tables, vectorized FC features)
 - `outputs/<DATASET>/`: run artifacts (results, figures)
-- `logs/<DATASET>/`: runtime logs (script logs, SLURM stdout/stderr)
+- `outputs/<DATASET>/logs/`: runtime logs (script logs, SLURM stdout/stderr)
 
 Some external inputs (e.g., fMRIPrep outputs) may live outside the repository; configure these as absolute paths under `external_inputs` in `configs/datasets/<DATASET>.yaml`.
 
@@ -59,7 +59,7 @@ Submission scripts:
 - `scripts/submit_hpc_real.sh`
 - `scripts/submit_hpc_perm.sh`
 
-They set `#SBATCH --chdir` to the cluster project root and write SLURM stdout/stderr plus per-task logs under `logs/<DATASET>/...`.
+They set `#SBATCH --chdir` to the cluster project root and write SLURM stdout/stderr plus per-task logs under `outputs/<DATASET>/logs/...`.
 Note: SLURM `#SBATCH --output/--error` paths are static and cannot expand environment variables, so they remain dataset-specific in the script headers.
 
 Example:

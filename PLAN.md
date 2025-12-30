@@ -16,7 +16,7 @@ Success criteria:
 
 ## Technical requirements and constraints
 
-- Do not change directory names or structure.
+- Do not change directory names or structure without explicit instruction; follow `PROJECT_STRUCTURE.md`.
 - Do not modify runtime artifacts under `data/` or `outputs/`.
 - Do not change statistical/algorithmic logic.
 - Avoid new heavy dependencies; prefer small, internal utilities.
