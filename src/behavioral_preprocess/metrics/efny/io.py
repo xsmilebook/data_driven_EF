@@ -3,36 +3,6 @@ import os
 import numpy as np
 import pandas as pd
 
-from .registry import KNOWN_METRICS
-
-
-def read_task_config(path):
-    try:
-        df = pd.read_csv(path, dtype=str, keep_default_na=False, encoding='utf-8')
-    except Exception:
-        df = pd.read_csv(
-            path,
-            dtype=str,
-            keep_default_na=False,
-            encoding='utf-8',
-            engine='python',
-            on_bad_lines='warn'
-        )
-    df.columns = [c.strip() for c in df.columns]
-    df = df[[c for c in df.columns if c]]
-    rows = []
-    for _, row in df.iterrows():
-        task = str(row.get('Task', '')).strip()
-        if not task:
-            continue
-        metrics = []
-        for m in KNOWN_METRICS:
-            v = str(row.get(m, '')).strip().lower()
-            if v in ('true', '1', 'yes'):
-                metrics.append(m)
-        rows.append({'Task': task, 'metrics': metrics})
-    return rows
-
 
 def normalize_columns(df):
     return df.rename(columns={
