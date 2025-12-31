@@ -11,6 +11,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - 在 `docs/data_dictionary.md` 中补充 QC 与 FC 相关文件说明。
 - 在 `docs/workflow.md` 新增预处理流程章节，并在 `docs/methods.md` 补充方法学细节。
 - 重新整理 `docs/workflow.md` 与 `docs/methods.md`，修正中文编码乱码。
+- 补充影像与行为预处理的详细步骤（xcp-d、头动 QC 标准、行为清洗与映射）。
 
 
 

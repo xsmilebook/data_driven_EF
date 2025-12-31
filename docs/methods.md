@@ -19,11 +19,31 @@
 - FC 计算使用 Schaefer 分区（`src/functional_conn/compute_fc_schaefer.py`），随后进行 Fisher-Z（`src/functional_conn/fisher_z_fc.py`）。
 - 向量化特征在 `src/functional_conn/convert_fc_vector.py` 中生成，作为建模输入 X。
 
+#### 头动 QC 与 valid_subject 标准
+
+- 以 `*desc-confounds_timeseries.tsv` 中的 `framewise_displacement` 计算每个 run 的统计量。
+- `high_ratio` 为 `framewise_displacement > 0.3` 的比例。
+- 对每个 run，判定有效条件为：`frame == 180`、`high_ratio <= 0.25` 且 `mean_fd <= upper_limit`。
+- `upper_limit` 使用全体 FD 值的箱线图上界：`Q3 + 1.5*IQR`（基于帧数为 180 的 run）。
+- `valid_subject` 定义为有效 run 数 `valid_num >= 2`。
+- `meanFD` 为有效 run 的 mean FD 均值。
+
 ### 行为数据与指标构建
 
 - 原始 app 行为数据的列名与任务映射在 `src/metric_compute/efny/io.py` 与 `src/metric_compute/efny/main.py` 定义。
 - 试次级处理与 QC 逻辑在 `src/metric_compute/efny/preprocess.py` 实现（如 RT 解析、过滤与有效试次比例）。
 - 行为指标由 `src/metric_compute/efny/metrics.py` 计算，并由 `src/metric_compute/compute_efny_metrics.py` 汇总为宽表，作为建模输入 Y。
+
+#### 行为数据清洗与映射流程
+
+- `normalize_columns` 将常见中文列名映射为英文字段（`task`, `trial_index`, `subject_id`, `item`, `answer`, `key`, `rt` 等）。
+- `subject_code` 由文件名去掉 `_GameData.xlsx` 得到（`subject_code_from_filename`）。
+- 任务名映射由 `main.py` 按 sheet 名称解析并规范化。
+- `prepare_trials` 会：
+  - 若缺少 `correct_trial`，基于 `answer == key` 计算；
+  - 将 `rt` 转为数值（`errors='coerce'`），并按 `[rt_min, rt_max]` 过滤；
+  - 在可用 RT 上做 3 SD 修剪；
+  - 若有效试次比例低于 `min_prop`，该任务标记为无效（`ok=False`）。
 
 ## 嵌套交叉验证（真实数据）
 
