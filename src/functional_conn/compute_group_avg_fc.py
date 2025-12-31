@@ -3,8 +3,7 @@ import sys
 from pathlib import Path
 import numpy as np
 
-from src.config_io import load_simple_yaml
-from src.path_config import load_paths_config, resolve_dataset_roots
+from src.path_config import load_dataset_config, load_paths_config, resolve_dataset_roots
 
 def get_plot_function():
     try:
@@ -26,12 +25,11 @@ def _resolve_defaults(args) -> tuple[Path, Path, Path]:
     repo_root = Path(__file__).resolve().parents[2]
     paths_cfg = load_paths_config(args.paths_config, repo_root=repo_root)
     roots = resolve_dataset_roots(paths_cfg, dataset=args.dataset)
-    dataset_cfg_path = (
-        Path(args.dataset_config)
-        if args.dataset_config is not None
-        else (repo_root / "configs" / "datasets" / f"{args.dataset}.yaml")
+    dataset_cfg = load_dataset_config(
+        paths_cfg,
+        dataset_config_path=args.dataset_config,
+        repo_root=repo_root,
     )
-    dataset_cfg = load_simple_yaml(dataset_cfg_path)
     files_cfg = dataset_cfg.get("files", {})
 
     sublist_rel = files_cfg.get("rest_valid_sublist_file") or files_cfg.get("sublist_file")

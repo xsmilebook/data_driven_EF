@@ -1,83 +1,83 @@
-# data_driven_EF
+﻿# data_driven_EF
 
-本仓库包含 EF（执行功能）研究的端到端流程：
-- 数据 QC / 被试列表
-- 功能连接（FC）计算与向量化
-- 行为指标计算
-- 脑-行为关联分析（仅保留自适应模型：`adaptive_pls` / `adaptive_scca` / `adaptive_rcca`）
+鏈粨搴撳寘鍚?EF锛堟墽琛屽姛鑳斤級鐮旂┒鐨勭鍒扮娴佺▼锛?
+- 鏁版嵁 QC / 琚瘯鍒楄〃
+- 鍔熻兘杩炴帴锛團C锛夎绠椾笌鍚戦噺鍖?
+- 琛屼负鎸囨爣璁＄畻
+- 鑴?琛屼负鍏宠仈鍒嗘瀽锛堜粎淇濈暀鑷€傚簲妯″瀷锛歚adaptive_pls` / `adaptive_scca` / `adaptive_rcca`锛?
 
-下面只保留**最常用脚本的执行方式与关键参数**。
+涓嬮潰鍙繚鐣?*鏈€甯哥敤鑴氭湰鐨勬墽琛屾柟寮忎笌鍏抽敭鍙傛暟**銆?
 
-## 目录结构（核心）
+## 鐩綍缁撴瀯锛堟牳蹇冿級
 
 ```
 src/
-  preprocess/        # QC、表格与被试列表
-  functional_conn/   # FC 计算、Z变换、向量化、可视化
-  metric_compute/    # 行为指标计算与可视化
-  models/            # 脑-行为关联（建模/评估/嵌套CV）
-  scripts/           # 入口脚本 + HPC 提交脚本
-  result_summary/    # 汇总脚本
+  preprocess/        # QC銆佽〃鏍间笌琚瘯鍒楄〃
+  functional_conn/   # FC 璁＄畻銆乑鍙樻崲銆佸悜閲忓寲銆佸彲瑙嗗寲
+  metric_compute/    # 琛屼负鎸囨爣璁＄畻涓庡彲瑙嗗寲
+  models/            # 鑴?琛屼负鍏宠仈锛堝缓妯?璇勪及/宓屽CV锛?
+  scripts/           # 鍏ュ彛鑴氭湰 + HPC 鎻愪氦鑴氭湰
+  result_summary/    # 姹囨€昏剼鏈?
 ```
 
-## 快速开始（常用脚本）
+## 蹇€熷紑濮嬶紙甯哥敤鑴氭湰锛?
 
-### 1) 预处理 / QC / 被试列表（`src/preprocess`）
+### 1) 棰勫鐞?/ QC / 琚瘯鍒楄〃锛坄src/preprocess`锛?
 
-#### `get_mri_sublist.py`：从 fmriprep 输出目录列出被试
+#### `get_mri_sublist.py`锛氫粠 fmriprep 杈撳嚭鐩綍鍒楀嚭琚瘯
 ```bash
 python src/preprocess/get_mri_sublist.py --dir <fmriprep_rest_dir> --out <mri_sublist.txt>
 ```
-关键参数：
-- `--dir`: fmriprep 目录（包含 `sub-*`）
-- `--out`: 输出 txt 路径
+鍏抽敭鍙傛暟锛?
+- `--dir`: fmriprep 鐩綍锛堝寘鍚?`sub-*`锛?
+- `--out`: 杈撳嚭 txt 璺緞
 
-#### `screen_head_motion_efny.py`：统计 rest FD，并标注有效 run
+#### `screen_head_motion_efny.py`锛氱粺璁?rest FD锛屽苟鏍囨敞鏈夋晥 run
 ```bash
 python -m src.preprocess.screen_head_motion_efny --dataset EFNY --config configs/paths.yaml
 ```
-关键参数：
-- `--dataset`: 数据集名称（如 `EFNY`）
-- `--config`: 路径配置（`configs/paths.yaml`）
-- `--dataset-config`: 可选，默认 `configs/datasets/<DATASET>.yaml`
-- `--fmriprep-dir`: 可选，会覆盖 dataset config 中的 `external_inputs.fmriprep_dir`
-- `--out`: 输出 CSV（含 `valid_subject` 与 `meanFD`）
+鍏抽敭鍙傛暟锛?
+- `--dataset`: 鏁版嵁闆嗗悕绉帮紙濡?`EFNY`锛?
+- `--config`: 璺緞閰嶇疆锛坄configs/paths.yaml`锛?
+- `--dataset-config`: 鍙€夛紝榛樿 `configs/paths.yaml`
+- `--fmriprep-dir`: 鍙€夛紝浼氳鐩?dataset config 涓殑 `external_inputs.fmriprep_dir`
+- `--out`: 杈撳嚭 CSV锛堝惈 `valid_subject` 涓?`meanFD`锛?
 
-#### `preprocess_efny_demo.py`：清洗 demo 表并合并 QC
+#### `preprocess_efny_demo.py`锛氭竻娲?demo 琛ㄥ苟鍚堝苟 QC
 ```bash
 python -m src.preprocess.preprocess_efny_demo --dataset EFNY --config configs/paths.yaml
 ```
-关键参数：
-- `--dataset`: 数据集名称（如 `EFNY`）
-- `--config`: 路径配置（`configs/paths.yaml`）
-- `--dataset-config`: 可选，默认 `configs/datasets/<DATASET>.yaml`
-- `--input/-i`: 可选，覆盖 demo 原始 CSV 路径
-- `--output/-o`: 可选，覆盖 demo 处理后 CSV 路径
-- `--qc-file/-q`: 可选，覆盖 QC CSV 路径
-- `--merged-output/-m`: 可选，覆盖合并输出 CSV 路径
-- `--log/-l`: 可选，覆盖 log 路径
+鍏抽敭鍙傛暟锛?
+- `--dataset`: 鏁版嵁闆嗗悕绉帮紙濡?`EFNY`锛?
+- `--config`: 璺緞閰嶇疆锛坄configs/paths.yaml`锛?
+- `--dataset-config`: 鍙€夛紝榛樿 `configs/paths.yaml`
+- `--input/-i`: 鍙€夛紝瑕嗙洊 demo 鍘熷 CSV 璺緞
+- `--output/-o`: 鍙€夛紝瑕嗙洊 demo 澶勭悊鍚?CSV 璺緞
+- `--qc-file/-q`: 鍙€夛紝瑕嗙洊 QC CSV 璺緞
+- `--merged-output/-m`: 鍙€夛紝瑕嗙洊鍚堝苟杈撳嚭 CSV 璺緞
+- `--log/-l`: 鍙€夛紝瑕嗙洊 log 璺緞
 
-#### `generate_valid_sublists.py`：从 QC 表生成有效被试列表
-无命令行参数，直接运行：
+#### `generate_valid_sublists.py`锛氫粠 QC 琛ㄧ敓鎴愭湁鏁堣璇曞垪琛?
+鏃犲懡浠よ鍙傛暟锛岀洿鎺ヨ繍琛岋細
 ```bash
 python src/preprocess/generate_valid_sublists.py
 ```
-注意：数据根目录在脚本内常量 `DATA_ROOT`。
+娉ㄦ剰锛氭暟鎹牴鐩綍鍦ㄨ剼鏈唴甯搁噺 `DATA_ROOT`銆?
 
-#### `build_behavioral_data.py`：合并 demo 与 metrics，生成 `EFNY_behavioral_data.csv`
+#### `build_behavioral_data.py`锛氬悎骞?demo 涓?metrics锛岀敓鎴?`EFNY_behavioral_data.csv`
 ```bash
 python -m src.app_data_proc.build_behavioral_data --dataset EFNY --config configs/paths.yaml
 ```
-关键参数：
-- `--dataset`: 数据集名称（如 `EFNY`）
-- `--config`: 路径配置（`configs/paths.yaml`）
-- `--dataset-config`: 可选，默认 `configs/datasets/<DATASET>.yaml`
-- `--metrics/-m`: 可选，覆盖 metrics CSV 路径
-- `--demo/-d`: 可选，覆盖 demo CSV 路径
-- `--output/-o`: 可选，覆盖输出路径
-- `--log/-l`: 可选，覆盖 log 路径
+鍏抽敭鍙傛暟锛?
+- `--dataset`: 鏁版嵁闆嗗悕绉帮紙濡?`EFNY`锛?
+- `--config`: 璺緞閰嶇疆锛坄configs/paths.yaml`锛?
+- `--dataset-config`: 鍙€夛紝榛樿 `configs/paths.yaml`
+- `--metrics/-m`: 鍙€夛紝瑕嗙洊 metrics CSV 璺緞
+- `--demo/-d`: 鍙€夛紝瑕嗙洊 demo CSV 璺緞
+- `--output/-o`: 鍙€夛紝瑕嗙洊杈撳嚭璺緞
+- `--log/-l`: 鍙€夛紝瑕嗙洊 log 璺緞
 
-### 2) 功能连接（FC）计算与向量化（`src/functional_conn`）
+### 2) 鍔熻兘杩炴帴锛團C锛夎绠椾笌鍚戦噺鍖栵紙`src/functional_conn`锛?
 
 #### `compute_fc_schaefer.py`: single-subject FC matrix (CSV)
 ```bash
@@ -92,7 +92,7 @@ Key args:
 - `--out-dir`: output dir
 - `--dataset`: dataset name (e.g., `EFNY`)
 - `--config`: paths config (`configs/paths.yaml`)
-- `--dataset-config`: optional, default `configs/datasets/<DATASET>.yaml`
+- `--dataset-config`: optional, default `configs/paths.yaml`
 
 #### `fisher_z_fc.py`: Fisher-Z transform FC (CSV)
 ```bash
@@ -162,101 +162,101 @@ Key args:
 - `--min-pair-ratio`: pairwise valid ratio threshold
 - `--dataset`, `--config`, `--dataset-config`
 
-#### `behavioral_metric_exploration.py`：行为指标探索性可视化
+#### `behavioral_metric_exploration.py`锛氳涓烘寚鏍囨帰绱㈡€у彲瑙嗗寲
 ```bash
 python -m src.metric_compute.behavioral_metric_exploration --dataset EFNY --config configs/paths.yaml
 ```
-关键参数：
-- `--dataset`: 数据集名称（如 `EFNY`）
-- `--config`: 路径配置（`configs/paths.yaml`）
-- `--dataset-config`: 可选，默认 `configs/datasets/<DATASET>.yaml`
-- `--behavioral_csv`: 可选，覆盖行为数据 CSV 路径
-- `--output_dir`: 可选，覆盖图像输出目录
-- `--summary_dir`: 可选，覆盖 CSV 汇总输出目录
-- `--log`: 可选，覆盖 log 路径
+鍏抽敭鍙傛暟锛?
+- `--dataset`: 鏁版嵁闆嗗悕绉帮紙濡?`EFNY`锛?
+- `--config`: 璺緞閰嶇疆锛坄configs/paths.yaml`锛?
+- `--dataset-config`: 鍙€夛紝榛樿 `configs/paths.yaml`
+- `--behavioral_csv`: 鍙€夛紝瑕嗙洊琛屼负鏁版嵁 CSV 璺緞
+- `--output_dir`: 鍙€夛紝瑕嗙洊鍥惧儚杈撳嚭鐩綍
+- `--summary_dir`: 鍙€夛紝瑕嗙洊 CSV 姹囨€昏緭鍑虹洰褰?
+- `--log`: 鍙€夛紝瑕嗙洊 log 璺緞
 
-## 脑-行为关联分析（`scripts/run_single_task.py`）
+## 鑴?琛屼负鍏宠仈鍒嗘瀽锛坄scripts/run_single_task.py`锛?
 
-该入口脚本支持：真实分析（`task_id=0`）与单次置换（`task_id>=1`）。
+璇ュ叆鍙ｈ剼鏈敮鎸侊細鐪熷疄鍒嗘瀽锛坄task_id=0`锛変笌鍗曟缃崲锛坄task_id>=1`锛夈€?
 
-### 1) 最常用命令
+### 1) 鏈€甯哥敤鍛戒护
 ```bash
-# 真实数据
+# 鐪熷疄鏁版嵁
 python -m scripts.run_single_task --dataset EFNY --config configs/paths.yaml --analysis-config configs/analysis.yaml --task_id 0 --model_type adaptive_pls
 
-# 单次置换（种子由 task_id 决定，便于 HPC array）
+# 鍗曟缃崲锛堢瀛愮敱 task_id 鍐冲畾锛屼究浜?HPC array锛?
 python -m scripts.run_single_task --dataset EFNY --config configs/paths.yaml --analysis-config configs/analysis.yaml --task_id 1 --model_type adaptive_pls
 ```
 
-### 2) 关键参数速查
-- `--task_id`: 0=真实；1..N=置换
+### 2) 鍏抽敭鍙傛暟閫熸煡
+- `--task_id`: 0=鐪熷疄锛?..N=缃崲
 - `--model_type`: `adaptive_pls` / `adaptive_scca` / `adaptive_rcca`
-- `--config`: 路径配置（`configs/paths.yaml`）
-- `--dataset`: 数据集名称（如 `EFNY`）
-- `--analysis-config`: 分析默认配置（`configs/analysis.yaml`，可选）
-- `--random_state`: 随机种子（真实重复跑时常用）
-- `--covariates_path`: 可选，协变量 CSV（需包含 `age/sex/meanFD`）
-- `--cv_n_splits`: 外层 CV 折数（默认 5）
-- `--max_missing_rate`: 缺失率阈值
-- `--output_dir`: 输出根目录（默认写入项目 results 目录）
-- `--output_prefix`: 输出前缀
+- `--config`: 璺緞閰嶇疆锛坄configs/paths.yaml`锛?
+- `--dataset`: 鏁版嵁闆嗗悕绉帮紙濡?`EFNY`锛?
+- `--analysis-config`: 鍒嗘瀽榛樿閰嶇疆锛坄configs/analysis.yaml`锛屽彲閫夛級
+- `--random_state`: 闅忔満绉嶅瓙锛堢湡瀹為噸澶嶈窇鏃跺父鐢級
+- `--covariates_path`: 鍙€夛紝鍗忓彉閲?CSV锛堥渶鍖呭惈 `age/sex/meanFD`锛?
+- `--cv_n_splits`: 澶栧眰 CV 鎶樻暟锛堥粯璁?5锛?
+- `--max_missing_rate`: 缂哄け鐜囬槇鍊?
+- `--output_dir`: 杈撳嚭鏍圭洰褰曪紙榛樿鍐欏叆椤圭洰 results 鐩綍锛?
+- `--output_prefix`: 杈撳嚭鍓嶇紑
 - `--save_formats`: `json` / `npz`
 - `--log_level`, `--log_file`
 
-查看完整参数：
+鏌ョ湅瀹屾暣鍙傛暟锛?
 ```bash
 python -m scripts.run_single_task --help
 ```
 
-### 3) 嵌套交叉验证（推荐框架）
-目标：外层评估泛化能力，内层选择超参数，所有预处理严格在训练折内完成以避免信息泄露。
+### 3) 宓屽浜ゅ弶楠岃瘉锛堟帹鑽愭鏋讹級
+鐩爣锛氬灞傝瘎浼版硾鍖栬兘鍔涳紝鍐呭眰閫夋嫨瓒呭弬鏁帮紝鎵€鏈夐澶勭悊涓ユ牸鍦ㄨ缁冩姌鍐呭畬鎴愪互閬垮厤淇℃伅娉勯湶銆?
 
-推荐流程（每次运行都遵循同一逻辑）：
-1. 外层 KFold（n_outer）划分训练/测试。
-2. 对每个外层折：
-   - 先进入内层 KFold（n_inner），不要提前在“外层训练集整体”拟合任何预处理。
-   - 内层每个折：
-     * 只用“内层训练折”拟合预处理（缺失值填补、协变量回归、标准化、可选 PCA）。
-     * 将同一预处理应用到“内层验证折”，计算评分。
-     * 对每组候选参数重复上述过程并汇总得分。
-   - 选择内层平均分最高的参数（推荐指标：`meancorr`=各成分相关系数均值）；如并列，用更小方差或更少参数作为 tie-break。
-   - 用最佳参数在“外层训练集整体”重新拟合预处理与模型（固定参数、无模型内部 CV），再在“外层测试集”评估。
-3. 汇总外层结果：各成分相关系数的均值/方差等整体指标。
-4. 置换检验：每次置换仅打乱 Y（保持 X/协变量索引一致），完整重复上述嵌套流程并记录种子。
+鎺ㄨ崘娴佺▼锛堟瘡娆¤繍琛岄兘閬靛惊鍚屼竴閫昏緫锛夛細
+1. 澶栧眰 KFold锛坣_outer锛夊垝鍒嗚缁?娴嬭瘯銆?
+2. 瀵规瘡涓灞傛姌锛?
+   - 鍏堣繘鍏ュ唴灞?KFold锛坣_inner锛夛紝涓嶈鎻愬墠鍦ㄢ€滃灞傝缁冮泦鏁翠綋鈥濇嫙鍚堜换浣曢澶勭悊銆?
+   - 鍐呭眰姣忎釜鎶橈細
+     * 鍙敤鈥滃唴灞傝缁冩姌鈥濇嫙鍚堥澶勭悊锛堢己澶卞€煎～琛ャ€佸崗鍙橀噺鍥炲綊銆佹爣鍑嗗寲銆佸彲閫?PCA锛夈€?
+     * 灏嗗悓涓€棰勫鐞嗗簲鐢ㄥ埌鈥滃唴灞傞獙璇佹姌鈥濓紝璁＄畻璇勫垎銆?
+     * 瀵规瘡缁勫€欓€夊弬鏁伴噸澶嶄笂杩拌繃绋嬪苟姹囨€诲緱鍒嗐€?
+   - 閫夋嫨鍐呭眰骞冲潎鍒嗘渶楂樼殑鍙傛暟锛堟帹鑽愭寚鏍囷細`meancorr`=鍚勬垚鍒嗙浉鍏崇郴鏁板潎鍊硷級锛涘骞跺垪锛岀敤鏇村皬鏂瑰樊鎴栨洿灏戝弬鏁颁綔涓?tie-break銆?
+   - 鐢ㄦ渶浣冲弬鏁板湪鈥滃灞傝缁冮泦鏁翠綋鈥濋噸鏂版嫙鍚堥澶勭悊涓庢ā鍨嬶紙鍥哄畾鍙傛暟銆佹棤妯″瀷鍐呴儴 CV锛夛紝鍐嶅湪鈥滃灞傛祴璇曢泦鈥濊瘎浼般€?
+3. 姹囨€诲灞傜粨鏋滐細鍚勬垚鍒嗙浉鍏崇郴鏁扮殑鍧囧€?鏂瑰樊绛夋暣浣撴寚鏍囥€?
+4. 缃崲妫€楠岋細姣忔缃崲浠呮墦涔?Y锛堜繚鎸?X/鍗忓彉閲忕储寮曚竴鑷达級锛屽畬鏁撮噸澶嶄笂杩板祵濂楁祦绋嬪苟璁板綍绉嶅瓙銆?
 
-实现约定（便于后续修改）：
-- 预处理步骤的 fit 只发生在训练折（外层与内层都遵守）。
-- 模型内部不再做选参型 CV；超参数仅由内层 CV 决定。
-- 输出至少包含：`outer_fold_results`、`inner_cv_table`、`outer_mean_canonical_correlations`、`outer_all_test_canonical_correlations`、随机种子与参数网格规模。
+瀹炵幇绾﹀畾锛堜究浜庡悗缁慨鏀癸級锛?
+- 棰勫鐞嗘楠ょ殑 fit 鍙彂鐢熷湪璁粌鎶橈紙澶栧眰涓庡唴灞傞兘閬靛畧锛夈€?
+- 妯″瀷鍐呴儴涓嶅啀鍋氶€夊弬鍨?CV锛涜秴鍙傛暟浠呯敱鍐呭眰 CV 鍐冲畾銆?
+- 杈撳嚭鑷冲皯鍖呭惈锛歚outer_fold_results`銆乣inner_cv_table`銆乣outer_mean_canonical_correlations`銆乣outer_all_test_canonical_correlations`銆侀殢鏈虹瀛愪笌鍙傛暟缃戞牸瑙勬ā銆?
 
-### 4) 置换检验（stepwise）
-目标：按成分逐步检验第 k 个成分（控制前 k-1 个成分），避免后续成分被前序成分“带出”。
+### 4) 缃崲妫€楠岋紙stepwise锛?
+鐩爣锛氭寜鎴愬垎閫愭妫€楠岀 k 涓垚鍒嗭紙鎺у埗鍓?k-1 涓垚鍒嗭級锛岄伩鍏嶅悗缁垚鍒嗚鍓嶅簭鎴愬垎鈥滃甫鍑衡€濄€?
 
-推荐流程：
-1. 真实数据（real）运行时，保存每个外层 fold 的 loadings（X/Y），以及每折对应的相关向量与评分。
-   - 同时保存外层训练集与测试集的 X/Y scores，便于 stepwise 残差化。
-2. 单独脚本汇总所有 real 结果：
-   - 汇总输出：每个成分的 real score（mean/median）与对应的 loadings（mean）。
-   - 同时输出全样本的 train/test scores（按 fold 内平均，再跨 real 取 mean）。
-3. 置换检验（perm）对每个成分 k 进行 stepwise：
-   - 读取 real 的 score 与全样本 train scores（mean）。
-   - 将 real 的前 k-1 成分 train scores 作为额外协变量加入 confounds。
-   - 在残差化后的数据上拟合并提取第 k 个成分得分，计算相关作为 perm score。
-   - 用 perm 分布对 real 的第 k 个成分 **中位数** score 计算右尾单侧 p 值（real 越大越显著）。
+鎺ㄨ崘娴佺▼锛?
+1. 鐪熷疄鏁版嵁锛坮eal锛夎繍琛屾椂锛屼繚瀛樻瘡涓灞?fold 鐨?loadings锛圶/Y锛夛紝浠ュ強姣忔姌瀵瑰簲鐨勭浉鍏冲悜閲忎笌璇勫垎銆?
+   - 鍚屾椂淇濆瓨澶栧眰璁粌闆嗕笌娴嬭瘯闆嗙殑 X/Y scores锛屼究浜?stepwise 娈嬪樊鍖栥€?
+2. 鍗曠嫭鑴氭湰姹囨€绘墍鏈?real 缁撴灉锛?
+   - 姹囨€昏緭鍑猴細姣忎釜鎴愬垎鐨?real score锛坢ean/median锛変笌瀵瑰簲鐨?loadings锛坢ean锛夈€?
+   - 鍚屾椂杈撳嚭鍏ㄦ牱鏈殑 train/test scores锛堟寜 fold 鍐呭钩鍧囷紝鍐嶈法 real 鍙?mean锛夈€?
+3. 缃崲妫€楠岋紙perm锛夊姣忎釜鎴愬垎 k 杩涜 stepwise锛?
+   - 璇诲彇 real 鐨?score 涓庡叏鏍锋湰 train scores锛坢ean锛夈€?
+   - 灏?real 鐨勫墠 k-1 鎴愬垎 train scores 浣滀负棰濆鍗忓彉閲忓姞鍏?confounds銆?
+   - 鍦ㄦ畫宸寲鍚庣殑鏁版嵁涓婃嫙鍚堝苟鎻愬彇绗?k 涓垚鍒嗗緱鍒嗭紝璁＄畻鐩稿叧浣滀负 perm score銆?
+   - 鐢?perm 鍒嗗竷瀵?real 鐨勭 k 涓垚鍒?**涓綅鏁?* score 璁＄畻鍙冲熬鍗曚晶 p 鍊硷紙real 瓒婂ぇ瓒婃樉钁楋級銆?
 
-输出建议：
-- real：每折 loadings + 每折 train/test scores + fold 索引 + 汇总后的 mean/median（报告中位数）。
-- perm：每个 k 的 stepwise scores + p 值表格（CSV，基于 real 中位数）。
+杈撳嚭寤鸿锛?
+- real锛氭瘡鎶?loadings + 姣忔姌 train/test scores + fold 绱㈠紩 + 姹囨€诲悗鐨?mean/median锛堟姤鍛婁腑浣嶆暟锛夈€?
+- perm锛氭瘡涓?k 鐨?stepwise scores + p 鍊艰〃鏍硷紙CSV锛屽熀浜?real 涓綅鏁帮級銆?
 
-### 5) HPC（SLURM）
-建议使用 submit_hpc_* 批量运行 real 与 perm（real 也需要多次运行以获得稳健中位数统计）。
-仓库提供了 2 个示例提交脚本（可按需要改 `MODEL_TYPE`、array 范围、log 路径等）：
+### 5) HPC锛圫LURM锛?
+寤鸿浣跨敤 submit_hpc_* 鎵归噺杩愯 real 涓?perm锛坮eal 涔熼渶瑕佸娆¤繍琛屼互鑾峰緱绋冲仴涓綅鏁扮粺璁★級銆?
+浠撳簱鎻愪緵浜?2 涓ず渚嬫彁浜よ剼鏈紙鍙寜闇€瑕佹敼 `MODEL_TYPE`銆乤rray 鑼冨洿銆乴og 璺緞绛夛級锛?
 ```bash
-sbatch scripts/submit_hpc_real.sh   # 多次真实运行（array=0-10）
-sbatch scripts/submit_hpc_perm.sh   # 置换运行（array=1-1000）
+sbatch scripts/submit_hpc_real.sh   # 澶氭鐪熷疄杩愯锛坅rray=0-10锛?
+sbatch scripts/submit_hpc_perm.sh   # 缃崲杩愯锛坅rray=1-1000锛?
 ```
 
-## 结果汇总（real/perm 扫描）
+## 缁撴灉姹囨€伙紙real/perm 鎵弿锛?
 
 Examples call directly into `src` modules.
 
@@ -269,47 +269,49 @@ python -m src.result_summary.visualize_loadings_similarity_batch --dataset EFNY 
 ```
 
 ### `src/result_summary/summarize_real_perm_scores.py`
-扫描 `results_root/real` 与 `results_root/perm`，提取每次运行的相关向量并输出 CSV。
+鎵弿 `results_root/real` 涓?`results_root/perm`锛屾彁鍙栨瘡娆¤繍琛岀殑鐩稿叧鍚戦噺骞惰緭鍑?CSV銆?
 
 ```bash
 python -m src.result_summary.summarize_real_perm_scores --dataset EFNY --config configs/paths.yaml --analysis_type both --atlas <atlas> --model_type <model>
 ```
 
-关键参数：
-- `--results_root`: 结果根目录（可选；默认 `outputs/<DATASET>/results`）
+鍏抽敭鍙傛暟锛?
+- `--results_root`: 缁撴灉鏍圭洰褰曪紙鍙€夛紱榛樿 `outputs/results`锛?
 - `--analysis_type`: real / perm / both
-- `--atlas`: 可选过滤
-- `--model_type`: 可选过滤
-- `--output_csv`: 输出 CSV
+- `--atlas`: 鍙€夎繃婊?
+- `--model_type`: 鍙€夎繃婊?
+- `--output_csv`: 杈撳嚭 CSV
 - `--score_mode`: `first_component` / `mean_all`
 
-### 必需顺序（stepwise 置换）
-1. 运行 real（建议用 `submit_hpc_real.sh` 批量跑）。
-2. 汇总 real：`summarize_real_loadings_scores.py`（生成 real mean loadings + 全样本 train/test scores + score median，默认输出到 `results_root/summary/<atlas>`）。
-3. 运行 perm（建议用 `submit_hpc_perm.sh` 批量跑，stepwise 会读取 real 汇总结果）。
-4. 汇总 perm：`summarize_perm_stepwise_pvalues.py`（右尾单侧 p 值，基于 real 中位数，默认输出到 `results_root/summary/<atlas>`）。
+### 蹇呴渶椤哄簭锛坰tepwise 缃崲锛?
+1. 杩愯 real锛堝缓璁敤 `submit_hpc_real.sh` 鎵归噺璺戯級銆?
+2. 姹囨€?real锛歚summarize_real_loadings_scores.py`锛堢敓鎴?real mean loadings + 鍏ㄦ牱鏈?train/test scores + score median锛岄粯璁よ緭鍑哄埌 `results_root/summary/<atlas>`锛夈€?
+3. 杩愯 perm锛堝缓璁敤 `submit_hpc_perm.sh` 鎵归噺璺戯紝stepwise 浼氳鍙?real 姹囨€荤粨鏋滐級銆?
+4. 姹囨€?perm锛歚summarize_perm_stepwise_pvalues.py`锛堝彸灏惧崟渚?p 鍊硷紝鍩轰簬 real 涓綅鏁帮紝榛樿杈撳嚭鍒?`results_root/summary/<atlas>`锛夈€?
 
 ### `src/result_summary/summarize_real_loadings_scores.py`
-汇总 real 的外层 fold loadings 与相关分数，输出 mean/median 结果（默认写入 `results_root/summary/<atlas>`）。
+姹囨€?real 鐨勫灞?fold loadings 涓庣浉鍏冲垎鏁帮紝杈撳嚭 mean/median 缁撴灉锛堥粯璁ゅ啓鍏?`results_root/summary/<atlas>`锛夈€?
 
 ```bash
 python -m src.result_summary.summarize_real_loadings_scores --dataset EFNY --config configs/paths.yaml --atlas <atlas> --model_type <model>
 ```
 
-关键参数：
-- 无（默认输出 mean 与 median）
+鍏抽敭鍙傛暟锛?
+- 鏃狅紙榛樿杈撳嚭 mean 涓?median锛?
 
 ### `src/result_summary/summarize_perm_stepwise_pvalues.py`
-汇总 perm 的 stepwise 分数并计算右尾单侧 p 值（对 real 中位数，默认写入 `results_root/summary/<atlas>`）。
+姹囨€?perm 鐨?stepwise 鍒嗘暟骞惰绠楀彸灏惧崟渚?p 鍊硷紙瀵?real 涓綅鏁帮紝榛樿鍐欏叆 `results_root/summary/<atlas>`锛夈€?
 
 ```bash
 python -m src.result_summary.summarize_perm_stepwise_pvalues --dataset EFNY --config configs/paths.yaml --atlas <atlas> --model_type <model>
 ```
 
-## 输出位置（约定）
+## 杈撳嚭浣嶇疆锛堢害瀹氾級
 
-常用输出：
-- QC / 中间结果：`data/interim/<DATASET>/...`
-- 表格与处理后产物：`data/processed/<DATASET>/...`
-- 脑-行为关联结果：`outputs/<DATASET>/results/...`（可用 `--output_dir` 改写）
-- 大型数组（如每折 `X_scores/Y_scores`）会保存到同目录的 `artifacts/`，JSON/NPZ 内仅保留索引与路径
+甯哥敤杈撳嚭锛?
+- QC / 涓棿缁撴灉锛歚data/interim/...`
+- 琛ㄦ牸涓庡鐞嗗悗浜х墿锛歚data/processed/...`
+- 鑴?琛屼负鍏宠仈缁撴灉锛歚outputs/results/...`锛堝彲鐢?`--output_dir` 鏀瑰啓锛?
+- 澶у瀷鏁扮粍锛堝姣忔姌 `X_scores/Y_scores`锛変細淇濆瓨鍒板悓鐩綍鐨?`artifacts/`锛孞SON/NPZ 鍐呬粎淇濈暀绱㈠紩涓庤矾寰?
+
+

@@ -3,12 +3,11 @@ import sys
 from pathlib import Path
 import numpy as np
 
-from src.config_io import load_simple_yaml
-from src.path_config import load_paths_config, resolve_dataset_roots
+from src.path_config import load_dataset_config, load_paths_config, resolve_dataset_roots
 
 ## command
 # Example:
-# python -m src.functional_conn.compute_fc_schaefer --subject sub-THU20250819728LZQ --out data/interim/<DATASET>/functional_conn/rest/Schaefer100/sub-THU20250819728LZQ_Schaefer100_FC.csv
+# python -m src.functional_conn.compute_fc_schaefer --subject sub-THU20250819728LZQ --out data/interim/functional_conn/rest/Schaefer100/sub-THU20250819728LZQ_Schaefer100_FC.csv
 
 def find_runs(func_dir: Path, run_ids: list[int]) -> list[Path]:
     files = []
@@ -71,12 +70,11 @@ def _resolve_defaults(args) -> tuple[Path, Path, Path, Path]:
     repo_root = Path(__file__).resolve().parents[2]
     paths_cfg = load_paths_config(args.paths_config, repo_root=repo_root)
     roots = resolve_dataset_roots(paths_cfg, dataset=args.dataset)
-    dataset_cfg_path = (
-        Path(args.dataset_config)
-        if args.dataset_config is not None
-        else (repo_root / "configs" / "datasets" / f"{args.dataset}.yaml")
+    dataset_cfg = load_dataset_config(
+        paths_cfg,
+        dataset_config_path=args.dataset_config,
+        repo_root=repo_root,
     )
-    dataset_cfg = load_simple_yaml(dataset_cfg_path)
     files_cfg = dataset_cfg.get("files", {})
 
     qc_rel = files_cfg.get("qc_rest_fd_file")

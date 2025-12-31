@@ -3,8 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.config_io import load_simple_yaml
-from src.path_config import load_paths_config, resolve_dataset_roots
+from src.path_config import load_dataset_config, load_paths_config, resolve_dataset_roots
 from src.metric_compute.efny.main import DEFAULT_TASK_CONFIG, normalize_task_name
 
 
@@ -69,12 +68,11 @@ def _resolve_defaults(args):
     repo_root = Path(__file__).resolve().parents[2]
     paths_cfg = load_paths_config(args.paths_config, repo_root=repo_root)
     roots = resolve_dataset_roots(paths_cfg, dataset=args.dataset)
-    dataset_cfg_path = (
-        Path(args.dataset_config)
-        if args.dataset_config is not None
-        else (repo_root / "configs" / "datasets" / f"{args.dataset}.yaml")
+    dataset_cfg = load_dataset_config(
+        paths_cfg,
+        dataset_config_path=args.dataset_config,
+        repo_root=repo_root,
     )
-    dataset_cfg = load_simple_yaml(dataset_cfg_path)
     files_cfg = dataset_cfg.get("files", {})
     behavioral_cfg = dataset_cfg.get("behavioral", {})
 

@@ -3,8 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-from src.config_io import load_simple_yaml
-from src.path_config import load_paths_config, resolve_dataset_roots
+from src.path_config import load_dataset_config, load_paths_config, resolve_dataset_roots
 
 
 def resolve_results_root(
@@ -18,7 +17,7 @@ def resolve_results_root(
     Resolve results_root from CLI args and centralized configs.
 
     If results_root is provided, it wins. Otherwise, dataset is required and
-    results_root is set to outputs/<DATASET>/results.
+    results_root is set to outputs/results.
     """
     if results_root:
         return Path(results_root)
@@ -30,10 +29,10 @@ def resolve_results_root(
     paths_cfg = load_paths_config(paths_config, repo_root=repo_root)
     roots = resolve_dataset_roots(paths_cfg, dataset=dataset)
 
-    if dataset_config:
-        _ = load_simple_yaml(dataset_config)
-    else:
-        _ = load_simple_yaml(repo_root / "configs" / "datasets" / f"{dataset}.yaml")
+    _ = load_dataset_config(
+        paths_cfg,
+        dataset_config_path=dataset_config,
+        repo_root=repo_root,
+    )
 
     return roots["outputs_root"] / "results"
-

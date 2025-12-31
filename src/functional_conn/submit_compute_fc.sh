@@ -6,8 +6,8 @@
 #SBATCH --cpus-per-task=2
 #SBATCH --partition=q_cn
 #SBATCH --array=1-508%508            # TODO: Update array range based on line count of sublist
-#SBATCH --output=outputs/EFNY/logs/functional_conn/%x_%A_%a.out
-#SBATCH --error=outputs/EFNY/logs/functional_conn/%x_%A_%a.err
+#SBATCH --output=outputs/logs/functional_conn/%x_%A_%a.out
+#SBATCH --error=outputs/logs/functional_conn/%x_%A_%a.err
 # NOTE: SBATCH log paths are static (no env expansion). Keep dataset-specific paths here.
 
 source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate

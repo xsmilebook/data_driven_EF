@@ -4,12 +4,38 @@ project_root: .
 # All scripts should resolve paths relative to the repository root.
 data_root: data
 outputs_root: outputs
-logs_root: logs
+logs_root: outputs/logs
 
-# Dataset-specific roots (no absolute paths).
-datasets:
-  EFNY:
-    raw_root: data/raw/EFNY
-    interim_root: data/interim/EFNY
-    processed_root: data/processed/EFNY
-    outputs_root: outputs/EFNY
+# Single-dataset roots (no <DATASET> layer).
+raw_root: data/raw
+interim_root: data/interim
+processed_root: data/processed
+
+# Single-dataset settings (EFNY only).
+dataset:
+  files:
+    # Paths are resolved relative to processed_root unless noted otherwise.
+    # Atlas selection is encoded in this path (Schaefer100/200/400).
+    brain_file: fc_vector/Schaefer400/EFNY_Schaefer400_FC_matrix.npy
+    demo_raw_file: table/demo/EFNY_demo_all.csv
+    demo_processed_file: table/demo/EFNY_demo_processed.csv
+    qc_rest_fd_file: table/qc/rest_fd_summary.csv
+    behavioral_file: table/demo/EFNY_behavioral_data.csv
+    behavioral_metrics_file: table/metrics/EFNY_beh_metrics.csv
+    thu_metrics_file: table/metrics/THU_app_results.csv
+    sublist_file: table/sublist/sublist.txt
+    rest_valid_sublist_file: table/sublist/rest_valid_sublist.txt
+    covariates_file: table/demo/EFNY_demo_with_rsfmri.csv
+
+  preprocessing:
+    confound_variables: [sex, age, meanFD]
+
+  behavioral:
+    # Optional: set to an explicit list to restrict Y; leave empty to use all metrics.
+    selected_measures: []
+    app_data_dir: behavior_data/cibr_app_data
+    task_prefixes: [GNG, FLANKER, SST, ColorStroop, EmotionStroop, CPT, DCCS, DT, EmotionSwitch, KT, oneback_number, twoback_number, oneback_spatial, twoback_spatial, oneback_emotion, twoback_emotion]
+
+  external_inputs:
+    # fMRIPrep outputs may live outside this repo; allow absolute paths here.
+    fmriprep_dir: /ibmgpfs/cuizaixu_lab/liyang/BrainProject25/Tsinghua_data/results/fmriprep_rest

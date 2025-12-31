@@ -11,8 +11,7 @@ import argparse
 import os
 from pathlib import Path
 
-from src.config_io import load_simple_yaml
-from src.path_config import load_paths_config, resolve_dataset_roots
+from src.path_config import load_dataset_config, load_paths_config, resolve_dataset_roots
 
 def setup_logging(log_file='behavioral_data_processing.log'):
     """Setup logging configuration."""
@@ -192,12 +191,11 @@ def _resolve_defaults(args):
     repo_root = Path(__file__).resolve().parents[2]
     paths_cfg = load_paths_config(args.paths_config, repo_root=repo_root)
     roots = resolve_dataset_roots(paths_cfg, dataset=args.dataset)
-    dataset_cfg_path = (
-        Path(args.dataset_config)
-        if args.dataset_config is not None
-        else (repo_root / "configs" / "datasets" / f"{args.dataset}.yaml")
+    dataset_cfg = load_dataset_config(
+        paths_cfg,
+        dataset_config_path=args.dataset_config,
+        repo_root=repo_root,
     )
-    dataset_cfg = load_simple_yaml(dataset_cfg_path)
     files_cfg = dataset_cfg.get("files", {})
 
     metrics_rel = files_cfg.get("behavioral_metrics_file")
@@ -213,7 +211,7 @@ def _resolve_defaults(args):
     metrics_path = roots["processed_root"] / metrics_rel
     demo_path = roots["processed_root"] / demo_rel
     output_path = roots["processed_root"] / output_rel
-    log_path = roots["logs_root"] / args.dataset / "preprocess" / "build_behavioral_data.log"
+    log_path = roots["logs_root"] / "preprocess" / "build_behavioral_data.log"
     return metrics_path, demo_path, output_path, log_path
 
 

@@ -67,7 +67,7 @@
 结果保存路径：
 
 ```
-outputs/<DATASET>/results/real/<atlas>/<model_type>/seed_<seed>/
+outputs/results/real/<atlas>/<model_type>/seed_<seed>/
 ```
 
 ## 置换检验（逐成分）
@@ -88,7 +88,7 @@ outputs/<DATASET>/results/real/<atlas>/<model_type>/seed_<seed>/
 读取路径：
 
 ```
-outputs/<DATASET>/results/summary/<atlas>/<model_type>/
+outputs/results/summary/<atlas>/<model_type>/
 ```
 
 摘要包含真实数据的逐成分得分与被试得分，用于后续逐成分置换。
@@ -111,7 +111,7 @@ outputs/<DATASET>/results/summary/<atlas>/<model_type>/
 置换结果保存路径：
 
 ```
-outputs/<DATASET>/results/perm/<atlas>/<model_type>/seed_<seed>/
+outputs/results/perm/<atlas>/<model_type>/seed_<seed>/
 ```
 
 元数据包含置换种子与 `configs/analysis.yaml` 中的 `permutation_n_iters`（用于可追溯性记录）。

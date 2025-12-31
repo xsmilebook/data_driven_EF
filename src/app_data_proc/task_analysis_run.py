@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from src.path_config import load_dataset_config, load_paths_config, resolve_dataset_roots
+
 
 def setup_logging(log_path):
     """Configure logging to file and stdout."""
@@ -26,20 +28,9 @@ def setup_logging(log_path):
     )
 
 
-def load_task_prefixes(config_path):
-    """Load task prefixes from a dataset config (YAML or legacy JSON)."""
-    from pathlib import Path
-
-    config_path = Path(config_path)
-    if config_path.suffix.lower() in {".yaml", ".yml"}:
-        from src.config_io import load_simple_yaml
-
-        config = load_simple_yaml(config_path)
-    else:
-        with open(config_path, "r", encoding="utf-8") as handle:
-            config = json.load(handle)
-
-    prefixes = config.get("behavioral", {}).get("task_prefixes", [])
+def load_task_prefixes(dataset_cfg: dict) -> list[str]:
+    """Load task prefixes from the dataset config mapping."""
+    prefixes = dataset_cfg.get("behavioral", {}).get("task_prefixes", [])
     if not prefixes:
         raise ValueError("Missing behavioral.task_prefixes in dataset config")
     return prefixes
@@ -120,12 +111,11 @@ def _resolve_defaults(args):
     repo_root = Path(__file__).resolve().parents[2]
     paths_cfg = load_paths_config(args.paths_config, repo_root=repo_root)
     roots = resolve_dataset_roots(paths_cfg, dataset=args.dataset)
-    dataset_cfg_path = (
-        Path(args.dataset_config)
-        if args.dataset_config is not None
-        else (repo_root / "configs" / "datasets" / f"{args.dataset}.yaml")
+    dataset_cfg = load_dataset_config(
+        paths_cfg,
+        dataset_config_path=args.dataset_config,
+        repo_root=repo_root,
     )
-    dataset_cfg = load_simple_yaml(dataset_cfg_path)
     files_cfg = dataset_cfg.get("files", {})
 
     behavioral_rel = files_cfg.get("behavioral_file")
@@ -134,8 +124,8 @@ def _resolve_defaults(args):
 
     behavioral_csv = roots["processed_root"] / behavioral_rel
     output_dir = roots["outputs_root"] / "results" / "behavior_data" / "task_analysis"
-    log_path = roots["logs_root"] / args.dataset / "behavior_data" / "task_analysis_run.log"
-    return behavioral_csv, output_dir, log_path, dataset_cfg_path
+    log_path = roots["logs_root"] / "behavior_data" / "task_analysis_run.log"
+    return behavioral_csv, output_dir, log_path
 
 
 def main():
@@ -150,7 +140,7 @@ def main():
     parser.add_argument(
         "--config",
         default=None,
-        help="Dataset config (YAML) containing behavioral.task_prefixes.",
+        help="Legacy alias for --dataset-config (optional override).",
     )
     parser.add_argument(
         "--output_dir",
@@ -167,29 +157,30 @@ def main():
     parser.add_argument("--dataset-config", dest="dataset_config", type=str, default=None)
 
     args = parser.parse_args()
-    dataset_config = args.dataset_config or args.config
-    args.dataset_config = dataset_config
+    if args.dataset_config is None and args.config is not None:
+        args.dataset_config = args.config
 
-    if args.behavioral_csv is None or args.output_dir is None or args.log is None or args.dataset_config is None:
-        behavioral_csv, output_dir, log_path, dataset_cfg_path = _resolve_defaults(args)
+    if args.behavioral_csv is None or args.output_dir is None or args.log is None:
+        behavioral_csv, output_dir, log_path = _resolve_defaults(args)
         args.behavioral_csv = str(behavioral_csv)
         args.output_dir = str(output_dir)
         args.log = str(log_path)
-        if args.dataset_config is None:
-            args.dataset_config = str(dataset_cfg_path)
 
     setup_logging(args.log)
 
     if not os.path.exists(args.behavioral_csv):
         logging.error("Behavioral CSV not found: %s", args.behavioral_csv)
         return 1
-    if not os.path.exists(args.dataset_config):
-        logging.error("Config JSON not found: %s", args.dataset_config)
-        return 1
-
     os.makedirs(args.output_dir, exist_ok=True)
 
-    task_prefixes = load_task_prefixes(args.dataset_config)
+    repo_root = Path(__file__).resolve().parents[2]
+    paths_cfg = load_paths_config(args.paths_config, repo_root=repo_root)
+    dataset_cfg = load_dataset_config(
+        paths_cfg,
+        dataset_config_path=args.dataset_config,
+        repo_root=repo_root,
+    )
+    task_prefixes = load_task_prefixes(dataset_cfg)
     df = pd.read_csv(args.behavioral_csv)
 
     if "id" not in df.columns:
@@ -277,5 +268,3 @@ def main():
 
 if __name__ == "__main__":
     raise SystemExit(main())
-from src.config_io import load_simple_yaml
-from src.path_config import load_paths_config, resolve_dataset_roots

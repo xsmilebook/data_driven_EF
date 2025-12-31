@@ -1,7 +1,7 @@
 # Analysis defaults (dataset-agnostic).
 #
 # This file contains engineering defaults for script entry points.
-# Dataset-specific assumptions belong in `configs/datasets/<DATASET>.yaml`.
+# EFNY-specific assumptions belong in `configs/paths.yaml` (dataset section).
 
 preprocessing:
   # Subject-level exclusion threshold based on per-row missingness.

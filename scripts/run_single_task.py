@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
-主程序入口 - 支持真实数据分析和单个置换任务
-支持 HPC 集群并行化
+涓荤▼搴忓叆鍙?- 鏀寔鐪熷疄鏁版嵁鍒嗘瀽鍜屽崟涓疆鎹换鍔?
+鏀寔 HPC 闆嗙兢骞惰鍖?
 """
 
 import argparse
@@ -40,7 +40,7 @@ from src.models.utils import (
     config
 )
 from src.config_io import load_simple_yaml
-from src.path_config import load_paths_config, resolve_dataset_roots
+from src.path_config import load_dataset_config, load_paths_config, resolve_dataset_roots
 
 
 def _infer_atlas_tag(brain_file: str) -> str:
@@ -67,12 +67,12 @@ def _build_behavioral_matrix(df: pd.DataFrame) -> tuple[pd.DataFrame, list]:
         if len(candidate_cols) == 0:
             raise ValueError(
                 "No selected_measures found in behavioral table. "
-                "Please update configs/datasets/<DATASET>.yaml: behavioral.selected_measures to match EFNY_beh_metrics.csv column names."
+                "Please update configs/paths.yaml:dataset.behavioral.selected_measures to match EFNY_beh_metrics.csv column names."
             )
     else:
         candidate_cols = [c for c in df.columns if c not in exclude]
 
-    # 强制转数值（宽表中可能存在 object dtype）
+    # 寮哄埗杞暟鍊硷紙瀹借〃涓彲鑳藉瓨鍦?object dtype锛?
     Y = df[candidate_cols].apply(pd.to_numeric, errors='coerce')
     metric_cols = list(Y.columns)
     return Y, metric_cols
@@ -90,7 +90,7 @@ def _impute_with_mean(arr: np.ndarray) -> np.ndarray:
 
 def _apply_yaml_configs(args) -> dict:
     """
-    Load configs/paths.yaml + configs/datasets/<DATASET>.yaml and apply overrides
+    Load configs/paths.yaml and apply dataset overrides
     to the global ConfigManager.
 
     Returns a small dict of resolved paths for logging/debugging.
@@ -98,23 +98,27 @@ def _apply_yaml_configs(args) -> dict:
     paths_cfg = load_paths_config(args.paths_config, repo_root=REPO_ROOT)
     roots = resolve_dataset_roots(paths_cfg, dataset=args.dataset)
 
-    dataset_cfg_path = (
-        Path(args.dataset_config)
+    dataset_cfg_ref = (
+        str(Path(args.dataset_config))
         if args.dataset_config is not None
-        else (REPO_ROOT / "configs" / "datasets" / f"{args.dataset}.yaml")
+        else "configs/paths.yaml:dataset"
     )
-    dataset_cfg = load_simple_yaml(dataset_cfg_path)
+    dataset_cfg = load_dataset_config(
+        paths_cfg,
+        dataset_config_path=args.dataset_config,
+        repo_root=REPO_ROOT,
+    )
     analysis_cfg_path = Path(args.analysis_config) if args.analysis_config else None
     analysis_cfg = {}
     if analysis_cfg_path is not None and analysis_cfg_path.exists():
         analysis_cfg = load_simple_yaml(analysis_cfg_path)
     files = dataset_cfg.get("files", {})
     if not isinstance(files, dict):
-        raise ValueError(f"Invalid dataset config: files must be a mapping ({dataset_cfg_path})")
+        raise ValueError(f"Invalid dataset config: files must be a mapping ({dataset_cfg_ref})")
 
     overrides = {
         "data": {
-            # For modeling, inputs are expected under data/processed/<DATASET>/ by default.
+            # For modeling, inputs are expected under data/processed/ by default.
             "root_dir": str(roots["processed_root"]),
             "raw_root": str(roots["raw_root"]),
             "interim_root": str(roots["interim_root"]),
@@ -144,7 +148,7 @@ def _apply_yaml_configs(args) -> dict:
 
     missing = [k for k in ("brain_file", "behavioral_file", "sublist_file") if not overrides["data"].get(k)]
     if missing and not args.use_synthetic:
-        raise ValueError(f"Missing required dataset file keys in {dataset_cfg_path}: {missing}")
+        raise ValueError(f"Missing required dataset file keys in {dataset_cfg_ref}: {missing}")
 
     return {
         "repo_root": roots["repo_root"],
@@ -152,29 +156,29 @@ def _apply_yaml_configs(args) -> dict:
         "interim_root": roots["interim_root"],
         "processed_root": roots["processed_root"],
         "outputs_root": roots["outputs_root"],
-        "dataset_cfg_path": dataset_cfg_path,
+        "dataset_cfg_path": dataset_cfg_ref,
         "analysis_cfg_path": analysis_cfg_path,
     }
 
 
 def parse_arguments():
-    """解析命令行参数"""
+    """瑙ｆ瀽鍛戒护琛屽弬鏁?""
     parser = argparse.ArgumentParser(
         description="EFNY Brain-Behavior Association Analysis",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    # 运行真实数据分析
+    # 杩愯鐪熷疄鏁版嵁鍒嗘瀽
     python run_single_task.py --task_id 0 --model_type adaptive_pls
     
-    # 运行置换检验（task_id=1-1000 代表不同的置换种子）
+    # 杩愯缃崲妫€楠岋紙task_id=1-1000 浠ｈ〃涓嶅悓鐨勭疆鎹㈢瀛愶級
     python run_single_task.py --task_id 1 --model_type adaptive_pls --use_synthetic
     
-    # 运行调参版本的 SCCA / rCCA 分析
+    # 杩愯璋冨弬鐗堟湰鐨?SCCA / rCCA 鍒嗘瀽
     python run_single_task.py --task_id 0 --model_type adaptive_scca
     python run_single_task.py --task_id 0 --model_type adaptive_rcca
     
-    # 批量运行（在 HPC 上使用数组作业）
+    # 鎵归噺杩愯锛堝湪 HPC 涓婁娇鐢ㄦ暟缁勪綔涓氾級
     for i in {1..100}; do
         sbatch --wrap "python run_single_task.py --task_id $i --model_type adaptive_pls"
     done
@@ -186,7 +190,7 @@ Examples:
         "--dataset",
         type=str,
         required=True,
-        help="Dataset name (must exist in configs/paths.yaml and configs/datasets/<DATASET>.yaml).",
+        help="Dataset name (for metadata; paths resolve from configs/paths.yaml).",
     )
     parser.add_argument(
         "--config",
@@ -200,7 +204,7 @@ Examples:
         dest="dataset_config",
         type=str,
         default=None,
-        help="Optional dataset config override (defaults to configs/datasets/<DATASET>.yaml).",
+        help="Optional dataset config override (defaults to configs/paths.yaml:dataset).",
     )
     parser.add_argument(
         "--analysis-config",
@@ -215,52 +219,52 @@ Examples:
         help="Resolve configs and validate imports without reading data or writing outputs.",
     )
     
-    # 核心参数
+    # 鏍稿績鍙傛暟
     parser.add_argument(
         "--task_id", type=int, default=0,
-        help="任务ID。0=真实数据分析；1-N=置换检验（使用不同的随机种子）"
+        help="浠诲姟ID銆?=鐪熷疄鏁版嵁鍒嗘瀽锛?-N=缃崲妫€楠岋紙浣跨敤涓嶅悓鐨勯殢鏈虹瀛愶級"
     )
     
     parser.add_argument(
         "--model_type", type=str, default="adaptive_pls", choices=get_available_models(),
-        help="模型类型（仅支持调参版本）：adaptive_pls / adaptive_scca / adaptive_rcca"
+        help="妯″瀷绫诲瀷锛堜粎鏀寔璋冨弬鐗堟湰锛夛細adaptive_pls / adaptive_scca / adaptive_rcca"
     )
 
-    # 数据参数
+    # 鏁版嵁鍙傛暟
     parser.add_argument(
         "--use_synthetic", action="store_true",
-        help="使用合成数据（用于测试）"
+        help="浣跨敤鍚堟垚鏁版嵁锛堢敤浜庢祴璇曪級"
     )
     
     parser.add_argument(
         "--covariates_path", type=str, default=None,
-        help="协变量文件路径（.csv文件，可选）"
+        help="鍗忓彉閲忔枃浠惰矾寰勶紙.csv鏂囦欢锛屽彲閫夛級"
     )
     
     parser.add_argument(
         "--n_subjects", type=int, default=200,
-        help="合成数据的被试数量"
+        help="鍚堟垚鏁版嵁鐨勮璇曟暟閲?
     )
     
     parser.add_argument(
         "--atlas", type=str, default="schaefer100",
-        help="合成数据使用的脑图谱名称（仅在use_synthetic时生效）"
+        help="鍚堟垚鏁版嵁浣跨敤鐨勮剳鍥捐氨鍚嶇О锛堜粎鍦╱se_synthetic鏃剁敓鏁堬級"
     )
     
     parser.add_argument(
         "--n_brain_features", type=int, default=4950,
-        help="合成数据的脑特征数量"
+        help="鍚堟垚鏁版嵁鐨勮剳鐗瑰緛鏁伴噺"
     )
     
     parser.add_argument(
         "--n_behavioral_measures", type=int, default=30,
-        help="合成数据的行为指标数量"
+        help="鍚堟垚鏁版嵁鐨勮涓烘寚鏍囨暟閲?
     )
     
-    # 预处理参数
+    # 棰勫鐞嗗弬鏁?
     parser.add_argument(
         "--max_missing_rate", type=float, default=None,
-        help="最大允许缺失率"
+        help="鏈€澶у厑璁哥己澶辩巼"
     )
 
     parser.add_argument(
@@ -281,15 +285,15 @@ Examples:
         help="PCA components for Y (optional)"
     )
     
-    # 评估参数
+    # 璇勪及鍙傛暟
     parser.add_argument(
         "--run_cv", action="store_true", default=True,
-        help="是否运行交叉验证"
+        help="鏄惁杩愯浜ゅ弶楠岃瘉"
     )
     
     parser.add_argument(
         "--cv_n_splits", type=int, default=None,
-        help="交叉验证折数"
+        help="浜ゅ弶楠岃瘉鎶樻暟"
     )
     
     parser.add_argument(
@@ -337,60 +341,60 @@ Examples:
 
     parser.add_argument(
         "--output_dir", type=str, default=None,
-        help="输出目录（默认使用项目结果目录）"
+        help="杈撳嚭鐩綍锛堥粯璁や娇鐢ㄩ」鐩粨鏋滅洰褰曪級"
     )
     
     parser.add_argument(
         "--output_prefix", type=str, default="efny_analysis",
-        help="输出文件前缀"
+        help="杈撳嚭鏂囦欢鍓嶇紑"
     )
     
     parser.add_argument(
         "--save_formats", type=str, nargs="+", default=["json", "npz"],
         choices=["json", "npz"],
-        help="保存格式"
+        help="淇濆瓨鏍煎紡"
     )
     
-    # 日志参数
+    # 鏃ュ織鍙傛暟
     parser.add_argument(
         "--log_level", type=str, default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-        help="日志级别"
+        help="鏃ュ織绾у埆"
     )
     
     parser.add_argument(
         "--log_file", type=str, default=None,
-        help="日志文件路径"
+        help="鏃ュ織鏂囦欢璺緞"
     )
     
     parser.add_argument(
         "--random_state", type=int, default=42,
-        help="随机种子"
+        help="闅忔満绉嶅瓙"
     )
     
     return parser.parse_args()
 
 
 def extract_covariates_from_behavioral_data(behavioral_data, subject_ids, covariates_path=None, logger=None):
-    """从行为数据中提取协变量 - 仅支持age, sex, meanFD（EFNY标准）"""
+    """浠庤涓烘暟鎹腑鎻愬彇鍗忓彉閲?- 浠呮敮鎸乤ge, sex, meanFD锛圗FNY鏍囧噯锛?""
     if logger is None:
         logger = logging.getLogger(__name__)
     
-    # EFNY标准协变量列表（不区分大小写）
+    # EFNY鏍囧噯鍗忓彉閲忓垪琛紙涓嶅尯鍒嗗ぇ灏忓啓锛?
     standard_covariates = ['age', 'sex', 'meanFD']
     
     if covariates_path:
-        # 从指定文件加载协变量
+        # 浠庢寚瀹氭枃浠跺姞杞藉崗鍙橀噺
         logger.info(f"Loading covariates from: {covariates_path}")
         covariates = pd.read_csv(covariates_path, encoding='utf-8')
         
-        # 确保被试数量匹配
+        # 纭繚琚瘯鏁伴噺鍖归厤
         if len(covariates) != len(subject_ids):
             logger.warning(f"Covariates shape mismatch: {len(covariates)} vs {len(subject_ids)}")
-            # 尝试按索引对齐
+            # 灏濊瘯鎸夌储寮曞榻?
             covariates = covariates.iloc[:len(subject_ids)]
         
-        # 检查是否包含标准协变量（不区分大小写）
+        # 妫€鏌ユ槸鍚﹀寘鍚爣鍑嗗崗鍙橀噺锛堜笉鍖哄垎澶у皬鍐欙級
         covariates_lower = {col.lower(): col for col in covariates.columns}
         available_covs = []
         for std_cov in standard_covariates:
@@ -406,12 +410,12 @@ def extract_covariates_from_behavioral_data(behavioral_data, subject_ids, covari
     else:
         raise ValueError(
             "Covariates not found in behavioral table. "
-            "Please pass --covariates_path or set files.covariates_file in configs/datasets/<DATASET>.yaml."
+            "Please pass --covariates_path or set dataset.files.covariates_file in configs/paths.yaml."
         )
 
 
 def load_data(args):
-    """加载数据 - 使用默认EFNY数据路径"""
+    """鍔犺浇鏁版嵁 - 浣跨敤榛樿EFNY鏁版嵁璺緞"""
     logger = logging.getLogger(__name__)
     
     if args.use_synthetic:
@@ -424,7 +428,7 @@ def load_data(args):
             random_state=args.random_state
         )
         subject_ids = np.arange(args.n_subjects)
-        # 选择用于分析的行为指标（通过配置）
+        # 閫夋嫨鐢ㄤ簬鍒嗘瀽鐨勮涓烘寚鏍囷紙閫氳繃閰嶇疆锛?
         selected_measures = config.get('behavioral.selected_measures', [])
         if isinstance(behavioral_data, pd.DataFrame) and selected_measures:
             existing = [m for m in selected_measures if m in behavioral_data.columns]
@@ -436,7 +440,7 @@ def load_data(args):
             else:
                 raise ValueError(
                     "No selected_measures found in synthetic behavioral data. "
-                    "Please update configs/datasets/<DATASET>.yaml behavioral.selected_measures or disable selection (set to [])."
+                    "Please update configs/paths.yaml dataset.behavioral.selected_measures or disable selection (set to [])."
                 )
     else:
         logger.info("Loading real EFNY data using config paths")
@@ -455,7 +459,7 @@ def load_data(args):
 
         brain_data, behavioral_raw, subject_ids = data_loader.load_all_data()
 
-        # 协变量优先顺序：命令行 --covariates_path > config.data.covariates_file
+        # 鍗忓彉閲忎紭鍏堥『搴忥細鍛戒护琛?--covariates_path > config.data.covariates_file
         covariates_file = args.covariates_path or config.get('data.covariates_file')
         covariate_columns = config.get('preprocessing.confound_variables', [])
 
@@ -469,7 +473,7 @@ def load_data(args):
             logger.error(f"Failed to load covariates aligned to sublist: {e}")
             raise
 
-        # 使用 EFNY_beh_metrics.csv 的所有指标（排除 id 列，强制转数值）
+        # 浣跨敤 EFNY_beh_metrics.csv 鐨勬墍鏈夋寚鏍囷紙鎺掗櫎 id 鍒楋紝寮哄埗杞暟鍊硷級
         if not isinstance(behavioral_raw, pd.DataFrame):
             raise ValueError("Behavioral data must be a pandas DataFrame")
 
@@ -490,10 +494,10 @@ def load_data(args):
 
 
 def preprocess_data(brain_data, behavioral_data, covariates, args):
-    """预处理数据"""
+    """棰勫鐞嗘暟鎹?""
     logger = logging.getLogger(__name__)
     
-    # 数据质量检查
+    # 鏁版嵁璐ㄩ噺妫€鏌?
     quality_report = check_data_quality(
         brain_data, behavioral_data, covariates, 
         max_missing_rate=args.max_missing_rate
@@ -510,11 +514,11 @@ def preprocess_data(brain_data, behavioral_data, covariates, args):
 
 
 def create_model_instance(args):
-    """创建模型实例"""
+    """鍒涘缓妯″瀷瀹炰緥"""
     logger = logging.getLogger(__name__)
     
     if args.model_type == 'adaptive_pls':
-        # 自适应PLS模型 - 自动选择n_components
+        # 鑷€傚簲PLS妯″瀷 - 鑷姩閫夋嫨n_components
         model_params = {
             'n_components_range': [5],
             'cv_folds': 5,
@@ -526,11 +530,11 @@ def create_model_instance(args):
         }
         logger.info("Creating Adaptive-PLS model with fixed n_components_range=[5]")
     elif args.model_type == 'adaptive_scca':
-        # 自适应SCCA模型 - 自动选择成分数和稀疏度参数
+        # 鑷€傚簲SCCA妯″瀷 - 鑷姩閫夋嫨鎴愬垎鏁板拰绋€鐤忓害鍙傛暟
         model_params = {
             'n_components_range': [5],
-            'sparsity_X_range': [0.001, 0.005, 0.01, 0.05],  # 脑数据稀疏度（特征多，用小值）
-            'sparsity_Y_range': [0.1, 0.2, 0.3],  # 行为数据稀疏度（特征少，用大值）
+            'sparsity_X_range': [0.001, 0.005, 0.01, 0.05],  # 鑴戞暟鎹█鐤忓害锛堢壒寰佸锛岀敤灏忓€硷級
+            'sparsity_Y_range': [0.1, 0.2, 0.3],  # 琛屼负鏁版嵁绋€鐤忓害锛堢壒寰佸皯锛岀敤澶у€硷級
             'cv_folds': 5,
             'criterion': 'first_component_correlation',
             'random_state': args.random_state,
@@ -542,7 +546,7 @@ def create_model_instance(args):
         logger.info(f"sparsity_Y range: {model_params['sparsity_Y_range']}")
         logger.info(f"Total combinations: {len(model_params['n_components_range']) * len(model_params['sparsity_X_range']) * len(model_params['sparsity_Y_range'])}")
     elif args.model_type == 'adaptive_rcca':
-        # 自适应rCCA模型 - 自动选择成分数和正则化参数
+        # 鑷€傚簲rCCA妯″瀷 - 鑷姩閫夋嫨鎴愬垎鏁板拰姝ｅ垯鍖栧弬鏁?
         model_params = {
             'n_components_range': [5],
             'c_X_range': [0.0, 0.1, 0.3, 0.5],
@@ -566,7 +570,7 @@ def create_model_instance(args):
 
 
 def run_analysis(model, brain_data, behavioral_data, covariates, args):
-    """运行分析"""
+    """杩愯鍒嗘瀽"""
     logger = logging.getLogger(__name__)
 
     def _load_real_stepwise_summary(results_root: Path, atlas_tag: str, model_type: str):
@@ -627,7 +631,7 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
                         candidates.append(p)
             return candidates or [params0]
         return [params0]
-    # 置换检验模式
+    # 缃崲妫€楠屾ā寮?
     if args.task_id > 0:
         logger.info(f"Running permutation test (task_id={args.task_id})")
         permutation_seed = args.random_state + args.task_id
@@ -774,7 +778,7 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
             f"Permutation stepwise completed. Max score={np.nanmax(perm_stepwise_scores):.4f}"
         )
     else:
-        # 真实数据分析
+        # 鐪熷疄鏁版嵁鍒嗘瀽
         logger.info("Running real data analysis")
 
         X_raw = brain_data.values if isinstance(brain_data, pd.DataFrame) else brain_data
@@ -837,7 +841,7 @@ def run_analysis(model, brain_data, behavioral_data, covariates, args):
 
 
 def save_results_with_metadata(result, args):
-    """保存结果和元数据"""
+    """淇濆瓨缁撴灉鍜屽厓鏁版嵁"""
     logger = logging.getLogger(__name__)
 
     results_dir = config.get('output.results_dir')
@@ -849,7 +853,7 @@ def save_results_with_metadata(result, args):
     analysis_type = 'perm' if args.task_id > 0 else 'real'
     seed = (args.random_state + args.task_id) if args.task_id > 0 else args.random_state
     
-    # 确定输出目录
+    # 纭畾杈撳嚭鐩綍
     if args.output_dir is None:
         output_dir = (
             results_root
@@ -864,15 +868,15 @@ def save_results_with_metadata(result, args):
     
     output_dir.mkdir(parents=True, exist_ok=True)
     
-    # 构建输出文件名
+    # 鏋勫缓杈撳嚭鏂囦欢鍚?
     output_path = output_dir / "result"
     
-    # 获取或创建元数据
+    # 鑾峰彇鎴栧垱寤哄厓鏁版嵁
     metadata = result.get('metadata')
     if not isinstance(metadata, dict):
         metadata = {}
     
-    # 添加运行元数据
+    # 娣诲姞杩愯鍏冩暟鎹?
     metadata.update({
         'task_id': args.task_id,
         'model_type': args.model_type,
@@ -908,14 +912,14 @@ def save_results_with_metadata(result, args):
         result['artifacts'] = artifact_map
         metadata['artifacts_dir'] = str(artifacts_dir)
     
-    # 保存结果
+    # 淇濆瓨缁撴灉
     saved_files = save_results(result, output_path, format="both")
     
     logger.info(f"Results saved to:")
     for format_type, file_path in saved_files.items():
         logger.info(f"  {format_type}: {file_path}")
     
-    # 对于 Adaptive 模型的真实数据分析，保存最优超参数汇总
+    # 瀵逛簬 Adaptive 妯″瀷鐨勭湡瀹炴暟鎹垎鏋愶紝淇濆瓨鏈€浼樿秴鍙傛暟姹囨€?
     if args.task_id == 0:
         model_info = result.get('model_info', {})
         cv_results = result.get('cv_results', {})
@@ -1037,13 +1041,13 @@ def save_results_with_metadata(result, args):
 
 
 def main():
-    """主函数"""
-    # 解析参数
+    """涓诲嚱鏁?""
+    # 瑙ｆ瀽鍙傛暟
     args = parse_arguments()
 
     resolved = _apply_yaml_configs(args)
 
-    # 设置日志（dry-run 不写文件）
+    # 璁剧疆鏃ュ織锛坉ry-run 涓嶅啓鏂囦欢锛?
     logger = setup_logging(
         log_level=args.log_level,
         log_file=None if args.dry_run else args.log_file,
@@ -1152,3 +1156,4 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+

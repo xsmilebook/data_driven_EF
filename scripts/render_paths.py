@@ -11,8 +11,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from src.config_io import load_simple_yaml
-from src.path_config import load_paths_config, resolve_dataset_roots
+from src.path_config import load_dataset_config, load_paths_config, resolve_dataset_roots
 
 
 def _shell_escape_double_quotes(s: str) -> str:
@@ -39,12 +38,11 @@ def main() -> int:
     paths_cfg = load_paths_config(args.paths_config, repo_root=repo_root)
     roots = resolve_dataset_roots(paths_cfg, dataset=args.dataset)
 
-    dataset_cfg_path = (
-        Path(args.dataset_config)
-        if args.dataset_config is not None
-        else (repo_root / "configs" / "datasets" / f"{args.dataset}.yaml")
+    dataset_cfg = load_dataset_config(
+        paths_cfg,
+        dataset_config_path=args.dataset_config,
+        repo_root=repo_root,
     )
-    dataset_cfg = load_simple_yaml(dataset_cfg_path)
     external_inputs = dataset_cfg.get("external_inputs", {})
     fmriprep_dir = ""
     if isinstance(external_inputs, dict):
