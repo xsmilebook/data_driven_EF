@@ -1,6 +1,6 @@
-# 工作流（工程）
+﻿# 工作流（工程）
 
-本文件描述在 `PROJECT_STRUCTURE.md` 固定目录结构下，脚本入口的标准化调用方式。
+本文档描述在 `PROJECT_STRUCTURE.md` 固定目录结构下，脚本入口的标准化调用方式。
 
 ## 标准 CLI 形式
 
@@ -15,8 +15,7 @@
 python -m scripts.run_single_task --dataset EFNY --config configs/paths.yaml --dry-run
 ```
 
-EFNY 相关假设配置在 `configs/paths.yaml` 的 `dataset` 段落中。
-数据集无关的分析默认值可配置在 `configs/analysis.yaml`。
+EFNY 相关假设配置在 `configs/paths.yaml` 的 `dataset` 段落中。数据集无关的分析默认值可配置在 `configs/analysis.yaml`。
 
 ## data/ 与 outputs/ 约定
 
@@ -27,6 +26,38 @@ EFNY 相关假设配置在 `configs/paths.yaml` 的 `dataset` 段落中。
 - `outputs/logs/`: 运行日志（脚本日志、SLURM stdout/stderr）
 
 部分外部输入（如 fMRIPrep 输出）可能位于仓库外；请在 `configs/paths.yaml` 的 `dataset.external_inputs` 下配置绝对路径。
+
+## 预处理流程（影像与行为）
+
+本节描述推荐的预处理顺序与关键产物，细节以脚本为准。
+
+### 影像预处理与功能连接
+
+1) rs-fMRI 预处理（xcp-d）。
+   - 脚本：`src/preprocess/batch_run_xcpd.sh`、`src/preprocess/xcpd_36p.sh`
+   - 输入：`data/raw/MRI_data/`
+   - 输出：`data/interim/MRI_data/xcpd_rest`
+2) 头动 QC 汇总。
+   - 脚本：`src/preprocess/screen_head_motion_efny.py`
+   - 输出：`data/interim/table/qc/rest_fd_summary.csv`
+3) 单被试 FC 与 Fisher-Z。
+   - 脚本：`src/functional_conn/compute_fc_schaefer.py`、`src/functional_conn/fisher_z_fc.py`
+   - 输出：`data/interim/functional_conn/rest/` 与 `data/interim/functional_conn_z/rest/`
+4) FC 向量化特征。
+   - 脚本：`src/functional_conn/convert_fc_vector.py`
+   - 输出：`data/processed/fc_vector/`
+
+### 行为数据预处理与指标计算
+
+1) app 行为数据规范化（如需）。
+   - 脚本：`src/app_data_proc/format_app_data.py`
+   - 输入：`data/raw/behavior_data/cibr_app_data/`
+2) 行为指标计算。
+   - 脚本：`src/metric_compute/compute_efny_metrics.py`
+   - 输出：`data/processed/table/metrics/EFNY_beh_metrics.csv`
+3) 人口学与指标合并。
+   - 脚本：`src/app_data_proc/build_behavioral_data.py`
+   - 输出：`data/processed/table/demo/EFNY_behavioral_data.csv`
 
 ## 结果目录
 
@@ -60,7 +91,7 @@ python -m scripts.run_single_task --dataset EFNY --config configs/paths.yaml --d
 - `scripts/submit_hpc_perm.sh`
 
 这些脚本将 `#SBATCH --chdir` 设为集群项目根目录，并将 SLURM stdout/stderr 与任务日志写入 `outputs/logs/...`。
-注意：SLURM 的 `#SBATCH --output/--error` 路径为静态字符串，无法展开环境变量，因此在脚本头部保持数据集特定路径。
+注意：SLURM 的 `#SBATCH --output/--error` 路径为静态字符串，无法展开环境变量，因此在脚本头部保持固定路径。
 
 示例：
 
