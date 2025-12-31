@@ -12,6 +12,8 @@ Real-time development log for the refactor of `data_driven_EF`.
 - 在 `docs/workflow.md` 新增预处理流程章节，并在 `docs/methods.md` 补充方法学细节。
 - 重新整理 `docs/workflow.md` 与 `docs/methods.md`，修正中文编码乱码。
 - 补充影像与行为预处理的详细步骤（xcp-d、头动 QC 标准、行为清洗与映射）。
+- 重构 `src/` 目录：影像预处理与行为预处理分离，并统一命名风格。
+- 将 `preprocess_efny_demo.py` 归类到行为数据预处理模块。
 
 
 

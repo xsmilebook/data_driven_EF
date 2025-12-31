@@ -30,7 +30,7 @@ def _resolve_defaults(args) -> tuple[Path, Path]:
 
 
 def main():
-    from src.metric_compute.efny.main import run_raw
+    from src.behavioral_preprocess.metrics.efny.main import run_raw
 
     parser = argparse.ArgumentParser(description="Compute EFNY behavioral metrics.")
     parser.add_argument("--data-dir", default=None, help="Input app-data directory.")

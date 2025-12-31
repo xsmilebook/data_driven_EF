@@ -16,7 +16,7 @@ conda activate ML
 eval "$(python -m scripts.render_paths --dataset EFNY --config configs/paths.yaml --format bash)"
 ROOT_DIR="${PROJECT_DIR}"
 SUBLIST="$PROCESSED_ROOT/table/sublist/rest_valid_sublist.txt"
-SCRIPT="$ROOT_DIR/src/functional_conn/fisher_z_fc.py"
+SCRIPT="$ROOT_DIR/src/imaging_preprocess/fisher_z_fc.py"
 LOG_DIR="$LOGS_ROOT/${DATASET}/functional_conn_z"
 
 mkdir -p "$LOG_DIR"

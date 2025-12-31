@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 
 from src.path_config import load_dataset_config, load_paths_config, resolve_dataset_roots
-from src.metric_compute.efny.main import DEFAULT_TASK_CONFIG, normalize_task_name
+from src.behavioral_preprocess.metrics.efny.main import DEFAULT_TASK_CONFIG, normalize_task_name
 
 
 def build_report(metrics_csv, data_dir, output_csv=None):

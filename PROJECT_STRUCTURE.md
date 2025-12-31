@@ -15,6 +15,10 @@ This document defines the stable folder structure and responsibilities of each d
 
 - src/
   Reusable Python modules. No hard-coded paths. No dataset-specific logic.
+  - imaging_preprocess/: rs-fMRI preprocessing, QC, and functional connectivity utilities
+  - behavioral_preprocess/: behavioral data cleaning, task metrics, and summaries
+  - models/: modeling and evaluation utilities
+  - result_summary/: result aggregation and reporting utilities
 
 - scripts/
   Execution entry points. May parse config and dataset arguments.

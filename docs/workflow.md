@@ -34,35 +34,35 @@ EFNY 相关假设配置在 `configs/paths.yaml` 的 `dataset` 段落中。数据
 ### 影像预处理与功能连接
 
 1) rs-fMRI 预处理（xcp-d）。
-   - 脚本：`src/preprocess/batch_run_xcpd.sh`、`src/preprocess/xcpd_36p.sh`
+   - 脚本：`src/imaging_preprocess/batch_run_xcpd.sh`、`src/imaging_preprocess/xcpd_36p.sh`
    - 输入：`data/raw/MRI_data/`
    - 输出：`data/interim/MRI_data/xcpd_rest`
 2) 头动 QC 汇总。
-   - 脚本：`src/preprocess/screen_head_motion_efny.py`
+   - 脚本：`src/imaging_preprocess/screen_head_motion_efny.py`
    - 输出：`data/interim/table/qc/rest_fd_summary.csv`
    - 有效 run 判定：`frame == 180`、`high_ratio <= 0.25` 且 `mean_fd <= upper_limit`。
    - `high_ratio` 为 `framewise_displacement > 0.3` 的比例；`upper_limit` 来自全体 FD 值的 `Q3 + 1.5*IQR`。
    - `valid_subject` 标准：有效 run 数 `valid_num >= 2`。
 3) 单被试 FC 与 Fisher-Z。
-   - 脚本：`src/functional_conn/compute_fc_schaefer.py`、`src/functional_conn/fisher_z_fc.py`
+   - 脚本：`src/imaging_preprocess/compute_fc_schaefer.py`、`src/imaging_preprocess/fisher_z_fc.py`
    - 输出：`data/interim/functional_conn/rest/` 与 `data/interim/functional_conn_z/rest/`
 4) FC 向量化特征。
-   - 脚本：`src/functional_conn/convert_fc_vector.py`
+   - 脚本：`src/imaging_preprocess/convert_fc_vector.py`
    - 输出：`data/processed/fc_vector/`
 
 ### 行为数据预处理与指标计算
 
 1) app 行为数据规范化（如需）。
-   - 脚本：`src/app_data_proc/format_app_data.py`
+   - 脚本：`src/behavioral_preprocess/app_data/format_app_data.py`
    - 输入：`data/raw/behavior_data/cibr_app_data/`
 2) 行为指标计算。
-   - 脚本：`src/metric_compute/compute_efny_metrics.py`
+   - 脚本：`src/behavioral_preprocess/metrics/compute_efny_metrics.py`
    - 输出：`data/processed/table/metrics/EFNY_beh_metrics.csv`
-   - 列名规范化：见 `src/metric_compute/efny/io.py` 的 `normalize_columns`。
-   - 任务映射：见 `src/metric_compute/efny/main.py`，按 sheet 名称映射到内部任务键。
-   - 试次清洗：见 `src/metric_compute/efny/preprocess.py` 的 `prepare_trials`。
+   - 列名规范化：见 `src/behavioral_preprocess/metrics/efny/io.py` 的 `normalize_columns`。
+   - 任务映射：见 `src/behavioral_preprocess/metrics/efny/main.py`，按 sheet 名称映射到内部任务键。
+   - 试次清洗：见 `src/behavioral_preprocess/metrics/efny/preprocess.py` 的 `prepare_trials`。
 3) 人口学与指标合并。
-   - 脚本：`src/app_data_proc/build_behavioral_data.py`
+   - 脚本：`src/behavioral_preprocess/app_data/build_behavioral_data.py`
    - 输出：`data/processed/table/demo/EFNY_behavioral_data.csv`
 
 ## 结果目录
@@ -125,10 +125,10 @@ sbatch scripts/submit_hpc_real.sh
 
 列名与任务规范：
 
-- 列名统一与任务映射见 `src/metric_compute/efny/io.py` 与 `src/metric_compute/efny/main.py`。
+- 列名统一与任务映射见 `src/behavioral_preprocess/metrics/efny/io.py` 与 `src/behavioral_preprocess/metrics/efny/main.py`。
 - 任务名映射遵循：`*1back*` -> `oneback_*`，`*2back*` -> `twoback_*`，其余保留规范化名称。
 
-试次级预处理（见 `src/metric_compute/efny/preprocess.py`）：
+试次级预处理（见 `src/behavioral_preprocess/metrics/efny/preprocess.py`）：
 
 - 缺失 `correct_trial` 时用 `answer == key` 计算。
 - `rt` 转数值（`errors='coerce'`），可选按 `rt_min`/`rt_max` 过滤并进行 ±3 SD 修剪。
@@ -148,18 +148,18 @@ sbatch scripts/submit_hpc_real.sh
 
 xcp-d：
 
-- 脚本：`src/preprocess/batch_run_xcpd.sh`、`src/preprocess/xcpd_36p.sh`
+- 脚本：`src/imaging_preprocess/batch_run_xcpd.sh`、`src/imaging_preprocess/xcpd_36p.sh`
 - 被试列表：`data/processed/table/sublist/mri_sublist.txt`
 - 输出目录：`data/interim/MRI_data/xcpd_rest`
 
 头动 QC：
 
-- 脚本：`src/preprocess/screen_head_motion_efny.py`
+- 脚本：`src/imaging_preprocess/screen_head_motion_efny.py`
 - 输出：`data/interim/table/qc/rest_fd_summary.csv`
 
 人口学处理：
 
-- 脚本：`src/preprocess/preprocess_efny_demo.py`
+- 脚本：`src/behavioral_preprocess/app_data/preprocess_efny_demo.py`
 - 输出：人口学清洗表与 demo+QC 合并表（以脚本为准）
 
 ### 4) 建模流程中的 EFNY 假设
@@ -181,3 +181,4 @@ Atlas 选择（Schaefer）：
 ### 5) 更新说明
 
 当预处理或文件约定变更时，请在 `docs/sessions/` 记录变更内容、原因与涉及脚本/路径。
+

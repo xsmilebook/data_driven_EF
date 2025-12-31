@@ -9,5 +9,5 @@ for subj in `cat ${SUBLIST_FILE}`
 do  
     #subj=$(echo $file | awk -F'_' '{print $1}')
     echo "perform xcpd of subject: $subj"
-    sbatch --chdir="${PROJECT_DIR}" -J ${subj} -o ${LOG_DIR}/out.${subj}.txt -e ${LOG_DIR}/error.${subj}.txt src/preprocess/xcpd_36p.sh $subj
+    sbatch --chdir="${PROJECT_DIR}" -J ${subj} -o ${LOG_DIR}/out.${subj}.txt -e ${LOG_DIR}/error.${subj}.txt src/imaging_preprocess/xcpd_36p.sh $subj
 done

@@ -7,7 +7,7 @@ from src.path_config import load_dataset_config, load_paths_config, resolve_data
 
 def get_plot_function():
     try:
-        from src.functional_conn.plot_fc_matrix import plot_fc_matrix
+        from src.imaging_preprocess.plot_fc_matrix import plot_fc_matrix
         return plot_fc_matrix
     except Exception:
         return None

@@ -8,7 +8,7 @@ import numpy as np
 from src.path_config import load_dataset_config, load_paths_config, resolve_dataset_roots
 
 # Example:
-# python -m src.preprocess.screen_head_motion_efny --dataset EFNY --config configs/paths.yaml
+# python -m src.imaging_preprocess.screen_head_motion_efny --dataset EFNY --config configs/paths.yaml
 
 def find_subject_id(p: Path) -> str:
     for part in p.parts:

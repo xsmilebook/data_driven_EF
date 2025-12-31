@@ -26,7 +26,7 @@ export ALL_PROXY=10.11.100.5:3128
 eval "$(python -m scripts.render_paths --dataset EFNY --config configs/paths.yaml --format bash)"
 ROOT_DIR="${PROJECT_DIR}"
 SUBLIST="$PROCESSED_ROOT/table/sublist/rest_valid_sublist.txt"
-SCRIPT="$ROOT_DIR/src/functional_conn/compute_fc_schaefer.py"
+SCRIPT="$ROOT_DIR/src/imaging_preprocess/compute_fc_schaefer.py"
 QC_FILE="$INTERIM_ROOT/table/qc/rest_fd_summary.csv"
 LOG_DIR="$LOGS_ROOT/${DATASET}/functional_conn"
 

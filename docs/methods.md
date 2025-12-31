@@ -14,10 +14,10 @@
 
 ### 影像预处理与 FC 构建
 
-- rs-fMRI 预处理由 xcp-d 执行（`src/preprocess/xcpd_36p.sh`），输出用于后续 FC 计算的清洗时序。
-- 头动 QC 指标由 `src/preprocess/screen_head_motion_efny.py` 汇总；阈值与字段以脚本为准。
-- FC 计算使用 Schaefer 分区（`src/functional_conn/compute_fc_schaefer.py`），随后进行 Fisher-Z（`src/functional_conn/fisher_z_fc.py`）。
-- 向量化特征在 `src/functional_conn/convert_fc_vector.py` 中生成，作为建模输入 X。
+- rs-fMRI 预处理由 xcp-d 执行（`src/imaging_preprocess/xcpd_36p.sh`），输出用于后续 FC 计算的清洗时序。
+- 头动 QC 指标由 `src/imaging_preprocess/screen_head_motion_efny.py` 汇总；阈值与字段以脚本为准。
+- FC 计算使用 Schaefer 分区（`src/imaging_preprocess/compute_fc_schaefer.py`），随后进行 Fisher-Z（`src/imaging_preprocess/fisher_z_fc.py`）。
+- 向量化特征在 `src/imaging_preprocess/convert_fc_vector.py` 中生成，作为建模输入 X。
 
 #### 头动 QC 与 valid_subject 标准
 
@@ -30,9 +30,9 @@
 
 ### 行为数据与指标构建
 
-- 原始 app 行为数据的列名与任务映射在 `src/metric_compute/efny/io.py` 与 `src/metric_compute/efny/main.py` 定义。
-- 试次级处理与 QC 逻辑在 `src/metric_compute/efny/preprocess.py` 实现（如 RT 解析、过滤与有效试次比例）。
-- 行为指标由 `src/metric_compute/efny/metrics.py` 计算，并由 `src/metric_compute/compute_efny_metrics.py` 汇总为宽表，作为建模输入 Y。
+- 原始 app 行为数据的列名与任务映射在 `src/behavioral_preprocess/metrics/efny/io.py` 与 `src/behavioral_preprocess/metrics/efny/main.py` 定义。
+- 试次级处理与 QC 逻辑在 `src/behavioral_preprocess/metrics/efny/preprocess.py` 实现（如 RT 解析、过滤与有效试次比例）。
+- 行为指标由 `src/behavioral_preprocess/metrics/efny/metrics.py` 计算，并由 `src/behavioral_preprocess/metrics/compute_efny_metrics.py` 汇总为宽表，作为建模输入 Y。
 
 #### 行为数据清洗与映射流程
 
@@ -152,3 +152,4 @@ outputs/results/perm/<atlas>/<model_type>/seed_<seed>/
 ```
 
 元数据包含置换种子与 `configs/analysis.yaml` 中的 `permutation_n_iters`（用于可追溯性记录）。
+

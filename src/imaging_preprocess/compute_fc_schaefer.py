@@ -7,7 +7,7 @@ from src.path_config import load_dataset_config, load_paths_config, resolve_data
 
 ## command
 # Example:
-# python -m src.functional_conn.compute_fc_schaefer --subject sub-THU20250819728LZQ --out data/interim/functional_conn/rest/Schaefer100/sub-THU20250819728LZQ_Schaefer100_FC.csv
+# python -m src.imaging_preprocess.compute_fc_schaefer --subject sub-THU20250819728LZQ --out data/interim/functional_conn/rest/Schaefer100/sub-THU20250819728LZQ_Schaefer100_FC.csv
 
 def find_runs(func_dir: Path, run_ids: list[int]) -> list[Path]:
     files = []

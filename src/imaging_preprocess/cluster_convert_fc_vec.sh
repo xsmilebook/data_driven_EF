@@ -33,7 +33,7 @@ echo "Output path: ${OUTPUT_PATH}"
 
 for N_ROIS in 100 200 400; do
     echo "Processing Schaefer${N_ROIS} ROIs..."
-    python ${PROJECT_ROOT}/src/functional_conn/convert_fc_vector.py \
+    python ${PROJECT_ROOT}/src/imaging_preprocess/convert_fc_vector.py \
         --input_path "${INPUT_PATH}" \
         --sublist_file "${SUBLIST_FILE}" \
         --output_path "${OUTPUT_PATH}" \
