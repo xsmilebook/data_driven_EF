@@ -91,19 +91,19 @@ behavioral_metrics:
       filter_rt: false
       rt_max: 2.0
       min_prop: 0.5
-      metrics: [ACC, RT_Mean, RT_SD, SSRT, Mean_SSD, Stop_ACC, Go_RT_Mean, Go_RT_SD]
+      metrics: [ACC, SSRT, Mean_SSD, Stop_ACC, Go_RT_Mean, Go_RT_SD]
     GNG:
       type: gonogo
       filter_rt: false
       rt_max: 3.0
       min_prop: 0.5
-      metrics: [ACC, RT_Mean, RT_SD, Go_ACC, NoGo_ACC, Go_RT_Mean, Go_RT_SD, dprime]
+      metrics: [ACC, Go_ACC, NoGo_ACC, Go_RT_Mean, Go_RT_SD, dprime]
     CPT:
       type: gonogo
       filter_rt: false
       rt_max: 3.0
       min_prop: 0.5
-      metrics: [ACC, RT_Mean, RT_SD, Go_ACC, NoGo_ACC, Go_RT_Mean, Go_RT_SD, dprime]
+      metrics: [ACC, Go_ACC, NoGo_ACC, Go_RT_Mean, Go_RT_SD, dprime]
     ZYST:
       type: zyst
       filter_rt: false
@@ -135,9 +135,9 @@ behavioral_metrics:
     DCCS: [ACC, RT_Mean, RT_SD, Repeat_ACC, Repeat_RT, Switch_ACC, Switch_RT, Switch_Cost_RT, Switch_Cost_ACC]
     DT: [ACC, RT_Mean, RT_SD, Repeat_ACC, Repeat_RT, Switch_ACC, Switch_RT, Switch_Cost_RT, Switch_Cost_ACC]
     EmotionSwitch: [ACC, RT_Mean, RT_SD, Repeat_ACC, Repeat_RT, Switch_ACC, Switch_RT, Switch_Cost_RT, Switch_Cost_ACC]
-    SST: [ACC, RT_Mean, RT_SD, SSRT, Mean_SSD, Stop_ACC, Go_RT_Mean, Go_RT_SD]
-    GNG: [ACC, RT_Mean, RT_SD, Go_ACC, NoGo_ACC, Go_RT_Mean, Go_RT_SD, dprime]
-    CPT: [ACC, RT_Mean, RT_SD, Go_ACC, NoGo_ACC, Go_RT_Mean, Go_RT_SD, dprime]
+    SST: [ACC, SSRT, Mean_SSD, Stop_ACC, Go_RT_Mean, Go_RT_SD]
+    GNG: [ACC, Go_ACC, NoGo_ACC, Go_RT_Mean, Go_RT_SD, dprime]
+    CPT: [ACC, Go_ACC, NoGo_ACC, Go_RT_Mean, Go_RT_SD, dprime]
     ZYST: [ACC, RT_Mean, RT_SD, T0_ACC, T1_ACC, T1_given_T0_ACC, T0_RT, T1_RT]
     FZSS: [ACC, RT_Mean, RT_SD, Overall_ACC, Miss_Rate, FA_Rate, Correct_RT_Mean, Correct_RT_SD]
     KT: [ACC, RT_Mean, RT_SD, Overall_ACC, Mean_RT]

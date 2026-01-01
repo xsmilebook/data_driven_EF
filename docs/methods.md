@@ -45,6 +45,95 @@
   - 在可用 RT 上做 3 SD 修剪；
   - 若有效试次比例低于 `min_prop`，该任务标记为无效（`ok=False`）。
 
+#### 指标计算总流程与定义口径
+
+指标计算以 `configs/behavioral_metrics.yaml` 为配置入口，`compute_tasks` 指定任务类型与参数，`metrics` 限定需要输出的字段。`metrics.py` 中的 `get_raw_metrics` 按任务类型调用对应计算函数，并仅保留配置要求的指标。关键口径如下：
+
+- 共通输入：以 `prepare_trials` 清洗后的试次表为输入，缺失列或无有效试次时返回空结果（全部为 `NaN`）。
+- 正确性定义：若存在 `correct_trial` 列直接使用；否则由 `answer == key` 推导。
+- RT 口径：默认仅在正确试次上统计（当函数显式筛选 `corr`），并在 `[rt_min, rt_max]` 与 3 SD 修剪后计算均值与标准差。
+- d′ 口径：使用命中率与虚报率的正态分位差（`d′ = Z(H) - Z(FA)`），并对极端比例做 0.5 校正。
+
+#### 各任务类型的指标计算流程
+
+1) N-back（`type: nback`）
+
+- 试次分类：以 `item` 序列定义 `target`（与 `n_back` 步前相同）与 `nontarget`。
+- 指标：
+  - `ACC`：全部有效试次正确率。
+  - `RT_Mean`/`RT_SD`：全部有效试次 RT 均值与标准差。
+  - `Hit_Rate`：`target` 试次正确率。
+  - `FA_Rate`：`nontarget` 试次错误率。
+  - `dprime`：由 `Hit_Rate` 与 `FA_Rate` 计算。
+
+2) 冲突任务（`type: conflict`；Flanker/ColorStroop/EmotionStroop）
+
+- 条件划分：由 `item` 解析 `congruent` 与 `incongruent`，具体解析规则按任务名区分（例如 Flanker 的末尾方向、Stroop 的图片-文字一致性/序号规则）。
+- 指标：
+  - `ACC`/`RT_Mean`/`RT_SD`：整体正确率与 RT 统计。
+  - `Congruent_ACC`/`Congruent_RT`、`Incongruent_ACC`/`Incongruent_RT`：条件内统计。
+  - `Contrast_RT = Incongruent_RT - Congruent_RT`。
+  - `Contrast_ACC = Incongruent_ACC - Congruent_ACC`。
+
+3) 任务切换（`type: switch`；DCCS/DT/EmotionSwitch）
+
+- 规则序列：
+  - DCCS：以 `item` 末位字符代表规则。
+  - DT：以 `answer` 分类水平/垂直规则。
+  - EmotionSwitch：以 `item` 数字区间映射 emotion/gender 规则。
+- 切换定义：与前一试次规则不同为 `switch`，相同为 `repeat`，并可用 `mixed_from` 丢弃前期非混合段。
+- 指标：
+  - `ACC`/`RT_Mean`/`RT_SD`：整体统计。
+  - `Repeat_ACC`/`Repeat_RT`、`Switch_ACC`/`Switch_RT`：条件内统计。
+  - `Switch_Cost_RT = Switch_RT - Repeat_RT`。
+  - `Switch_Cost_ACC = Switch_ACC - Repeat_ACC`。
+
+4) 停止信号任务（`type: sst`）
+
+- 基于 `SSRT`/`ssd_var` 划分 stop 与 go 试次；stop 试次正确性以“未按键”为抑制成功。
+- go 试次 RT 进行 `rt_max` 与 3 SD 修剪，并要求有效比例不低于 `min_prop`。
+- 指标：
+  - `ACC`：所有试次正确率。
+  - `Stop_ACC`：stop 试次抑制成功率。
+  - `Mean_SSD`：stop 试次 SSD 均值。
+  - `SSRT`：采用积分法，`SSRT = Go_RT_quantile(p) - Mean_SSD`，其中 `p = 1 - Stop_ACC`。
+  - `Go_RT_Mean`/`Go_RT_SD`：go 正确试次 RT 统计。
+
+5) Go/No-Go 与 CPT（`type: gonogo`）
+
+- 试次分类：`answer` 为 true/yes/1 视为 go，false/no/0 视为 nogo。
+- go 试次 RT 进行 `rt_max` 与 3 SD 修剪，并要求有效比例不低于 `min_prop`。
+- 指标：
+  - `ACC`：全体正确率。
+  - `Go_ACC`/`NoGo_ACC`：go/nogo 正确率。
+  - `Go_RT_Mean`/`Go_RT_SD`：go 有效试次 RT 统计。
+  - `dprime`：`Go_ACC` 作为命中率，`1 - NoGo_ACC` 作为虚报率。
+
+6) ZYST（`type: zyst`）
+
+- 试次解析：`trial_index` 解析为 `(trial, subtrial)`，仅保留含 0/1 子试次的 trial。
+- 反应率门槛：`resp_var` 有效数量需达到 `min_resp`。
+- 指标：
+  - `ACC`/`RT_Mean`/`RT_SD`：整体统计。
+  - `T0_ACC`/`T1_ACC`：子试次 0/1 的正确率。
+  - `T1_given_T0_ACC`：在 T0 正确的条件下 T1 正确率。
+  - `T0_RT`/`T1_RT`：子试次 RT 均值。
+
+7) FZSS（`type: fzss`）
+
+- 正确性：以 `answer == key` 定义正确试次。
+- 指标：
+  - `ACC`/`RT_Mean`/`RT_SD`：整体正确率与正确试次 RT 统计。
+  - `Miss_Rate`：在 `answer == right` 子集中，`key != right` 的比例。
+  - `FA_Rate`：在 `answer == left` 子集中，`key == right` 的比例。
+  - `Correct_RT_Mean`/`Correct_RT_SD`：正确试次 RT 统计。
+
+8) KT（`type: kt`）
+
+- 指标：
+  - `ACC`/`RT_Mean`/`RT_SD`：整体统计。
+  - `Overall_ACC` 与 `Mean_RT` 为与 `ACC`、`RT_Mean` 等价的重复输出，用于下游兼容。
+
 ## 嵌套交叉验证（真实数据）
 
 入口：`scripts/run_single_task.py`（`task_id=0`）调用 `src/models/evaluation.py` 中的 `run_nested_cv_evaluation`。

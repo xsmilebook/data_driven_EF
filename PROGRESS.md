@@ -6,6 +6,9 @@ Real-time development log for the refactor of `data_driven_EF`.
 
 ## Completed
 
+- Expanded behavioral metrics computation documentation in `docs/methods.md`.
+- Removed `RT_Mean`/`RT_SD` outputs for SST/GNG/CPT in metrics configuration and docs.
+
 
 ## In progress
 
