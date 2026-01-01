@@ -15,6 +15,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - 重构 `src/` 目录：影像预处理与行为预处理分离，并统一命名风格。
 - 将 `preprocess_efny_demo.py` 归类到行为数据预处理模块。
 - 移除基于 task 配置表的旧指标流程，仅保留 `DEFAULT_TASK_CONFIG` 方案。
+- 将行为指标计算与下游使用指标的配置迁移到 `configs/behavioral_metrics.yaml`。
 
 
 

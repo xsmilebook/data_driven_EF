@@ -38,6 +38,13 @@ def main():
     parser.add_argument("--dataset", type=str, default=None)
     parser.add_argument("--config", dest="paths_config", type=str, default="configs/paths.yaml")
     parser.add_argument("--dataset-config", dest="dataset_config", type=str, default=None)
+    parser.add_argument(
+        "--metrics-config",
+        dest="metrics_config",
+        type=str,
+        default="configs/behavioral_metrics.yaml",
+        help="Behavioral metrics config with compute_tasks/use_metrics.",
+    )
     args = parser.parse_args()
 
     if args.data_dir is None or args.out_csv is None:
@@ -45,7 +52,7 @@ def main():
         args.data_dir = str(data_dir)
         args.out_csv = str(out_csv)
 
-    run_raw(data_dir=args.data_dir, out_csv=args.out_csv)
+    run_raw(data_dir=args.data_dir, out_csv=args.out_csv, metrics_config_path=args.metrics_config)
 
 if __name__ == '__main__':
     main()

@@ -1,10 +1,12 @@
 import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 from .io import normalize_columns, subject_code_from_filename
 from .metrics import get_raw_metrics
+from src.config_io import load_simple_yaml
 
 
 def normalize_task_name(sheet_name: str) -> str:
@@ -29,158 +31,34 @@ def normalize_task_name(sheet_name: str) -> str:
     return s
 
 
-DEFAULT_TASK_CONFIG = {
-    'oneback_number': {
-        'type': 'nback',
-        'n_back': 1,
-        'filter_rt': True,
-        'rt_max': 2.5,
-        'min_prop': 0.5,
-        'metrics': ['ACC', 'RT_Mean', 'RT_SD', 'Hit_Rate', 'FA_Rate', 'dprime'],
-    },
-    'oneback_spatial': {
-        'type': 'nback',
-        'n_back': 1,
-        'filter_rt': True,
-        'rt_max': 2.5,
-        'min_prop': 0.5,
-        'metrics': ['ACC', 'RT_Mean', 'RT_SD', 'Hit_Rate', 'FA_Rate', 'dprime'],
-    },
-    'oneback_emotion': {
-        'type': 'nback',
-        'n_back': 1,
-        'filter_rt': True,
-        'rt_max': 2.5,
-        'min_prop': 0.5,
-        'metrics': ['ACC', 'RT_Mean', 'RT_SD', 'Hit_Rate', 'FA_Rate', 'dprime'],
-    },
-    'twoback_number': {
-        'type': 'nback',
-        'n_back': 2,
-        'filter_rt': True,
-        'rt_max': 2.5,
-        'min_prop': 0.5,
-        'metrics': ['ACC', 'RT_Mean', 'RT_SD', 'Hit_Rate', 'FA_Rate', 'dprime'],
-    },
-    'twoback_spatial': {
-        'type': 'nback',
-        'n_back': 2,
-        'filter_rt': True,
-        'rt_max': 2.5,
-        'min_prop': 0.5,
-        'metrics': ['ACC', 'RT_Mean', 'RT_SD', 'Hit_Rate', 'FA_Rate', 'dprime'],
-    },
-    'twoback_emotion': {
-        'type': 'nback',
-        'n_back': 2,
-        'filter_rt': True,
-        'rt_max': 2.5,
-        'min_prop': 0.5,
-        'metrics': ['ACC', 'RT_Mean', 'RT_SD', 'Hit_Rate', 'FA_Rate', 'dprime'],
-    },
-    'FLANKER': {
-        'type': 'conflict',
-        'filter_rt': True,
-        'rt_max': 2.0,
-        'min_prop': 0.5,
-        'metrics': ['ACC', 'RT_Mean', 'RT_SD',
-                    'Congruent_ACC', 'Congruent_RT', 'Incongruent_ACC', 'Incongruent_RT',
-                    'Contrast_RT', 'Contrast_ACC'],
-    },
-    'ColorStroop': {
-        'type': 'conflict',
-        'filter_rt': True,
-        'rt_max': 2.5,
-        'min_prop': 0.5,
-        'metrics': ['ACC', 'RT_Mean', 'RT_SD',
-                    'Congruent_ACC', 'Congruent_RT', 'Incongruent_ACC', 'Incongruent_RT',
-                    'Contrast_RT', 'Contrast_ACC'],
-    },
-    'EmotionStroop': {
-        'type': 'conflict',
-        'filter_rt': True,
-        'rt_max': 2.5,
-        'min_prop': 0.5,
-        'metrics': ['ACC', 'RT_Mean', 'RT_SD',
-                    'Congruent_ACC', 'Congruent_RT', 'Incongruent_ACC', 'Incongruent_RT',
-                    'Contrast_RT', 'Contrast_ACC'],
-    },
-    'DCCS': {
-        'type': 'switch',
-        'filter_rt': True,
-        'rt_max': 2.5,
-        'min_prop': 0.5,
-        'mixed_from': 22,
-        'metrics': ['ACC', 'RT_Mean', 'RT_SD',
-                    'Repeat_ACC', 'Repeat_RT', 'Switch_ACC', 'Switch_RT',
-                    'Switch_Cost_RT', 'Switch_Cost_ACC'],
-    },
-    'DT': {
-        'type': 'switch',
-        'filter_rt': True,
-        'rt_max': 2.5,
-        'min_prop': 0.5,
-        'mixed_from': 66,
-        'metrics': ['ACC', 'RT_Mean', 'RT_SD',
-                    'Repeat_ACC', 'Repeat_RT', 'Switch_ACC', 'Switch_RT',
-                    'Switch_Cost_RT', 'Switch_Cost_ACC'],
-    },
-    'EmotionSwitch': {
-        'type': 'switch',
-        'filter_rt': True,
-        'rt_max': 2.5,
-        'min_prop': 0.5,
-        'mixed_from': 66,
-        'metrics': ['ACC', 'RT_Mean', 'RT_SD',
-                    'Repeat_ACC', 'Repeat_RT', 'Switch_ACC', 'Switch_RT',
-                    'Switch_Cost_RT', 'Switch_Cost_ACC'],
-    },
-    'SST': {
-        'type': 'sst',
-        'filter_rt': False,
-        'rt_max': 2.0,
-        'min_prop': 0.5,
-        'metrics': ['ACC', 'RT_Mean', 'RT_SD', 'SSRT', 'Mean_SSD', 'Stop_ACC', 'Go_RT_Mean', 'Go_RT_SD'],
-    },
-    'GNG': {
-        'type': 'gonogo',
-        'filter_rt': False,
-        'rt_max': 3.0,
-        'min_prop': 0.5,
-        'metrics': ['ACC', 'RT_Mean', 'RT_SD', 'Go_ACC', 'NoGo_ACC', 'Go_RT_Mean', 'Go_RT_SD', 'dprime'],
-    },
-    'CPT': {
-        'type': 'gonogo',
-        'filter_rt': False,
-        'rt_max': 3.0,
-        'min_prop': 0.5,
-        'metrics': ['ACC', 'RT_Mean', 'RT_SD', 'Go_ACC', 'NoGo_ACC', 'Go_RT_Mean', 'Go_RT_SD', 'dprime'],
-    },
-    'ZYST': {
-        'type': 'zyst',
-        'filter_rt': False,
-        'min_prop': 0.5,
-        'metrics': ['ACC', 'RT_Mean', 'RT_SD', 'T0_ACC', 'T1_ACC', 'T1_given_T0_ACC', 'T0_RT', 'T1_RT'],
-    },
-    'FZSS': {
-        'type': 'fzss',
-        'filter_rt': True,
-        'rt_max': 2.0,
-        'min_prop': 0.5,
-        'metrics': ['ACC', 'RT_Mean', 'RT_SD', 'Overall_ACC', 'Miss_Rate', 'FA_Rate', 'Correct_RT_Mean', 'Correct_RT_SD'],
-    },
-    'KT': {
-        'type': 'kt',
-        'filter_rt': False,
-        'rt_max': 3.0,
-        'min_prop': 0.5,
-        'metrics': ['ACC', 'RT_Mean', 'RT_SD', 'Overall_ACC', 'Mean_RT'],
-    },
-}
+DEFAULT_METRICS_CONFIG_PATH = "configs/behavioral_metrics.yaml"
+
+
+def load_metrics_config(metrics_config_path: str | None = None) -> dict:
+    config_path = Path(metrics_config_path or DEFAULT_METRICS_CONFIG_PATH)
+    cfg = load_simple_yaml(config_path)
+    metrics_cfg = cfg.get("behavioral_metrics", {})
+    if not isinstance(metrics_cfg, dict):
+        raise ValueError("Missing behavioral_metrics section in metrics config.")
+    return metrics_cfg
+
+
+def load_task_config(metrics_config_path: str | None = None) -> dict:
+    metrics_cfg = load_metrics_config(metrics_config_path)
+    tasks = metrics_cfg.get("compute_tasks", {})
+    if not tasks:
+        raise ValueError("Missing behavioral_metrics.compute_tasks in metrics config.")
+    return tasks
+
+
+def load_use_metrics(metrics_config_path: str | None = None) -> dict:
+    metrics_cfg = load_metrics_config(metrics_config_path)
+    return metrics_cfg.get("use_metrics", {})
 
 
 def process_file_raw(path, task_config=None):
-    task_config = task_config or DEFAULT_TASK_CONFIG
+    if task_config is None:
+        task_config = load_task_config()
     res = {'subject_code': subject_code_from_filename(path), 'file_name': os.path.basename(path)}
     try:
         xl = pd.ExcelFile(path)
@@ -207,7 +85,9 @@ def process_file_raw(path, task_config=None):
     return res
 
 
-def run_raw(data_dir, out_csv, task_config=None):
+def run_raw(data_dir, out_csv, task_config=None, metrics_config_path=None):
+    if task_config is None:
+        task_config = load_task_config(metrics_config_path)
     files = []
     for root, dirs, filenames in os.walk(data_dir):
         for fn in filenames:

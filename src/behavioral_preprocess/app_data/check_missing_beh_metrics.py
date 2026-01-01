@@ -4,13 +4,14 @@ from pathlib import Path
 import pandas as pd
 
 from src.path_config import load_dataset_config, load_paths_config, resolve_dataset_roots
-from src.behavioral_preprocess.metrics.efny.main import DEFAULT_TASK_CONFIG, normalize_task_name
+from src.behavioral_preprocess.metrics.efny.main import load_task_config, normalize_task_name
 
 
-def build_report(metrics_csv, data_dir, output_csv=None):
+def build_report(metrics_csv, data_dir, output_csv=None, metrics_config_path=None):
     metrics_csv = Path(metrics_csv)
     data_dir = Path(data_dir)
 
+    task_config = load_task_config(metrics_config_path)
     df = pd.read_csv(metrics_csv)
     row_map = {str(r.file_name): r for r in df.itertuples(index=False)}
 
@@ -25,7 +26,7 @@ def build_report(metrics_csv, data_dir, output_csv=None):
         xl = pd.ExcelFile(fp)
         for sheet in xl.sheet_names:
             task = normalize_task_name(sheet)
-            cfg = DEFAULT_TASK_CONFIG.get(task)
+            cfg = task_config.get(task)
             if cfg is None:
                 continue
 
@@ -116,6 +117,13 @@ def main():
     parser.add_argument("--dataset", type=str, default=None)
     parser.add_argument("--config", dest="paths_config", type=str, default="configs/paths.yaml")
     parser.add_argument("--dataset-config", dest="dataset_config", type=str, default=None)
+    parser.add_argument(
+        "--metrics-config",
+        dest="metrics_config",
+        type=str,
+        default="configs/behavioral_metrics.yaml",
+        help="Behavioral metrics config with compute_tasks/use_metrics.",
+    )
     args = parser.parse_args()
 
     if args.metrics_csv is None or args.data_dir is None or args.output_csv is None:
@@ -128,6 +136,7 @@ def main():
         metrics_csv=args.metrics_csv,
         data_dir=args.data_dir,
         output_csv=args.output_csv,
+        metrics_config_path=args.metrics_config,
     )
 
     if len(missing_files) > 0:

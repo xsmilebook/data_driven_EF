@@ -23,6 +23,12 @@ This document defines the stable folder structure and responsibilities of each d
 - scripts/
   Execution entry points. May parse config and dataset arguments.
 
+- configs/
+  Centralized configuration files.
+  - paths.yaml: repository paths and dataset-specific settings (single dataset section)
+  - analysis.yaml: modeling and evaluation defaults
+  - behavioral_metrics.yaml: task-level metric definitions and downstream metric selection
+
 - data/
   Raw and processed datasets. Never modified by git.
   - external/: third-party inputs not produced by the pipeline
