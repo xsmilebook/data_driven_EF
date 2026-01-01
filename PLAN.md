@@ -1,10 +1,20 @@
-# PLAN.md
+# Plan.md
 
-`data_driven_EF` 项目PLAN
+<1–3 sentences: what we’re doing, why, and the high-level approach.>
 
-## Feature roadmap and development phases
+## Scope
+- In:
+- Out:
 
+## Action items
+[ ] <Step 1>
+[ ] <Step 2>
+[ ] <Step 3>
+[ ] <Step 4>
+[ ] <Step 5>
+[ ] <Step 6>
 
-## Current action items (from create-plan)
-
-
+## Open questions
+- <Question 1>
+- <Question 2>
+- <Question 3>

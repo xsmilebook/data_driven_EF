@@ -6,8 +6,9 @@ Real-time development log for the refactor of `data_driven_EF`.
 
 ## Completed
 
-- 更新 `ARCHITECTURE.md`，补充根目录主要 Markdown 文件并修正乱码。
-- 将 `PROJECT_STRUCTURE.md` 重命名为 `ARCHITECTURE.md` 并更新相关引用。
+- Updated PLAN.md template to align with research workflow and validation steps.
+- Clarified that root-level Markdown files must be English only.
+- Documented that `create-plan` outputs must be written to root `PLAN.md`.
 
 ## In progress
 
