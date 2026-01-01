@@ -6,7 +6,7 @@ data_driven_EF/                # 项目根目录
 ├── AGENTS.md                   # AI 协作与修改约束
 ├── PLAN.md                     # 计划与任务拆解
 ├── PROGRESS.md                 # 进度记录
-├── PROJECT_STRUCTURE.md        # 结构说明（本文）
+├── ARCHITECTURE.md            # 结构说明（本文）
 ├── configs/                    # 全局配置中心
 │   ├── paths.yaml              # 路径与数据集相关设置（单一数据集 section）
 │   ├── analysis.yaml           # 建模与评估默认参数

@@ -1,11 +1,11 @@
 # AGENTS.md
 
 Operational rules for AI-assisted work in `data_driven_EF`.
-This repository treats `PROJECT_STRUCTURE.md` as the source of truth for the stable layout. Do not propose structural changes unless explicitly requested.
+This repository treats `ARCHITECTURE.md` as the source of truth for the stable layout. Do not propose structural changes unless explicitly requested.
 
 ## Base workflow
 
-1) Read `PROJECT_STRUCTURE.md` before planning or editing.
+1) Read `ARCHITECTURE.md` before planning or editing.
 2) Execute changes only according to `PLAN.md` or explicit user instructions.
 3) If a change affects usage or structure, update `README.md` and/or `docs/workflow.md`.
 4) Update `PROGRESS.md` after completing a change set.
