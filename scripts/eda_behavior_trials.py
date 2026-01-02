@@ -10,7 +10,6 @@ import pandas as pd
 from src.behavioral_preprocess.metrics.efny.io import normalize_columns
 from src.behavioral_preprocess.metrics.efny.main import load_task_config, normalize_task_name
 from src.behavioral_preprocess.metrics.efny.metrics import _conflict_condition
-from src.behavioral_preprocess.metrics.efny.preprocess import prepare_trials
 from src.path_config import load_dataset_config, load_paths_config, resolve_dataset_roots
 
 
@@ -98,14 +97,7 @@ def _summarize_sst(df: pd.DataFrame, cfg: dict) -> tuple[int, dict[str, int], st
 
 
 def _summarize_conflict(df: pd.DataFrame, cfg: dict, task_name: str) -> TaskTrialSummary:
-    prep = prepare_trials(
-        df,
-        filter_rt=bool(cfg.get("filter_rt", True)),
-        rt_min=float(cfg.get("rt_min", 0.2)),
-        rt_max=float(cfg.get("rt_max", 20.0)),
-        min_prop=float(cfg.get("min_prop", 0.5)),
-    )
-    if not prep.get("ok", False):
+    if df is None or len(df) == 0:
         return TaskTrialSummary(
             sheet_name=task_name,
             task_name=task_name,
@@ -113,10 +105,10 @@ def _summarize_conflict(df: pd.DataFrame, cfg: dict, task_name: str) -> TaskTria
             n_raw=int(len(df)),
             n_included=None,
             counts={},
-            note="prepare_trials: low_prop or missing rt",
+            note="empty sheet",
         )
-    d = prep["df"]
-    if "item" not in d.columns:
+
+    if "item" not in df.columns:
         return TaskTrialSummary(
             sheet_name=task_name,
             task_name=task_name,
@@ -126,9 +118,10 @@ def _summarize_conflict(df: pd.DataFrame, cfg: dict, task_name: str) -> TaskTria
             counts={},
             note="missing item column",
         )
-    cond = _conflict_condition(task_name, d["item"])
+
+    cond = _conflict_condition(task_name, df["item"])
     keep = cond.notna()
-    d2 = d.loc[keep].copy()
+    d2 = df.loc[keep].copy()
     d2["cond"] = cond.loc[keep]
     counts = d2["cond"].value_counts().to_dict()
     return TaskTrialSummary(
@@ -138,18 +131,12 @@ def _summarize_conflict(df: pd.DataFrame, cfg: dict, task_name: str) -> TaskTria
         n_raw=int(len(df)),
         n_included=int(len(d2)),
         counts={str(k): int(v) for k, v in counts.items()},
+        note=None,
     )
 
 
 def _summarize_switch(df: pd.DataFrame, cfg: dict, task_name: str) -> TaskTrialSummary:
-    prep = prepare_trials(
-        df,
-        filter_rt=bool(cfg.get("filter_rt", True)),
-        rt_min=float(cfg.get("rt_min", 0.2)),
-        rt_max=float(cfg.get("rt_max", 20.0)),
-        min_prop=float(cfg.get("min_prop", 0.5)),
-    )
-    if not prep.get("ok", False):
+    if df is None or len(df) == 0:
         return TaskTrialSummary(
             sheet_name=task_name,
             task_name=task_name,
@@ -157,9 +144,9 @@ def _summarize_switch(df: pd.DataFrame, cfg: dict, task_name: str) -> TaskTrialS
             n_raw=int(len(df)),
             n_included=None,
             counts={},
-            note="prepare_trials: low_prop or missing rt",
+            note="empty sheet",
         )
-    d = prep["df"].copy()
+    d = df.copy()
     if "item" not in d.columns:
         return TaskTrialSummary(
             sheet_name=task_name,
@@ -212,19 +199,13 @@ def _summarize_switch(df: pd.DataFrame, cfg: dict, task_name: str) -> TaskTrialS
         n_raw=int(len(df)),
         n_included=int(len(d)),
         counts={str(k): int(v) for k, v in counts.items()},
+        note=None,
     )
 
 
 def _summarize_nback(df: pd.DataFrame, cfg: dict, task_name: str) -> TaskTrialSummary:
     n_back = int(cfg.get("n_back", 1))
-    prep = prepare_trials(
-        df,
-        filter_rt=bool(cfg.get("filter_rt", True)),
-        rt_min=float(cfg.get("rt_min", 0.2)),
-        rt_max=float(cfg.get("rt_max", 20.0)),
-        min_prop=float(cfg.get("min_prop", 0.5)),
-    )
-    if not prep.get("ok", False):
+    if df is None or len(df) == 0:
         return TaskTrialSummary(
             sheet_name=task_name,
             task_name=task_name,
@@ -232,9 +213,9 @@ def _summarize_nback(df: pd.DataFrame, cfg: dict, task_name: str) -> TaskTrialSu
             n_raw=int(len(df)),
             n_included=None,
             counts={},
-            note="prepare_trials: low_prop or missing rt",
+            note="empty sheet",
         )
-    d = prep["df"]
+    d = df
     if "item" not in d.columns:
         return TaskTrialSummary(
             sheet_name=task_name,
@@ -266,6 +247,7 @@ def _summarize_nback(df: pd.DataFrame, cfg: dict, task_name: str) -> TaskTrialSu
         n_raw=int(len(df)),
         n_included=int(len(d2)),
         counts={str(k): int(v) for k, v in counts.items()},
+        note=None,
     )
 
 
@@ -280,6 +262,10 @@ def build_report_markdown(
     lines.append("## 数据来源")
     lines.append(f"- 工作簿：`{excel_path.as_posix()}`")
     lines.append(f"- Sheet 数：{len(sheet_summaries)}")
+    lines.append("")
+    lines.append("## 口径说明")
+    lines.append("- 本报告用于探索性试次统计与建模可行性评估：**不进行反应时过滤/修剪**（避免单被试过滤后分布失真）。")
+    lines.append("- `Included` 表示可被当前规则归类的试次数量（例如切换任务需可判定 repeat/switch；SST 可能截断到前 96 行）。")
     lines.append("")
 
     by_type: dict[str, list[TaskTrialSummary]] = {}

@@ -144,6 +144,10 @@ sbatch scripts/submit_hpc_real.sh
 
 默认输入文件由 `configs/paths.yaml` 的 `dataset.behavioral.reference_game_data_file` 指定，位于 `dataset.behavioral.app_data_dir` 下。
 
+口径：
+
+- 探索性统计默认不进行反应时过滤/修剪，避免单被试过滤导致条件分布不稳定；`Included` 表示可被规则归类的试次（可能包含任务特定截断）。
+
 运行：
 
 ```bash
