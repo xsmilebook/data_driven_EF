@@ -138,6 +138,23 @@ sbatch scripts/submit_hpc_real.sh
 
 - `{task_name}_{metric_name}`（如 `FLANKER_ACC`, `oneback_number_dprime`）。
 
+### 行为数据探索性分析（单被试试次统计）
+
+目的：对单个 Excel 工作簿（单被试）按指标计算口径统计试次数量与条件分布，用于建模可行性评估与数据质量自检。
+
+默认输入文件由 `configs/paths.yaml` 的 `dataset.behavioral.reference_game_data_file` 指定，位于 `dataset.behavioral.app_data_dir` 下。
+
+运行：
+
+```bash
+python -m scripts.eda_behavior_trials --dataset EFNY --config configs/paths.yaml
+```
+
+输出：
+
+- 报告写入 `configs/paths.yaml` 的 `docs_reports_root`（默认 `docs/reports/`），文件名根据工作簿自动生成。
+- 可通过 `--excel-file`（绝对路径或仓库相对路径）与 `--report-out` 覆盖默认输入/输出位置。
+
 ### 3) 神经影像预处理与 QC
 
 预期顺序：

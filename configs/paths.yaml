@@ -6,6 +6,10 @@ data_root: data
 outputs_root: outputs
 logs_root: outputs/logs
 
+# Documentation roots (repo-relative).
+docs_root: docs
+docs_reports_root: docs/reports
+
 # Single-dataset roots (no <DATASET> layer).
 raw_root: data/raw
 interim_root: data/interim
@@ -34,6 +38,8 @@ dataset:
     # Optional: set to an explicit list to restrict Y; leave empty to use all metrics.
     selected_measures: []
     app_data_dir: behavior_data/cibr_app_data
+    # Reference file for exploratory analysis / sanity checks (single-subject workbook).
+    reference_game_data_file: THU_20250829_759_JZC_景志成_GameData.xlsx
     task_prefixes: [GNG, FLANKER, SST, ColorStroop, EmotionStroop, CPT, DCCS, DT, EmotionSwitch, KT, oneback_number, twoback_number, oneback_spatial, twoback_spatial, oneback_emotion, twoback_emotion]
 
   external_inputs:
