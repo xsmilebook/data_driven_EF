@@ -25,6 +25,10 @@
 | DT | 128 | 64 | 33 | 31 |  |
 | EmotionSwitch | 128 | 64 | 39 | 25 |  |
 | DCCS | 40 | 20 | 10 | 10 |  |
+其中：
+DT的pure block有64个trials，mixed block有64个trials（33个repeat，31个switch）。
+EmotionSwitch的pure block有64个trials，mixed block有64个trials（39个repeat，25个switch）。
+DCCS的pure block有20个trials，mixed block有20个trials（10个repeat，10个switch）。
 
 ## Congruent/Incongruent（基于 item 解析）
 | Task | Total | Included | Congruent | Incongruent | Note |
