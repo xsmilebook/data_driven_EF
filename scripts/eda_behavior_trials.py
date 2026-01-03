@@ -22,6 +22,7 @@ class TaskTrialSummary:
     n_included: int | None
     counts: dict[str, int]
     note: str | None = None
+    mixed_from: float | None = None
 
 
 def _to_markdown_table(rows: list[dict], columns: list[str]) -> str:
@@ -200,6 +201,7 @@ def _summarize_switch(df: pd.DataFrame, cfg: dict, task_name: str) -> TaskTrialS
         n_included=int(len(d)),
         counts={str(k): int(v) for k, v in counts.items()},
         note=None,
+        mixed_from=float(mixed_from) if mixed_from is not None else None,
     )
 
 
@@ -380,9 +382,20 @@ def build_report_markdown(
         sw = by_type["switch"]
         sw_ok = [s for s in sw if (s.n_included or 0) >= 50]
         sw_low = [s for s in sw if (s.n_included or 0) < 50]
+        mixed_info = []
+        for s in sorted(sw, key=lambda x: x.task_name):
+            if s.mixed_from is None:
+                continue
+            mixed_info.append(f"{s.task_name}: trial_index≥{int(s.mixed_from)}")
+        if mixed_info:
+            lines.append(f"- **切换类口径**：仅使用 mixed block（{', '.join(mixed_info)}；pure block 不参与 repeat/switch 统计与建模）。")
         if sw_ok:
-            tasks = ", ".join(s.task_name for s in sw_ok)
-            lines.append(f"- **可用候选（切换类）**：{tasks}（可按 repeat/switch 分层；需确保响应为二选一且 RT 质量可控）。")
+            parts = []
+            for s in sorted(sw_ok, key=lambda x: x.task_name):
+                rep = s.counts.get("repeat", 0)
+                swc = s.counts.get("switch", 0)
+                parts.append(f"{s.task_name}(Repeat={rep}, Switch={swc})")
+            lines.append(f"- **可用候选（切换类）**：{', '.join(parts)}（建议多被试层级 DDM；单被试分层拟合不稳定）。")
         if sw_low:
             tasks = ", ".join(f"{s.task_name}(Included={s.n_included})" for s in sw_low)
             lines.append(f"- **谨慎使用（切换类试次偏少）**：{tasks}（分层后单条件试次可能不足，参数估计不稳定）。")

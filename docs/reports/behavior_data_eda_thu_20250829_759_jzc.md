@@ -22,9 +22,9 @@
 ## Repeat/Switch（按规则变更；含 mixed_from 截断）
 | Task | Total | Included | Repeat | Switch | Note |
 | --- | --- | --- | --- | --- | --- |
-| DT | 128 | 63 | 32 | 31 |  |
-| EmotionSwitch | 128 | 63 | 38 | 25 |  |
-| DCCS | 40 | 19 | 10 | 9 |  |
+| DT | 128 | 64 | 33 | 31 |  |
+| EmotionSwitch | 128 | 64 | 39 | 25 |  |
+| DCCS | 40 | 20 | 10 | 10 |  |
 
 ## Congruent/Incongruent（基于 item 解析）
 | Task | Total | Included | Congruent | Incongruent | Note |
@@ -54,8 +54,9 @@
 以下判断以“二选一反应（2AFC）+ 试次级 RT + 充分试次数量”为基本前提；若任务存在抑制/停止机制或大量无反应试次，应优先考虑扩展模型（如 go/no-go DDM、stop-signal race）。
 
 - **优先候选（冲突类）**：EmotionStroop, FLANKER, ColorStroop（条件划分清晰，通常可按 congruent/incongruent 分层拟合）。
-- **可用候选（切换类）**：DT, EmotionSwitch（可按 repeat/switch 分层；需确保响应为二选一且 RT 质量可控）。
-- **谨慎使用（切换类试次偏少）**：DCCS(Included=19)（分层后单条件试次可能不足，参数估计不稳定）。
+- **切换类口径**：仅使用 mixed block（DCCS: trial_index≥21, DT: trial_index≥65, EmotionSwitch: trial_index≥65；pure block 不参与 repeat/switch 统计与建模）。
+- **可用候选（切换类）**：DT(Repeat=33, Switch=31), EmotionSwitch(Repeat=39, Switch=25)（建议多被试层级 DDM；单被试分层拟合不稳定）。
+- **谨慎使用（切换类试次偏少）**：DCCS(Included=20)（分层后单条件试次可能不足，参数估计不稳定）。
 - **可探索（N-back）**：oneback_spatial, twoback_spatial, oneback_number, twoback_number, oneback_emotion, twoback_emotion（可按 match/no-match 分层；需注意 match 试次往往较少，可能不足以稳定估计条件差异）。
   - 本工作簿中 match 试次偏少：oneback_spatial(Match=12), twoback_spatial(Match=12), oneback_number(Match=12), twoback_number(Match=11), oneback_emotion(Match=7), twoback_emotion(Match=8)。
 - **不建议直接用标准 2AFC DDM（Go/NoGo）**：CPT, GNG（no-go 通常缺失 RT；若要建模可考虑 go/no-go DDM 或 race 模型）。

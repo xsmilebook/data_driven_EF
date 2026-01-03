@@ -78,10 +78,11 @@
 3) 任务切换（`type: switch`；DCCS/DT/EmotionSwitch）
 
 - 规则序列：
-  - DCCS：以 `item` 末位字符代表规则。
-  - DT：以 `answer` 分类水平/垂直规则。
+  - DCCS：以 `item` 的首字符代表规则。
+  - DT：以 `item` 是否包含 `T/t` 映射为 `TN/CN` 规则。
   - EmotionSwitch：以 `item` 数字区间映射 emotion/gender 规则。
 - 切换定义：与前一试次规则不同为 `switch`，相同为 `repeat`，并可用 `mixed_from` 丢弃前期非混合段。
+  - 当前 block 约定（EFNY app）：DCCS 的 pure block 为 1–20（mixed 从 21 开始）；DT 与 EmotionSwitch 的 pure block 为 1–64（mixed 从 65 开始）。
 - 指标：
   - `ACC`/`RT_Mean`/`RT_SD`：整体统计。
   - `Repeat_ACC`/`Repeat_RT`、`Switch_ACC`/`Switch_RT`：条件内统计。

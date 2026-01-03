@@ -70,21 +70,21 @@ behavioral_metrics:
       filter_rt: true
       rt_max: 2.5
       min_prop: 0.5
-      mixed_from: 22
+      mixed_from: 21
       metrics: [ACC, RT_Mean, RT_SD, Repeat_ACC, Repeat_RT, Switch_ACC, Switch_RT, Switch_Cost_RT, Switch_Cost_ACC]
     DT:
       type: switch
       filter_rt: true
       rt_max: 2.5
       min_prop: 0.5
-      mixed_from: 66
+      mixed_from: 65
       metrics: [ACC, RT_Mean, RT_SD, Repeat_ACC, Repeat_RT, Switch_ACC, Switch_RT, Switch_Cost_RT, Switch_Cost_ACC]
     EmotionSwitch:
       type: switch
       filter_rt: true
       rt_max: 2.5
       min_prop: 0.5
-      mixed_from: 66
+      mixed_from: 65
       metrics: [ACC, RT_Mean, RT_SD, Repeat_ACC, Repeat_RT, Switch_ACC, Switch_RT, Switch_Cost_RT, Switch_Cost_ACC]
     SST:
       type: sst
