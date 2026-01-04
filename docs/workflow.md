@@ -173,7 +173,13 @@ python -m scripts.ddm_decision_report --dataset EFNY --config configs/paths.yaml
 
 - 输入目录默认为 `data/raw/behavior_data/cibr_app_data/`（由 `configs/paths.yaml` 的 `dataset.behavioral.app_data_dir` 控制）。
 - 层级 HDDM 计算成本高：可用 `--max-files` 做 pilot（先确认模型与依赖可运行），再扩展到全样本。
-- 本脚本默认仅将表格嵌入 Markdown 报告，不额外写出 CSV。
+- 决策要点（以 `docs/reports/ddm_decision.md` 为准）：
+  - `ColorStroop/EmotionStroop` 为 4-choice，主模型为 **4-choice LBA**；报告中将 choice 归并为 Target / Word / Other。
+  - `DT/EmotionSwitch` 原始为 4-choice，但可按轴向/维度做 **2-choice 重编码** 后进行层级 DDM，并在同一模型中联合估计 Mixing + Switch（建议加入 axis/dimension 控制项）。
+  - `SST` 标准 DDM 不适用，需补充 **go-only 2AFC DDM**（仅 go trials）。
+- 输出与可追溯性：
+  - Markdown 报告内嵌表格用于“决策 + 证据”汇总；
+  - 每个 `task×model` 建议保存 posterior traces（`InferenceData` netcdf）与轻量 summary（便于从集群下载后本地复核/再汇总），保存位置应落在 `data/processed/table/metrics/` 的子目录（由脚本统一管理路径）。
 
 ### 3) 神经影像预处理与 QC
 

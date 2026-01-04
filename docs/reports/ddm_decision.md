@@ -5,26 +5,79 @@
 - 文件模式：`*.xlsx`
 - 本次运行文件数：10
 
+## 2AFC 合规性检查（全样本）
+
+本节基于 `data/raw/behavior_data/cibr_app_data/` 下全部 `588` 个 Excel 工作簿，汇总各任务 `key(正式阶段被试按键)` 的取值集合（跨被试取并集），用于判断任务是否满足标准 2AFC-RT DDM 的前提。
+
+结论（按 `key` 的 choices 数量）：
+
+| Task | key choices | 2AFC? | choices（key 取值集合） | 备注 |
+| --- | --- | --- | --- | --- |
+| FLANKER | 2 | 是 | `left/right` | 可作为标准 2AFC-RT DDM 候选 |
+| DCCS | 2 | 是 | `left/right` | 2AFC 但试次数较少（尤其 mixed 内） |
+| SST | 2 | 部分 | `left/right` | stop 常见无按键；标准 DDM 不适用，需做 go-only DDM（补充） |
+| GNG | 2 | 理论上否 | `false/true` | 数据层面有 RT，但任务本质为 go/no-go（建议 SDT；DDM 仅作补充需谨慎解释） |
+| CPT | 2 | 否 | `false/true` | NoGo 基本无 RT（不满足 2AFC-RT DDM） |
+| oneback_* / twoback_* | 2 | 不建议 | `left/right` | 虽 2-choice，但 match 试次偏少；DDM 解释力弱 |
+| ColorStroop | 4 | 否 | `red/green/blue/yellow` | **非 2AFC**，应使用多选模型（LBA/race） |
+| EmotionStroop | 4 | 否 | `an/ha/ne/sa` | **非 2AFC**，应使用多选模型（LBA/race） |
+| DT | 4 | 否（原始） | `left/right/up/down` | **原始为 4-choice**；可按轴向重编码为 2-choice（见下） |
+| EmotionSwitch | 4 | 否（原始） | `female/male/happy/sad` | **原始为 4-choice**；可按维度重编码为 2-choice（见下） |
+
+因此：本报告中先前对 `ColorStroop/EmotionStroop/DT/EmotionSwitch` 的 DDM 试算结果应视为“管线通路验证”（legacy），后续应以 LBA 或 2-choice 重编码后的模型结果替代。
+
 ## 决策矩阵（依据任务表）
 | Task | 纳入试次 | 层级HDDM | 模型（主推） | 备注/风险点 |
 | --- | --- | --- | --- | --- |
 | FLANKER | 全部 (96; 48C/48I) | 可选（推荐做统一管线） | HDDM/层级DDM：v ~ congruency（必要时 a ~ congruency） | 条件均衡，最稳定；也可做单被试分层拟合（不推荐作为主结论）。 |
-| ColorStroop | 全部 (96; 24C/72I) | 是 | HDDM/层级DDM：v ~ congruency（不建议单被试分层拟合） | 条件极不均衡；congruent 少，必须用 predictor 思路。 |
-| EmotionStroop | 全部 (96; 24C/72I) | 是 | HDDM/层级DDM：v ~ congruency（不建议单被试分层拟合） | 同上。 |
-| DT | pure 64 + mixed 64 = 128；switch 仅 mixed | 是（强烈建议） | 两层策略：① Mixing-DDM：v ~ block_type(pure/mixed)（用 128）；②（辅）Switch-DDM：v ~ trial_type(R/S)（仅 mixed） | 更适合“完整 DDM 分解”：mixing 主打，switch 可做补充。 |
-| EmotionSwitch | pure 64 + mixed 64 = 128；switch 仅 mixed | 是（强烈建议） | 两层策略：① Mixing-DDM：v ~ block_type(pure/mixed)（用 128）；②（辅）Switch-DDM：v ~ trial_type(R/S)（仅 mixed） | mixed 内 switch 较少；建议只让 v 随条件变，避免多参数一起变。 |
+| ColorStroop | 全部 (96; 24C/72I) | 是（多选） | **4-choice LBA**（4 accumulators；回归：参数随 congruency 变化） | 报告层面将 choice 归并为：Target（正确选项）、Word（文字诱导选项；仅 incongruent 有意义）、Other（其余两项错误） |
+| EmotionStroop | 全部 (96; 24C/72I) | 是（多选） | **4-choice LBA**（4 accumulators；回归：参数随 congruency 变化） | 需要在试次级数据中解析“Target vs Word”；当前 `item=e{n}` 仅支持 congruency 判定，需补充映射表后才能稳定构造 Word 诱导选项 |
+| DT | pure 64 + mixed 64 = 128；switch 仅 mixed | 是（重编码后） | **2-choice 层级 DDM（按轴向重编码）**：保留 `left/right` 与 `up/down` 两类试次；剔除“跨轴错误”作为 lapse/outlier | 可在同一模型中同时估计 Mixing+Switch：`v ~ block_mixed + is_switch + (1|subject)`（pure 中令 `is_switch=0`） |
+| EmotionSwitch | pure 64 + mixed 64 = 128；switch 仅 mixed | 是（重编码后） | **2-choice 层级 DDM（按维度重编码）**：emotion 试次仅保留 `happy/sad`；gender 试次仅保留 `female/male`；其余作为 lapse/outlier | 同上，可同时估计 Mixing+Switch：`v ~ block_mixed + is_switch + (1|subject)`（并建议加入维度哑变量做控制） |
 | DCCS | pure 20 + mixed 20 = 40；mixed 内 10R/10S | 否（或仅探索） | 不建议做 switch-DDM；如一定要做，仅做整体 DDM 或 v ~ block_type | mixed 内每格 10 太少；switch-DDM 基本不可识别。 |
-| SST | 主模型用 go+stop（race/SSRT）；DDM 仅用 go RT | ①否（标准 DDM）②可选（Go-DDM） | Stop-signal race/SSRT（integration 等）；可选补充：Go-DDM（HDDM）仅用 go=72 | 抑制过程更适合 race/SSRT；Go-DDM 解释“go 决策”，仅作补充。 |
+| SST | 主模型用 go+stop（race/SSRT）；DDM 仅用 go RT | ①否（标准 DDM）②是（Go-only DDM） | 主推：Stop-signal race/SSRT；补充：**Go-only 2AFC DDM（仅 go trials）** | stop 无反应不满足 DDM；go-only DDM 用于刻画 go 决策（需与 SSRT/race 分析并列呈现） |
 | GNG / CPT | Go/NoGo（NoGo 无 RT） | 否 | 不做标准 DDM；用 SDT(d'+c) + commission/omission（可加 time-on-task） | 单键 Go/NoGo 不符合标准 2AFC-RT DDM；NoGo 无 RT。 |
 | N-back 系列 | 60（match 很少） | 否（不建议） | SDT(d'+c) + RT/ACC + 负荷/域比较 | match 太少；分层 DDM 不可行，整体 DDM 解释弱。 |
+
+## 关键重编码与报表归并规则（保证 2AFC / 多选一致性）
+
+本节将“原始 choices（任务真实按键集合）”与“用于建模的数据结构”显式对齐，避免在 2AFC-RT DDM 上违反基本假设。
+
+### DT：`left/right/up/down` → 两个 2-choice 子任务（轴向重编码）
+- 轴向判定（以正确按键为准）：若 `key ∈ {left,right}` 记为 `axis=horizontal`；若 `key ∈ {up,down}` 记为 `axis=vertical`。
+- 2-choice 化：在每个 `axis` 内，将 `choice` 限定为该轴的两键（horizontal: left vs right；vertical: down vs up）。
+- 响应处理（关键）：若被试响应 `answer` 落在**另一条轴**（例如 horizontal 试次答了 up），该响应在 2-choice DDM 中不可表示，建议作为 `lapse/outlier` 计数并从 DDM 拟合数据中剔除；同时在报告中单独汇报其比例（质量指标）。
+- Mixing + Switch：使用 `block_type ∈ {pure,mixed}` 生成 `block_mixed`；在 mixed 内根据规则变更生成 `is_switch`（repeat=0/switch=1）；pure block 中定义 `is_switch=0` 以便在同一模型中联合估计（并在解释时强调：switch 效应只来自 mixed）。
+- 建模策略建议：优先在一个层级 DDM 中加入 `axis` 哑变量做控制（axis 作为协变量，或在后续做分轴敏感性分析），避免把两种语义不同的 2-choice 直接无区分混合。
+
+### EmotionSwitch：`female/male/happy/sad` → 两个 2-choice 子任务（维度重编码）
+- 维度判定（以正确按键为准）：若 `key ∈ {female,male}` 记为 `dimension=gender`；若 `key ∈ {happy,sad}` 记为 `dimension=emotion`。
+- 2-choice 化：在每个 `dimension` 内仅保留对应两键（gender: female vs male；emotion: happy vs sad）。
+- 响应处理：若被试响应跨维度（例如 emotion 试次答了 female），同 DT 处理为 `lapse/outlier` 计数并从 DDM 拟合数据中剔除，同时报告比例。
+- Mixing + Switch：同 DT（`block_mixed` 与 `is_switch`）；并建议在模型中加入 `dimension` 控制项，避免性别/情绪维度的基线差异混入 mixing/switch 解释。
+
+### SST：go-only 2AFC DDM（补充模型）
+- 仅纳入 go 试次（需能稳定判定 go/stop；并排除 stop 无按键/无 RT 试次），在 go 试次内按 `left/right` 做 2AFC DDM。
+- go-only DDM 的作用定位为“go 决策过程刻画”，必须与 SSRT/race 模型的 stop 抑制结论并列解释。
+
+### ColorStroop / EmotionStroop：4-choice LBA + 报表三类归并
+- 拟合层面：保留**原始 4-choice** 作为 LBA 的四个 accumulators（ColorStroop: `red/green/blue/yellow`；EmotionStroop: `an/ha/ne/sa`），以 congruency 为主要条件变量。
+- 报表层面：将每个试次的响应按以下三类归并，用于更直观的错误结构总结：
+  - `Target`：响应等于正确选项（`answer == key`）。
+  - `Word`：仅对 incongruent 试次定义；响应等于“文字诱导选项”（ColorStroop 可从 `item` 解析 Text 颜色；EmotionStroop 需从试次信息解析 word 对应类别）。
+  - `Other`：其余两项错误选项。
+- 可实现性提醒：ColorStroop 的 `item` 形如 `Pic_<Color>_Text_<Color>`，可直接构造 Word；EmotionStroop 当前 `item=e{n}` 仅支持 congruency 判定，需补充“每个 e{n} 对应的 target 与 word 类别”映射表（或从原始表格中读取显式字段）后才能严格区分 `Word` 与 `Other`。
 
 ## 本次模型计算设置
 - 后端：HSSM（PyMC-based hierarchical SSM） + `nuts_numpyro` 采样
 - draws=40, tune=40, chains=1, seed=1
-- 层级结构：仅对 drift rate (`v`) 引入被试随机截距（`(1|subject)`）；`a`/`t` 采用群体固定效应（计算可行性优先）。
+- 层级结构（目标）：对 `v/a/t/z` 均引入被试随机截距（random effects）；默认仅允许 `v` 随条件变化（必要时 FLANKER 可做 `a ~ congruency` 的敏感性分析）。
 - 说明：仅将结果嵌入本文档，不写出 CSV。
+- 追溯性保存：每个 task×model（null/effect）保存 posterior traces（`InferenceData` netcdf），并另存一份轻量 summary（便于下载后本地汇总与复核）。
 
 ## 计算结果摘要（效果评估）
+说明：下表为早期 DDM 试算（用于验证管线可运行与效应符号）。其中 `ColorStroop/EmotionStroop/DT/EmotionSwitch` 在“标准 2AFC”意义上不成立（原始为 4-choice），后续应以 LBA/2-choice 重编码后的结果替代。
+
 | Task | Model | N_subjects | N_trials | Beta(v_congruency) | Beta(v_block_mixed) | Beta(v_is_switch) | LOO |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | FLANKER | HDDM (hier): v ~ congruency | 10 | 960 | -0.257 [-0.501, -0.106], P(>0)=0.00 |  |  | elpd_loo=495.2, p_loo=17.1 |
@@ -49,5 +102,6 @@ python -m scripts.ddm_decision_report --dataset EFNY --config configs/paths.yaml
 
 ## 风险与注意事项（规划）
 - 层级 HDDM 对计算资源敏感：建议先用 `--max-files` 进行 pilot，确认模型可运行后再扩展到全样本。
-- 对条件极不均衡的任务（Color/Emotion Stroop），应避免单被试分层拟合，优先层级回归形式。
-- 对 switch 任务：主分析建议优先 Mixing-DDM（pure vs mixed），Switch-DDM 作为补充（仅 mixed）。
+- 对非 2AFC 的任务：`ColorStroop/EmotionStroop` 应使用 4-choice LBA；`DT/EmotionSwitch` 需先做 2-choice 重编码（并剔除跨维度/跨轴错误），否则 DDM 解释不成立。
+- 对条件极不均衡任务：应避免单被试分层拟合，优先层级回归形式，并在 posterior predictive 中检查 choice 概率是否合理。
+- 对 switch 任务：建议在同一模型中联合估计 mixing+switch（`block_mixed` 与 `is_switch`），并明确 `is_switch` 的 pure block 取值约定（pure=0）。 
