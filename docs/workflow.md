@@ -37,6 +37,30 @@ EFNY 相关假设配置在 `configs/paths.yaml` 的 `dataset` 段落中。数据
    - 脚本：`src/imaging_preprocess/batch_run_xcpd.sh`、`src/imaging_preprocess/xcpd_36p.sh`
    - 输入：`data/raw/MRI_data/`
    - 输出：`data/interim/MRI_data/xcpd_rest`
+2) task-fMRI 预处理（xcp-d：去噪 + 去除任务诱发 HRF）。
+   - 目标：在 36P + 0.01–0.1 Hz 滤波的基础上，将任务诱发共激活信号作为 confounds 一并回归。
+   - 脚本：
+     - 单被试单任务：`src/imaging_preprocess/xcpd_task_36p_taskreg.sh`
+     - 批处理（SLURM 提交）：`src/imaging_preprocess/batch_run_xcpd_task.sh`
+     - task confounds 生成（Python）：`python -m scripts.build_task_xcpd_confounds`
+   - 依赖：
+     - xcp-d 容器版本：`xcpd-0.7.1rc5`
+     - Psychopy 行为记录：`data/raw/MRI_data/task_psych/`（可通过配置覆盖）
+     - fMRIPrep 结果：由 `configs/dataset_tsinghua_taskfmri.yaml` 指定各任务的 fMRIPrep 根目录（可为仓库外绝对路径）。
+   - 输出：
+     - xcp-d 结果：`data/interim/MRI_data/xcpd_task/<task>/`
+     - 自定义 confounds（BIDS derivative）：`data/interim/MRI_data/xcpd_task/custom_confounds/<task>/<subject>/`
+   - 回归口径（按任务诱发 HRF 去除）：
+     - block/state 回归量：canonical HRF（SPM HRF）卷积。
+       - NBACK：`state_pure_0back`、`state_pure_2back`（如存在混合段：`state_mixed`）。
+       - SWITCH：`state_pure_red`、`state_pure_blue`、`state_mixed`。
+       - SST：`state_part1`、`state_part2`（按 `Trial_loop.thisTrialN < 60` 分段）。
+     - event 回归量：FIR（以 TR 为 bin，窗口默认为 20 秒）。
+       - 共通：`stimulus`（刺激呈现）、`response`（按键 onset = `key_resp.started + key_resp.rt`）。
+       - SST 额外：`banana`（当 `bad` 列包含 banana 时，以 `Trial_image_3.started` 作为事件 onset）。
+   - 关键对齐假设：
+     - 扫描起点：使用 Psychopy CSV 中首个 `MRI_Signal_s.started` 作为时间 0；缺失时回退到 `Begin_fix.started`，再回退到 0。
+     - NBACK/SWITCH 的 block 类型优先由 `Trial_loop_list` 推断（行为试次行中 `Task_img` 常为空）。
 2) 头动 QC 汇总。
    - 脚本：`src/imaging_preprocess/screen_head_motion_efny.py`
    - 输出：`data/interim/table/qc/rest_fd_summary.csv`
@@ -207,6 +231,22 @@ xcp-d：
 - 脚本：`src/imaging_preprocess/batch_run_xcpd.sh`、`src/imaging_preprocess/xcpd_36p.sh`
 - 被试列表：`data/processed/table/sublist/mri_sublist.txt`
 - 输出目录：`data/interim/MRI_data/xcpd_rest`
+
+task-fMRI xcp-d（任务回归）：
+
+- 配置文件：`configs/dataset_tsinghua_taskfmri.yaml`（指定 task_psych_dir 与各任务 fMRIPrep 根目录）。
+- 被试列表（建议路径，可在命令行覆盖）：`data/processed/table/sublist/taskfmri_sublist.txt`
+- 批量提交：
+
+```bash
+bash src/imaging_preprocess/batch_run_xcpd_task.sh data/processed/table/sublist/taskfmri_sublist.txt "nback sst switch"
+```
+
+- 单被试单任务提交：
+
+```bash
+sbatch src/imaging_preprocess/xcpd_task_36p_taskreg.sh THU20231119141SYQ nback
+```
 
 头动 QC：
 

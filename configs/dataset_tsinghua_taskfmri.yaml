@@ -1,0 +1,11 @@
+external_inputs:
+  # Relative to RAW_ROOT (defaults to data/raw).
+  task_psych_dir: MRI_data/task_psych
+
+  # fMRIPrep derivative roots for each task-fMRI dataset.
+  # These are typically absolute paths on the cluster.
+  fmriprep_task_dirs:
+    nback: /ibmgpfs/cuizaixu_lab/xuxiaoyu/songxinwei/fmri_task/Tsinghua/Tsinghua_nback/fmriprep_task
+    sst: /ibmgpfs/cuizaixu_lab/xuxiaoyu/songxinwei/fmri_task/Tsinghua/Tsinghua_sst/fmriprep_task
+    switch: /ibmgpfs/cuizaixu_lab/xuxiaoyu/songxinwei/fmri_task/Tsinghua/Tsinghua_nback/fmriprep_switch
+

@@ -1,0 +1,83 @@
+#!/bin/bash
+#SBATCH --chdir=/ibmgpfs/cuizaixu_lab/xuhaoshu/projects/data_driven_EF
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=2
+#SBATCH -p q_fat
+
+module load singularity
+
+subj=$1
+task=$2
+if [ -z "$subj" ] || [ -z "$task" ]; then
+  echo "Usage: $0 <SUBJECT_LABEL> <TASK: nback|sst|switch>" 1>&2
+  exit 2
+fi
+
+subj_label=${subj#sub-}
+
+task=$(echo "$task" | tr '[:upper:]' '[:lower:]')
+case "$task" in
+  nback|sst|switch) ;;
+  *) echo "Invalid task: $task (expected nback|sst|switch)" 1>&2; exit 2 ;;
+esac
+
+eval "$(python -m scripts.render_paths --dataset THU_TASK --config configs/paths.yaml --dataset-config configs/dataset_tsinghua_taskfmri.yaml --format bash)"
+
+case "$task" in
+  nback) fmriprep_Path=${FMRIPREP_TASK_NBACK_DIR} ;;
+  sst) fmriprep_Path=${FMRIPREP_TASK_SST_DIR} ;;
+  switch) fmriprep_Path=${FMRIPREP_TASK_SWITCH_DIR} ;;
+esac
+
+if [ -z "$fmriprep_Path" ]; then
+  echo "ERROR: fmriprep path for task=$task is not configured in configs/dataset_tsinghua_taskfmri.yaml" 1>&2
+  exit 1
+fi
+if [ -z "$TASK_PSYCH_DIR" ]; then
+  echo "ERROR: TASK_PSYCH_DIR is not configured in configs/dataset_tsinghua_taskfmri.yaml" 1>&2
+  exit 1
+fi
+
+output=${INTERIM_ROOT}/MRI_data/xcpd_task/${task}
+custom_confounds_root=${INTERIM_ROOT}/MRI_data/xcpd_task/custom_confounds/${task}/sub-${subj_label}
+wd=${INTERIM_ROOT}/wd/xcpd_task/${task}/sub-${subj_label}
+mkdir -p "$output" "$custom_confounds_root" "$wd"
+
+python -m scripts.build_task_xcpd_confounds \
+  --subject "${subj}" \
+  --task "${task}" \
+  --out-root "${custom_confounds_root}" \
+  --fmriprep-dir "${fmriprep_Path}" \
+  --task-psych-dir "${TASK_PSYCH_DIR}" \
+  --fir-window-seconds 20
+
+temp_dir=/ibmgpfs/cuizaixu_lab/xuhaoshu/trash/sub-${subj_label}
+mkdir -p "$temp_dir"
+
+fslic=/ibmgpfs/cuizaixu_lab/xulongzhou/tool/freesurfer
+templateflow=/ibmgpfs/cuizaixu_lab/xulongzhou/tool/templateflow
+export SINGULARITYENV_TEMPLATEFLOW_HOME=$templateflow
+
+singularity run --cleanenv \
+  -B $fmriprep_Path:/fmriprep \
+  -B $output:/output \
+  -B $wd:/wd \
+  -B $fslic:/fslic \
+  -B $templateflow:$templateflow \
+  -B $custom_confounds_root:/custom_confounds \
+  -B /ibmgpfs/cuizaixu_lab/xuhaoshu/tmp:/tmp \
+  -B $temp_dir:$HOME \
+  /ibmgpfs/cuizaixu_lab/xulongzhou/apps/singularity/xcpd-0.7.1rc5.simg \
+  /fmriprep /output participant \
+  --participant_label ${subj_label} --task-id ${task} \
+  --datasets custom=/custom_confounds \
+  --nuisance-regressors /custom_confounds/confounds_config.yml \
+  --fs-license-file /fslic/license.txt \
+  -w /wd --nthreads 2 --mem-gb 40 \
+  --despike \
+  --lower-bpf=0.01 --upper-bpf=0.1 \
+  --motion-filter-type lp --band-stop-min 6 \
+  --fd-thresh -1
+
+rm -rf "$wd"

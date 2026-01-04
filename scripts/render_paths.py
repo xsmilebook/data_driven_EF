@@ -21,6 +21,15 @@ def _shell_escape_double_quotes(s: str) -> str:
 def _bash_export(name: str, value: str) -> str:
     return f'export {name}="{_shell_escape_double_quotes(value)}"'
 
+def _resolve_maybe_relative(value: str, *, base: Path) -> str:
+    s = str(value).strip()
+    if s.startswith("/"):
+        return s
+    p = Path(s)
+    if p.is_absolute():
+        return str(p)
+    return str((base / p).resolve())
+
 
 def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser()
@@ -45,8 +54,22 @@ def main() -> int:
     )
     external_inputs = dataset_cfg.get("external_inputs", {})
     fmriprep_dir = ""
+    task_psych_dir = ""
+    fmriprep_task_dirs: dict[str, str] = {}
     if isinstance(external_inputs, dict):
         fmriprep_dir = str(external_inputs.get("fmriprep_dir", "") or "")
+        task_psych_dir = str(external_inputs.get("task_psych_dir", "") or "")
+        # Accept either a mapping (recommended) or per-task keys.
+        raw_task_dirs = external_inputs.get("fmriprep_task_dirs", {})
+        if isinstance(raw_task_dirs, dict):
+            for k, v in raw_task_dirs.items():
+                if v:
+                    fmriprep_task_dirs[str(k)] = str(v)
+        for task in ("nback", "sst", "switch"):
+            k = f"fmriprep_task_{task}_dir"
+            v = external_inputs.get(k)
+            if v:
+                fmriprep_task_dirs[task] = str(v)
 
     lines: list[str] = []
     lines.append(_bash_export("PROJECT_DIR", str(roots["repo_root"])))
@@ -57,7 +80,12 @@ def main() -> int:
     lines.append(_bash_export("OUTPUTS_ROOT", str(roots["outputs_root"])))
     lines.append(_bash_export("LOGS_ROOT", str(roots["logs_root"])))
     if fmriprep_dir:
-        lines.append(_bash_export("FMRIPREP_DIR", fmriprep_dir))
+        lines.append(_bash_export("FMRIPREP_DIR", _resolve_maybe_relative(fmriprep_dir, base=roots["repo_root"])))
+    if task_psych_dir:
+        lines.append(_bash_export("TASK_PSYCH_DIR", _resolve_maybe_relative(task_psych_dir, base=roots["raw_root"])))
+    for task, path in sorted(fmriprep_task_dirs.items()):
+        env_name = f"FMRIPREP_TASK_{task.upper()}_DIR"
+        lines.append(_bash_export(env_name, _resolve_maybe_relative(path, base=roots["repo_root"])))
 
     print("\n".join(lines))
     return 0
