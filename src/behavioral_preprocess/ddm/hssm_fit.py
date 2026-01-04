@@ -41,6 +41,44 @@ def _beta_summary(idata: az.InferenceData, var: str) -> dict[str, float] | None:
     }
 
 
+def fit_hssm(
+    data: pd.DataFrame,
+    *,
+    model: str,
+    include: list[UserParam],
+    fit_cfg: FitConfig,
+    loglik_kind: str = "analytical",
+    beta_varname: str | None = None,
+) -> FitResult:
+    if len(data) == 0:
+        raise ValueError("Empty dataset for fitting.")
+    if "rt" not in data.columns or "response" not in data.columns:
+        raise ValueError("Missing required columns: rt/response")
+
+    model_obj = hssm.HSSM(
+        data,
+        model=model,
+        loglik_kind=loglik_kind,
+        include=include,
+    )
+    idata = model_obj.sample(
+        sampler=fit_cfg.sampler,
+        draws=int(fit_cfg.draws),
+        tune=int(fit_cfg.tune),
+        chains=int(fit_cfg.chains),
+        target_accept=float(fit_cfg.target_accept),
+        random_seed=int(fit_cfg.random_seed),
+        progress_bar=bool(fit_cfg.progress_bar),
+    )
+    beta = _beta_summary(idata, beta_varname) if beta_varname else None
+    loo = None
+    try:
+        loo = az.loo(idata)
+    except Exception:
+        loo = None
+    return FitResult(idata=idata, loo=loo, beta_summary=beta)
+
+
 def fit_ddm(
     data: pd.DataFrame,
     *,
@@ -58,40 +96,28 @@ def fit_ddm(
     if not needed.issubset(set(data.columns)):
         raise ValueError(f"Missing required columns: {sorted(needed - set(data.columns))}")
 
+    include: list[UserParam] = [UserParam("v", formula=v_formula)]
     if hierarchical_v_only:
-        include = [
-            UserParam("v", formula=v_formula),
-            UserParam("a", formula="a ~ 1"),
-            UserParam("t", formula="t ~ 1"),
-            UserParam("z", prior=float(z_fixed)),
-        ]
+        include.extend(
+            [
+                UserParam("a", formula="a ~ 1"),
+                UserParam("t", formula="t ~ 1"),
+                UserParam("z", prior=float(z_fixed)),
+            ]
+        )
     else:
-        include = [
-            UserParam("v", formula=v_formula),
-            UserParam("a", formula=f"a ~ 1 + (1|{group})"),
-            UserParam("t", formula=f"t ~ 1 + (1|{group})"),
-            UserParam("z", prior=float(z_fixed)),
-        ]
-
-    model = hssm.HSSM(
+        include.extend(
+            [
+                UserParam("a", formula=f"a ~ 1 + (1|{group})"),
+                UserParam("t", formula=f"t ~ 1 + (1|{group})"),
+                UserParam("z", formula=f"z ~ 1 + (1|{group})"),
+            ]
+        )
+    return fit_hssm(
         data,
         model="ddm",
-        loglik_kind=loglik_kind,
         include=include,
+        fit_cfg=fit_cfg,
+        loglik_kind=loglik_kind,
+        beta_varname=beta_varname,
     )
-    idata = model.sample(
-        sampler=fit_cfg.sampler,
-        draws=int(fit_cfg.draws),
-        tune=int(fit_cfg.tune),
-        chains=int(fit_cfg.chains),
-        target_accept=float(fit_cfg.target_accept),
-        random_seed=int(fit_cfg.random_seed),
-        progress_bar=bool(fit_cfg.progress_bar),
-    )
-    beta = _beta_summary(idata, beta_varname) if beta_varname else None
-    loo = None
-    try:
-        loo = az.loo(idata)
-    except Exception:
-        loo = None
-    return FitResult(idata=idata, loo=loo, beta_summary=beta)

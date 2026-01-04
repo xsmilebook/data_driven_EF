@@ -14,7 +14,7 @@ Update the EFNY decision+compute pipeline so each task is modeled with an assump
 [ ] For `DT` and `EmotionSwitch`, fit two parallel hierarchical DDMs and compare them (Model A vs Model B), with condition effects on `v/a/t0`:
 [ ] - Model A (Mixing): `v ~ block + rule + block:rule`, `a ~ block + rule + block:rule`, `t0 ~ block + rule + block:rule` (pure+mixed).
 [ ] - Model B (Switch): `v ~ trial_type + rule + trial_type:rule`, `a ~ trial_type + rule + trial_type:rule`, `t0 ~ trial_type + rule + trial_type:rule` (mixed only).
-[ ] Implement 4-choice LBA for `ColorStroop` and `EmotionStroop` (with congruency effects), and generate report-level collapsed choice rates: Target / Word / Other.
+[ ] Implement 4-choice multi-choice SSM for `ColorStroop` and `EmotionStroop` (HSSM: `race_no_z_4` as a practical substitute for LBA4), and generate report-level collapsed choice rates: Target / Word / Other.
 [ ] Implement `SST` go-only 2AFC hierarchical DDM (and keep SSRT/race modeling explicitly out-of-scope for the DDM table unless separately requested).
 [ ] Standardize hierarchical model specification: subject random effects for `v/a/t/z` (DDM); condition effects on `v` by default, plus task-specific extensions (DT/EmotionSwitch: `a` and `t0` also vary by condition; FLANKER optional sensitivity: `a ~ congruency`); consistent priors/sampling settings in `configs/analysis.yaml`.
 [ ] Add per-task model comparison (null vs effect; mixing+switch joint model where applicable) using LOO/WAIC and posterior predictive checks; write compact metrics tables for downstream plotting.

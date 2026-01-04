@@ -15,6 +15,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Updated `docs/reports/ddm_decision.md` and `docs/workflow.md` to reflect finalized model eligibility: 4-choice LBA for Stroops, 2-choice recoding for DT/EmotionSwitch, and go-only DDM for SST; updated `PLAN.md` accordingly.
 - Removed the Emotion1Back/Emotion2Back “reference item-column replacement” from `src/behavioral_preprocess/app_data/format_app_data.py` (kept only the SST SSRT reference fix).
 - Updated `docs/reports/ddm_decision.md` and `PLAN.md` to specify two parallel hierarchical DDMs for DT/EmotionSwitch (Mixing vs Switch), including condition effects on `v/a/t0` with `rule` interactions.
+- Implemented SLURM-ready hierarchical SSM runners that save posterior traces and summaries under `data/processed/table/metrics/ssm/`: `scripts/fit_ssm_task.py` (2AFC DDM tasks) and `scripts/fit_race4_task.py` (4-choice Stroop tasks), plus collection utility `scripts/collect_ssm_results.py`.
 
 
 ## In progress

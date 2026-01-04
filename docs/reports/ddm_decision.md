@@ -30,8 +30,8 @@
 | Task | 纳入试次 | 层级HDDM | 模型（主推） | 备注/风险点 |
 | --- | --- | --- | --- | --- |
 | FLANKER | 全部 (96; 48C/48I) | 可选（推荐做统一管线） | HDDM/层级DDM：v ~ congruency（必要时 a ~ congruency） | 条件均衡，最稳定；也可做单被试分层拟合（不推荐作为主结论）。 |
-| ColorStroop | 全部 (96; 24C/72I) | 是（多选） | **4-choice LBA**（4 accumulators；回归：参数随 congruency 变化） | 报告层面将 choice 归并为：Target（正确选项）、Word（文字诱导选项；仅 incongruent 有意义）、Other（其余两项错误） |
-| EmotionStroop | 全部 (96; 24C/72I) | 是（多选） | **4-choice LBA**（4 accumulators；回归：参数随 congruency 变化） | 需要在试次级数据中解析“Target vs Word”；当前 `item=e{n}` 仅支持 congruency 判定，需补充映射表后才能稳定构造 Word 诱导选项 |
+| ColorStroop | 全部 (96; 24C/72I) | 是（多选） | **4-choice 多选 SSM（HSSM: `race_no_z_4`；LBA4 替代）**（4 accumulators；回归：参数随 congruency 变化） | 报告层面将 choice 归并为：Target（正确选项）、Word（文字诱导选项；仅 incongruent 有意义）、Other（其余两项错误） |
+| EmotionStroop | 全部 (96; 24C/72I) | 是（多选） | **4-choice 多选 SSM（HSSM: `race_no_z_4`；LBA4 替代）**（4 accumulators；回归：参数随 congruency 变化） | 需要在试次级数据中解析“Target vs Word”；当前 `item=e{n}` 仅支持 congruency 判定，需补充映射表后才能稳定构造 Word 诱导选项 |
 | DT | pure 64 + mixed 64 = 128；switch 仅 mixed | 是（重编码后） | **2-choice 层级 DDM（按轴向重编码）**：建立两个对照模型（A/B），均纳入 `rule=axis`，并允许 `v/a/t0` 随条件变化（含交互） | Model A：Mixing（pure vs mixed）；Model B：Switch（repeat vs switch，仅 mixed）。跨轴错误按 lapse/outlier 处理并报告比例。 |
 | EmotionSwitch | pure 64 + mixed 64 = 128；switch 仅 mixed | 是（重编码后） | **2-choice 层级 DDM（按维度重编码）**：建立两个对照模型（A/B），均纳入 `rule=dimension`，并允许 `v/a/t0` 随条件变化（含交互） | Model A：Mixing（pure vs mixed）；Model B：Switch（repeat vs switch，仅 mixed）。跨维度错误按 lapse/outlier 处理并报告比例。 |
 | DCCS | pure 20 + mixed 20 = 40；mixed 内 10R/10S | 否（或仅探索） | 不建议做 switch-DDM；如一定要做，仅做整体 DDM 或 v ~ block_type | mixed 内每格 10 太少；switch-DDM 基本不可识别。 |
@@ -67,8 +67,8 @@
 - 仅纳入 go 试次（需能稳定判定 go/stop；并排除 stop 无按键/无 RT 试次），在 go 试次内按 `left/right` 做 2AFC DDM。
 - go-only DDM 的作用定位为“go 决策过程刻画”，必须与 SSRT/race 模型的 stop 抑制结论并列解释。
 
-### ColorStroop / EmotionStroop：4-choice LBA + 报表三类归并
-- 拟合层面：保留**原始 4-choice** 作为 LBA 的四个 accumulators（ColorStroop: `red/green/blue/yellow`；EmotionStroop: `an/ha/ne/sa`），以 congruency 为主要条件变量。
+### ColorStroop / EmotionStroop：4-choice 多选 SSM（race4/LBA 替代）+ 报表三类归并
+- 拟合层面：保留**原始 4-choice** 作为四个 accumulators（ColorStroop: `red/green/blue/yellow`；EmotionStroop: `an/ha/ne/sa`），以 congruency 为主要条件变量（当前实现使用 HSSM: `race_no_z_4`）。
 - 报表层面：将每个试次的响应按以下三类归并，用于更直观的错误结构总结：
   - `Target`：响应等于正确选项（`answer == key`）。
   - `Word`：仅对 incongruent 试次定义；响应等于“文字诱导选项”（ColorStroop 可从 `item` 解析 Text 颜色；EmotionStroop 需从试次信息解析 word 对应类别）。
@@ -80,8 +80,8 @@
 本节给出“每个任务每个参数允许随哪些条件变化”的统一规范，用于后续实现对照模型比较与全样本 SLURM 计算。记号约定：
 
 - 2AFC DDM 参数：`v`（drift）、`a`（boundary）、`t0`（non-decision time）、`z`（starting point）。
-- 多选任务使用 LBA（4-choice），以 LBA 的 `v`（各 accumulator drift）、`b`（threshold）、`A`（start-point range）、`t0` 为主。
-- 层级结构：默认对“参与比较或解释的关键参数”加入被试随机截距（random effects）。对 DDM 为 `v/a/t0/z`（至少 `v`），对 LBA 为 `v`（至少）与 `t0`（可选）。
+- 多选任务使用 4-choice race（`race_no_z_4`；作为 LBA4 的可行替代），以 `v0..v3`（各 accumulator drift）、`a`、`t0=t` 为主。
+- 层级结构：默认对“参与比较或解释的关键参数”加入被试随机截距（random effects）。对 DDM 为 `v/a/t0/z`（至少 `v`），对 4-choice race 为 `v0..v3`（至少）与 `t`（可选）。
 
 ### 2AFC DDM（层级回归）设计
 
@@ -99,25 +99,27 @@
 - `DT` 的 `rule` 为 `axis`（horizontal/vertical）；`EmotionSwitch` 的 `rule` 为 `dimension`（gender/emotion）。
 - Model B（Switch）默认仅在 mixed block 内拟合（repeat/switch 有定义）；与 Model A（Mixing）是并行对照，不做“同一模型强行同时放入 block 与 trial_type”的主结论。
 
-### 4-choice LBA（层级回归）设计
+### 4-choice 多选 SSM（层级回归；LBA4 的可行替代）
 
-| Task | Choices | predictors（v；各 accumulator） | predictors（b） | predictors（A） | predictors（t0） | 报表归并 |
-| --- | --- | --- | --- | --- | --- | --- |
-| ColorStroop | 4（颜色键） | `congruency` | `1` | `1` | `1` | Target / Word / Other |
-| EmotionStroop | 4（情绪键） | `congruency` | `1` | `1` | `1` | Target / Word / Other（需补齐 target/word 映射） |
+本项目当前使用 HSSM/SSMs 内置的 `race_no_z_4`（4-choice race，无 starting-point bias 参数）作为 4-choice LBA 的可行替代：二者同属“多 accumulator 的赛跑式序贯采样模型”，但**参数含义与先验设定并不等价**；因此在报告中需明确写为 “race4（LBA 替代）”，并避免把参数名直接解释为经典 LBA 的 `A/b`。
+
+| Task | Choices | predictors（v0..v3；各 accumulator） | predictors（a） | predictors（t0=t） | 报表归并 |
+| --- | --- | --- | --- | --- | --- |
+| ColorStroop | 4（颜色键） | `congruency` | `1` | `1` | Target / Word / Other |
+| EmotionStroop | 4（情绪键） | `congruency` | `1` | `1` | Target / Word / Other（需补齐 target/word 映射） |
 
 说明：
-- 这里的 `v ~ congruency` 表示：每个 accumulator 的 drift（或其均值/对数均值）允许随 congruency 变化；阈值/非决策时间默认不随条件变化以控制复杂度（如后验预测提示系统性偏差，可再扩展）。
+- 这里的 `v0..v3 ~ congruency` 表示：四个 accumulator 的 drift 允许随 congruency 变化；`a` 与 `t` 默认不随条件变化以控制复杂度（如后验预测提示系统性偏差，可再扩展）。
 
 ## 本次模型计算设置
 - 后端：HSSM（PyMC-based hierarchical SSM） + `nuts_numpyro` 采样
 - draws=40, tune=40, chains=1, seed=1
 - 层级结构（目标）：对 `v/a/t/z` 均引入被试随机截距（random effects）。除 `DT/EmotionSwitch` 的 Model A/B 明确要求 `a` 与 `t0` 随条件变化外，其余任务默认仅允许 `v` 随条件变化（必要时 FLANKER 可做 `a ~ congruency` 的敏感性分析）。
-- 说明：仅将结果嵌入本文档，不写出 CSV。
+- 说明：计算脚本会将 posterior traces（netcdf）与轻量 summary（CSV/JSON）写入 `data/processed/table/metrics/ssm/`，便于集群计算后下载到本地做二次分析与汇总。
 - 追溯性保存：每个 task×model（null/effect）保存 posterior traces（`InferenceData` netcdf），并另存一份轻量 summary（便于下载后本地汇总与复核）。
 
 ## 计算结果摘要（效果评估）
-说明：下表为早期 DDM 试算（用于验证管线可运行与效应符号）。其中 `ColorStroop/EmotionStroop/DT/EmotionSwitch` 在“标准 2AFC”意义上不成立（原始为 4-choice），后续应以 LBA/2-choice 重编码后的结果替代。
+说明：下表为早期 DDM 试算（用于验证管线可运行与效应符号）。其中 `DT/EmotionSwitch` 需先完成 2-choice 重编码（并剔除跨轴/跨维度错误）；`ColorStroop/EmotionStroop` 应以 4-choice 多选 SSM（`race_no_z_4`；LBA 替代）结果替代。
 
 | Task | Model | N_subjects | N_trials | Beta(v_congruency) | Beta(v_block_mixed) | Beta(v_is_switch) | LOO |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -131,18 +133,24 @@
 
 ## 复现方式
 ```bash
-python -m scripts.ddm_decision_report --dataset EFNY --config configs/paths.yaml --max-files 10 --draws 40 --tune 40 --chains 1 --seed 1
+# 2AFC DDM（示例：DT Mixing 模型；job-index 4）
+python -m scripts.fit_ssm_task --dataset EFNY --config configs/paths.yaml --job-index 4 --max-files 10 --draws 40 --tune 40 --chains 1 --seed 1
+
+# 4-choice 多选 SSM（示例：ColorStroop congruency 模型；job-index 1）
+python -m scripts.fit_race4_task --dataset EFNY --config configs/paths.yaml --job-index 1 --max-files 10 --draws 40 --tune 40 --chains 1 --seed 1
 ```
 
 ## 全样本运行建议（规划）
 - 先完成小规模 pilot（例如 `--max-files 10`），确认依赖与模型可跑通、参数符号与数量级合理。
-- 全样本层级 HDDM 计算耗时长，建议在可用计算节点上运行，并逐步提高采样长度（如 draws≥500, tune≥500, chains≥2）。
+- 全样本层级 SSM 计算耗时长，建议在可用计算节点上运行，并逐步提高采样长度（如 draws≥500, tune≥500, chains≥2），并通过 SLURM array 并行不同 task×model：
 ```bash
-python -m scripts.ddm_decision_report --dataset EFNY --config configs/paths.yaml --draws 500 --tune 500 --chains 2 --seed 1
+sbatch scripts/submit_hpc_ssm.sh
+sbatch scripts/submit_hpc_race4.sh
 ```
 
 ## 风险与注意事项（规划）
-- 层级 HDDM 对计算资源敏感：建议先用 `--max-files` 进行 pilot，确认模型可运行后再扩展到全样本。
-- 对非 2AFC 的任务：`ColorStroop/EmotionStroop` 应使用 4-choice LBA；`DT/EmotionSwitch` 需先做 2-choice 重编码（并剔除跨维度/跨轴错误），否则 DDM 解释不成立。
+- 层级 SSM 对计算资源敏感：建议先用 `--max-files` 进行 pilot，确认模型可运行后再扩展到全样本。
+- 对多选任务：`ColorStroop/EmotionStroop` 应使用 4-choice 多选 SSM（当前实现：`race_no_z_4`；LBA4 替代）；避免将其降维为“正确/错误”的 2AFC DDM 解释。
+- 对切换任务：`DT/EmotionSwitch` 需先做 2-choice 重编码（并剔除跨轴/跨维度错误），否则 2AFC DDM 解释不成立。
 - 对条件极不均衡任务：应避免单被试分层拟合，优先层级回归形式，并在 posterior predictive 中检查 choice 概率是否合理。
 - 对切换任务（DT/EmotionSwitch）：建议采用两个并行对照模型（Model A：Mixing；Model B：Switch），避免在同一模型中同时放入 `block` 与 `trial_type` 导致解释混淆；并在报告中明确 Model B 仅基于 mixed block。 

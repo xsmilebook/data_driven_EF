@@ -123,6 +123,11 @@ def main():
     parser.add_argument("--chains", type=int, default=2)
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--report-out", type=str, default=None, help="Default: docs/reports/ddm_decision.md")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Allow overwriting an existing report file (legacy script; prefer scripts.fit_ssm_task / scripts.fit_race4_task).",
+    )
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parents[1]
@@ -294,6 +299,10 @@ def main():
     if not out_path.is_absolute():
         out_path = repo_root / out_path
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    if out_path.exists() and not args.force:
+        raise SystemExit(
+            f"Refusing to overwrite existing report: {out_path} (use --force, or run scripts.fit_ssm_task / scripts.fit_race4_task)."
+        )
     out_path.write_text("\n".join(report_lines).rstrip() + "\n", encoding="utf-8")
     print(f"Wrote report: {out_path}")
 

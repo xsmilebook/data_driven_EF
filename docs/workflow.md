@@ -163,25 +163,36 @@ python -m scripts.eda_behavior_trials --dataset EFNY --config configs/paths.yaml
 
 目的：基于任务口径与样本特征生成 DDM/HDDM 决策文档，并在可行范围内进行层级 HDDM（回归）计算与基础效果评估（如条件效应后验区间、LOO 指标）。
 
-运行（生成 `docs/reports/ddm_decision.md`）：
+核心文档：
+
+- 决策与模型设计：`docs/reports/ddm_decision.md`
+
+计算脚本（保存 traces 与结果表到 `data/processed/table/metrics/ssm/`）：
+
+- 2AFC DDM（FLANKER / SST go-only / DT / EmotionSwitch）：`python -m scripts.fit_ssm_task`
+- 4-choice 多选 SSM（ColorStroop / EmotionStroop；`race_no_z_4`）：`python -m scripts.fit_race4_task`
+
+本项目将“决策文档”与“计算产物”解耦：决策文档稳定记录建模口径与参数设计；计算脚本可在本地或 SLURM 上运行并产出可下载的 posterior traces 与 summary。
+
+运行示例（本地小规模 pilot）：
 
 ```bash
-python -m scripts.ddm_decision_report --dataset EFNY --config configs/paths.yaml
+python -m scripts.fit_ssm_task --dataset EFNY --config configs/paths.yaml --job-index 4 --max-files 10 --draws 40 --tune 40 --chains 1 --seed 1
+python -m scripts.fit_race4_task --dataset EFNY --config configs/paths.yaml --job-index 1 --max-files 10 --draws 40 --tune 40 --chains 1 --seed 1
 ```
 
 说明：
 
 - 输入目录默认为 `data/raw/behavior_data/cibr_app_data/`（由 `configs/paths.yaml` 的 `dataset.behavioral.app_data_dir` 控制）。
-- 层级 HDDM 计算成本高：可用 `--max-files` 做 pilot（先确认模型与依赖可运行），再扩展到全样本。
+- 层级 SSM 计算成本高：可用 `--max-files` 做 pilot（先确认模型与依赖可运行），再扩展到全样本。
 - 决策要点（以 `docs/reports/ddm_decision.md` 为准）：
-  - `ColorStroop/EmotionStroop` 为 4-choice，主模型为 **4-choice LBA**；报告中将 choice 归并为 Target / Word / Other。
+  - `ColorStroop/EmotionStroop` 为 4-choice，主模型为 **4-choice 多选 SSM（`race_no_z_4`；LBA 替代）**；报告中将 choice 归并为 Target / Word / Other。
   - `DT/EmotionSwitch` 原始为 4-choice，但可按轴向/维度做 **2-choice 重编码** 后进行层级 DDM，并建立两个并行对照模型：
     - Model A（Mixing）：`v/a/t0 ~ block + rule + block:rule`（pure+mixed）
     - Model B（Switch）：`v/a/t0 ~ trial_type + rule + trial_type:rule`（mixed only）
   - `SST` 标准 DDM 不适用，需补充 **go-only 2AFC DDM**（仅 go trials）。
 - 输出与可追溯性：
-  - Markdown 报告内嵌表格用于“决策 + 证据”汇总；
-  - 每个 `task×model` 建议保存 posterior traces（`InferenceData` netcdf）与轻量 summary（便于从集群下载后本地复核/再汇总），保存位置应落在 `data/processed/table/metrics/` 的子目录（由脚本统一管理路径）。
+  - 每个 `task×model` 保存 posterior traces（`InferenceData` netcdf）与轻量 summary（CSV/JSON），保存位置默认在 `data/processed/table/metrics/ssm/`（由脚本统一管理路径）。
 
 ### 3) 神经影像预处理与 QC
 
