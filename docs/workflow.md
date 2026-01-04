@@ -175,7 +175,9 @@ python -m scripts.ddm_decision_report --dataset EFNY --config configs/paths.yaml
 - 层级 HDDM 计算成本高：可用 `--max-files` 做 pilot（先确认模型与依赖可运行），再扩展到全样本。
 - 决策要点（以 `docs/reports/ddm_decision.md` 为准）：
   - `ColorStroop/EmotionStroop` 为 4-choice，主模型为 **4-choice LBA**；报告中将 choice 归并为 Target / Word / Other。
-  - `DT/EmotionSwitch` 原始为 4-choice，但可按轴向/维度做 **2-choice 重编码** 后进行层级 DDM，并在同一模型中联合估计 Mixing + Switch（建议加入 axis/dimension 控制项）。
+  - `DT/EmotionSwitch` 原始为 4-choice，但可按轴向/维度做 **2-choice 重编码** 后进行层级 DDM，并建立两个并行对照模型：
+    - Model A（Mixing）：`v/a/t0 ~ block + rule + block:rule`（pure+mixed）
+    - Model B（Switch）：`v/a/t0 ~ trial_type + rule + trial_type:rule`（mixed only）
   - `SST` 标准 DDM 不适用，需补充 **go-only 2AFC DDM**（仅 go trials）。
 - 输出与可追溯性：
   - Markdown 报告内嵌表格用于“决策 + 证据”汇总；

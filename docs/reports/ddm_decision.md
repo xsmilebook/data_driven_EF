@@ -32,8 +32,8 @@
 | FLANKER | 全部 (96; 48C/48I) | 可选（推荐做统一管线） | HDDM/层级DDM：v ~ congruency（必要时 a ~ congruency） | 条件均衡，最稳定；也可做单被试分层拟合（不推荐作为主结论）。 |
 | ColorStroop | 全部 (96; 24C/72I) | 是（多选） | **4-choice LBA**（4 accumulators；回归：参数随 congruency 变化） | 报告层面将 choice 归并为：Target（正确选项）、Word（文字诱导选项；仅 incongruent 有意义）、Other（其余两项错误） |
 | EmotionStroop | 全部 (96; 24C/72I) | 是（多选） | **4-choice LBA**（4 accumulators；回归：参数随 congruency 变化） | 需要在试次级数据中解析“Target vs Word”；当前 `item=e{n}` 仅支持 congruency 判定，需补充映射表后才能稳定构造 Word 诱导选项 |
-| DT | pure 64 + mixed 64 = 128；switch 仅 mixed | 是（重编码后） | **2-choice 层级 DDM（按轴向重编码）**：保留 `left/right` 与 `up/down` 两类试次；剔除“跨轴错误”作为 lapse/outlier | 可在同一模型中同时估计 Mixing+Switch：`v ~ block_mixed + is_switch + (1|subject)`（pure 中令 `is_switch=0`） |
-| EmotionSwitch | pure 64 + mixed 64 = 128；switch 仅 mixed | 是（重编码后） | **2-choice 层级 DDM（按维度重编码）**：emotion 试次仅保留 `happy/sad`；gender 试次仅保留 `female/male`；其余作为 lapse/outlier | 同上，可同时估计 Mixing+Switch：`v ~ block_mixed + is_switch + (1|subject)`（并建议加入维度哑变量做控制） |
+| DT | pure 64 + mixed 64 = 128；switch 仅 mixed | 是（重编码后） | **2-choice 层级 DDM（按轴向重编码）**：建立两个对照模型（A/B），均纳入 `rule=axis`，并允许 `v/a/t0` 随条件变化（含交互） | Model A：Mixing（pure vs mixed）；Model B：Switch（repeat vs switch，仅 mixed）。跨轴错误按 lapse/outlier 处理并报告比例。 |
+| EmotionSwitch | pure 64 + mixed 64 = 128；switch 仅 mixed | 是（重编码后） | **2-choice 层级 DDM（按维度重编码）**：建立两个对照模型（A/B），均纳入 `rule=dimension`，并允许 `v/a/t0` 随条件变化（含交互） | Model A：Mixing（pure vs mixed）；Model B：Switch（repeat vs switch，仅 mixed）。跨维度错误按 lapse/outlier 处理并报告比例。 |
 | DCCS | pure 20 + mixed 20 = 40；mixed 内 10R/10S | 否（或仅探索） | 不建议做 switch-DDM；如一定要做，仅做整体 DDM 或 v ~ block_type | mixed 内每格 10 太少；switch-DDM 基本不可识别。 |
 | SST | 主模型用 go+stop（race/SSRT）；DDM 仅用 go RT | ①否（标准 DDM）②是（Go-only DDM） | 主推：Stop-signal race/SSRT；补充：**Go-only 2AFC DDM（仅 go trials）** | stop 无反应不满足 DDM；go-only DDM 用于刻画 go 决策（需与 SSRT/race 分析并列呈现） |
 | GNG / CPT | Go/NoGo（NoGo 无 RT） | 否 | 不做标准 DDM；用 SDT(d'+c) + commission/omission（可加 time-on-task） | 单键 Go/NoGo 不符合标准 2AFC-RT DDM；NoGo 无 RT。 |
@@ -45,16 +45,23 @@
 
 ### DT：`left/right/up/down` → 两个 2-choice 子任务（轴向重编码）
 - 轴向判定（以正确按键为准）：若 `key ∈ {left,right}` 记为 `axis=horizontal`；若 `key ∈ {up,down}` 记为 `axis=vertical`。
+- `rule` 定义：本任务中 `rule := axis`（horizontal vs vertical），用于控制不同规则/轴向的基线差异，并允许与实验条件交互。
 - 2-choice 化：在每个 `axis` 内，将 `choice` 限定为该轴的两键（horizontal: left vs right；vertical: down vs up）。
 - 响应处理（关键）：若被试响应 `answer` 落在**另一条轴**（例如 horizontal 试次答了 up），该响应在 2-choice DDM 中不可表示，建议作为 `lapse/outlier` 计数并从 DDM 拟合数据中剔除；同时在报告中单独汇报其比例（质量指标）。
-- Mixing + Switch：使用 `block_type ∈ {pure,mixed}` 生成 `block_mixed`；在 mixed 内根据规则变更生成 `is_switch`（repeat=0/switch=1）；pure block 中定义 `is_switch=0` 以便在同一模型中联合估计（并在解释时强调：switch 效应只来自 mixed）。
+- 条件变量：
+  - `block ∈ {pure,mixed}`：用于 Mixing 分析（Model A）。
+  - `trial_type ∈ {repeat,switch}`：用于 Switch 分析（Model B；仅 mixed 内有定义）。
 - 建模策略建议：优先在一个层级 DDM 中加入 `axis` 哑变量做控制（axis 作为协变量，或在后续做分轴敏感性分析），避免把两种语义不同的 2-choice 直接无区分混合。
 
 ### EmotionSwitch：`female/male/happy/sad` → 两个 2-choice 子任务（维度重编码）
 - 维度判定（以正确按键为准）：若 `key ∈ {female,male}` 记为 `dimension=gender`；若 `key ∈ {happy,sad}` 记为 `dimension=emotion`。
+- `rule` 定义：本任务中 `rule := dimension`（gender vs emotion），用于控制不同规则/维度的基线差异，并允许与实验条件交互。
 - 2-choice 化：在每个 `dimension` 内仅保留对应两键（gender: female vs male；emotion: happy vs sad）。
 - 响应处理：若被试响应跨维度（例如 emotion 试次答了 female），同 DT 处理为 `lapse/outlier` 计数并从 DDM 拟合数据中剔除，同时报告比例。
-- Mixing + Switch：同 DT（`block_mixed` 与 `is_switch`）；并建议在模型中加入 `dimension` 控制项，避免性别/情绪维度的基线差异混入 mixing/switch 解释。
+- 条件变量：
+  - `block ∈ {pure,mixed}`：用于 Mixing 分析（Model A）。
+  - `trial_type ∈ {repeat,switch}`：用于 Switch 分析（Model B；仅 mixed 内有定义）。
+- 建模策略建议：建议将 `rule` 纳入模型并允许与 block/trial_type 交互；同时建议报告两维度分别的基础行为差异（如 ACC/RT 分布）以辅助解释。
 
 ### SST：go-only 2AFC DDM（补充模型）
 - 仅纳入 go 试次（需能稳定判定 go/stop；并排除 stop 无按键/无 RT 试次），在 go 试次内按 `left/right` 做 2AFC DDM。
@@ -68,10 +75,44 @@
   - `Other`：其余两项错误选项。
 - 可实现性提醒：ColorStroop 的 `item` 形如 `Pic_<Color>_Text_<Color>`，可直接构造 Word；EmotionStroop 当前 `item=e{n}` 仅支持 congruency 判定，需补充“每个 e{n} 对应的 target 与 word 类别”映射表（或从原始表格中读取显式字段）后才能严格区分 `Word` 与 `Other`。
 
+## 模型设计总览（按任务×参数）
+
+本节给出“每个任务每个参数允许随哪些条件变化”的统一规范，用于后续实现对照模型比较与全样本 SLURM 计算。记号约定：
+
+- 2AFC DDM 参数：`v`（drift）、`a`（boundary）、`t0`（non-decision time）、`z`（starting point）。
+- 多选任务使用 LBA（4-choice），以 LBA 的 `v`（各 accumulator drift）、`b`（threshold）、`A`（start-point range）、`t0` 为主。
+- 层级结构：默认对“参与比较或解释的关键参数”加入被试随机截距（random effects）。对 DDM 为 `v/a/t0/z`（至少 `v`），对 LBA 为 `v`（至少）与 `t0`（可选）。
+
+### 2AFC DDM（层级回归）设计
+
+| Task | Model | 试次范围 | predictors（v） | predictors（a） | predictors（t0） | predictors（z） |
+| --- | --- | --- | --- | --- | --- | --- |
+| FLANKER | 基线/主模型 | 全部 | `congruency` | `1`（可选敏感性：`congruency`） | `1` | `1` |
+| SST | go-only DDM | go trials | `1`（如需可扩展：`hand`/`congruency` 等） | `1` | `1` | `1` |
+| DT | Model A：Mixing | pure+mixed | `block + rule + block:rule` | `block + rule + block:rule` | `block + rule + block:rule` | `1` |
+| DT | Model B：Switch | mixed only | `trial_type + rule + trial_type:rule` | `trial_type + rule + trial_type:rule` | `trial_type + rule + trial_type:rule` | `1` |
+| EmotionSwitch | Model A：Mixing | pure+mixed | `block + rule + block:rule` | `block + rule + block:rule` | `block + rule + block:rule` | `1` |
+| EmotionSwitch | Model B：Switch | mixed only | `trial_type + rule + trial_type:rule` | `trial_type + rule + trial_type:rule` | `trial_type + rule + trial_type:rule` | `1` |
+| DCCS | 仅探索（不建议） | 全部 | `block`（或 `1`） | `1` | `1` | `1` |
+
+实现要点：
+- `DT` 的 `rule` 为 `axis`（horizontal/vertical）；`EmotionSwitch` 的 `rule` 为 `dimension`（gender/emotion）。
+- Model B（Switch）默认仅在 mixed block 内拟合（repeat/switch 有定义）；与 Model A（Mixing）是并行对照，不做“同一模型强行同时放入 block 与 trial_type”的主结论。
+
+### 4-choice LBA（层级回归）设计
+
+| Task | Choices | predictors（v；各 accumulator） | predictors（b） | predictors（A） | predictors（t0） | 报表归并 |
+| --- | --- | --- | --- | --- | --- | --- |
+| ColorStroop | 4（颜色键） | `congruency` | `1` | `1` | `1` | Target / Word / Other |
+| EmotionStroop | 4（情绪键） | `congruency` | `1` | `1` | `1` | Target / Word / Other（需补齐 target/word 映射） |
+
+说明：
+- 这里的 `v ~ congruency` 表示：每个 accumulator 的 drift（或其均值/对数均值）允许随 congruency 变化；阈值/非决策时间默认不随条件变化以控制复杂度（如后验预测提示系统性偏差，可再扩展）。
+
 ## 本次模型计算设置
 - 后端：HSSM（PyMC-based hierarchical SSM） + `nuts_numpyro` 采样
 - draws=40, tune=40, chains=1, seed=1
-- 层级结构（目标）：对 `v/a/t/z` 均引入被试随机截距（random effects）；默认仅允许 `v` 随条件变化（必要时 FLANKER 可做 `a ~ congruency` 的敏感性分析）。
+- 层级结构（目标）：对 `v/a/t/z` 均引入被试随机截距（random effects）。除 `DT/EmotionSwitch` 的 Model A/B 明确要求 `a` 与 `t0` 随条件变化外，其余任务默认仅允许 `v` 随条件变化（必要时 FLANKER 可做 `a ~ congruency` 的敏感性分析）。
 - 说明：仅将结果嵌入本文档，不写出 CSV。
 - 追溯性保存：每个 task×model（null/effect）保存 posterior traces（`InferenceData` netcdf），并另存一份轻量 summary（便于下载后本地汇总与复核）。
 
@@ -104,4 +145,4 @@ python -m scripts.ddm_decision_report --dataset EFNY --config configs/paths.yaml
 - 层级 HDDM 对计算资源敏感：建议先用 `--max-files` 进行 pilot，确认模型可运行后再扩展到全样本。
 - 对非 2AFC 的任务：`ColorStroop/EmotionStroop` 应使用 4-choice LBA；`DT/EmotionSwitch` 需先做 2-choice 重编码（并剔除跨维度/跨轴错误），否则 DDM 解释不成立。
 - 对条件极不均衡任务：应避免单被试分层拟合，优先层级回归形式，并在 posterior predictive 中检查 choice 概率是否合理。
-- 对 switch 任务：建议在同一模型中联合估计 mixing+switch（`block_mixed` 与 `is_switch`），并明确 `is_switch` 的 pure block 取值约定（pure=0）。 
+- 对切换任务（DT/EmotionSwitch）：建议采用两个并行对照模型（Model A：Mixing；Model B：Switch），避免在同一模型中同时放入 `block` 与 `trial_type` 导致解释混淆；并在报告中明确 Model B 仅基于 mixed block。 
