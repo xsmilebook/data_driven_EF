@@ -71,8 +71,8 @@ singularity run --cleanenv \
   /ibmgpfs/cuizaixu_lab/xulongzhou/apps/singularity/xcpd-0.7.1rc5.simg \
   /fmriprep /output participant \
   --participant_label ${subj_label} --task-id ${task} \
-  --datasets custom=/custom_confounds \
-  --nuisance-regressors /custom_confounds/confounds_config.yml \
+  --nuisance-regressors 36P \
+  --custom_confounds /custom_confounds \
   --fs-license-file /fslic/license.txt \
   -w /wd --nthreads 3 --mem-gb 60 \
   --despike \

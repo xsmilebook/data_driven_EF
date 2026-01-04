@@ -16,7 +16,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Removed the Emotion1Back/Emotion2Back “reference item-column replacement” from `src/behavioral_preprocess/app_data/format_app_data.py` (kept only the SST SSRT reference fix).
 - Updated `docs/reports/ddm_decision.md` and `PLAN.md` to specify two parallel hierarchical DDMs for DT/EmotionSwitch (Mixing vs Switch), including condition effects on `v/a/t0` with `rule` interactions.
 - Implemented SLURM-ready hierarchical SSM runners that save posterior traces and summaries under `data/processed/table/metrics/ssm/`: `scripts/fit_ssm_task.py` (2AFC DDM tasks) and `scripts/fit_race4_task.py` (4-choice Stroop tasks), plus collection utility `scripts/collect_ssm_results.py`.
-- Added task-fMRI XCP-D task-regression pipeline using custom confounds built from Psychopy logs: `scripts/build_task_xcpd_confounds.py`, `src/imaging_preprocess/xcpd_task_36p_taskreg.sh`, and `src/imaging_preprocess/batch_run_xcpd_task.sh`; documented usage in `docs/workflow.md` and `docs/methods.md`.
+- Added task-fMRI XCP-D task-regression pipeline (xcpd-0.7.1rc5) using `--custom_confounds` with task regressors built from Psychopy logs: `scripts/build_task_xcpd_confounds.py`, `src/imaging_preprocess/xcpd_task_36p_taskreg.sh`, and `src/imaging_preprocess/batch_run_xcpd_task.sh`; documented usage in `docs/workflow.md` and `docs/methods.md`.
 - Added a generator for task-fMRI subject lists from Psychopy logs: `scripts/build_taskfmri_sublist.py` (writes `data/processed/table/sublist/taskfmri_sublist.txt`).
 - Standardized task-fMRI subject IDs in `taskfmri_sublist.txt` to the BIDS participant label format without `sub-` (required by xcp-d `--participant_label`).
 
