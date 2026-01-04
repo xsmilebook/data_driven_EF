@@ -120,31 +120,6 @@ def _apply_reference_fix(workbook, reference_data):
                         sst_ws.cell(row=r, column=ssrt_col).value = None
                 changes.append('SST SSRT column replaced')
 
-    # Emotion1Back/Emotion2Back: first item is EmotionXBack_7
-    item_header = '正式阶段刺激图片/Item名'
-    for sheet_name, ref_key, first_val in [
-        ('Emotion1Back', 'Emotion1Back_item', 'Emotion1Back_4'),
-        ('Emotion2Back', 'Emotion2Back_item', 'Emotion2Back_7'),
-    ]:
-        ws = workbook[sheet_name] if sheet_name in workbook.sheetnames else None
-        if ws is None:
-            continue
-        item_col = _get_header_col(ws, item_header)
-        if item_col is None:
-            continue
-        first_cell = ws.cell(row=2, column=item_col).value
-        if str(first_cell).strip() != first_val:
-            continue
-        ref_vals = reference_data.get(ref_key, [])
-        if not ref_vals:
-            continue
-        for r in range(2, ws.max_row + 1):
-            if r - 1 < len(ref_vals):
-                ws.cell(row=r, column=item_col).value = ref_vals[r - 1]
-            else:
-                ws.cell(row=r, column=item_col).value = None
-        changes.append(f'{sheet_name} item column replaced')
-
     return changes
 
 
@@ -158,15 +133,6 @@ def _load_reference_data(reference_path):
         if sst_ws is not None:
             ssrt_col = _get_header_col(sst_ws, 'SSRT')
             data['SST_SSRT'] = _column_values(sst_ws, ssrt_col)
-
-        item_header = '正式阶段刺激图片/Item名'
-        for sheet_name, key in [('Emotion1Back', 'Emotion1Back_item'),
-                                ('Emotion2Back', 'Emotion2Back_item')]:
-            ws = wb[sheet_name] if sheet_name in wb.sheetnames else None
-            if ws is None:
-                continue
-            item_col = _get_header_col(ws, item_header)
-            data[key] = _column_values(ws, item_col)
     finally:
         wb.close()
     return data

@@ -13,6 +13,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Updated switch-task mixed-block thresholds (`mixed_from`) for DCCS/DT/EmotionSwitch and refreshed docs/report (including updated DDM decision text) accordingly.
 - Added a PyMC-based hierarchical HDDM decision+fit pipeline (`scripts/ddm_decision_report.py`) and generated `docs/reports/ddm_decision.md`.
 - Updated `docs/reports/ddm_decision.md` and `docs/workflow.md` to reflect finalized model eligibility: 4-choice LBA for Stroops, 2-choice recoding for DT/EmotionSwitch, and go-only DDM for SST; updated `PLAN.md` accordingly.
+- Removed the Emotion1Back/Emotion2Back “reference item-column replacement” from `src/behavioral_preprocess/app_data/format_app_data.py` (kept only the SST SSRT reference fix).
 
 
 ## In progress
