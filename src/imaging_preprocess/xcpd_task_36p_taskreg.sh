@@ -2,8 +2,8 @@
 #SBATCH --chdir=/ibmgpfs/cuizaixu_lab/xuhaoshu/projects/data_driven_EF
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=2
-#SBATCH -p q_fat
+#SBATCH --cpus-per-task=3
+#SBATCH -p q_fat_c
 
 module load singularity
 
@@ -74,7 +74,7 @@ singularity run --cleanenv \
   --datasets custom=/custom_confounds \
   --nuisance-regressors /custom_confounds/confounds_config.yml \
   --fs-license-file /fslic/license.txt \
-  -w /wd --nthreads 2 --mem-gb 40 \
+  -w /wd --nthreads 3 --mem-gb 60 \
   --despike \
   --lower-bpf=0.01 --upper-bpf=0.1 \
   --motion-filter-type lp --band-stop-min 6 \
