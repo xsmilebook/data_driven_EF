@@ -47,6 +47,7 @@ EFNY 相关假设配置在 `configs/paths.yaml` 的 `dataset` 段落中。数据
      - xcp-d 容器版本：`xcpd-0.7.1rc5`
      - Psychopy 行为记录：`data/raw/MRI_data/task_psych/`（可通过配置覆盖）
      - fMRIPrep 结果：由 `configs/dataset_tsinghua_taskfmri.yaml` 指定各任务的 fMRIPrep 根目录（可为仓库外绝对路径）。
+       - xcp-d 需要 fMRIPrep 输入目录包含 `dataset_description.json`；若原始目录无写权限或缺失该文件，`xcpd_task_36p_taskreg.sh` 会在工作目录下创建 wrapper（仅包含 `dataset_description.json`）并把 `sub-<label>` 目录 bind 进去。
    - 输出：
      - xcp-d 结果：`data/interim/MRI_data/xcpd_task/<task>/`
      - 自定义 confounds（供 xcp-d `--custom_confounds` 使用）：`data/interim/MRI_data/xcpd_task/custom_confounds/<task>/sub-<label>/`

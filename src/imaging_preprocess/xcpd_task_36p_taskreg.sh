@@ -44,11 +44,22 @@ custom_confounds_root=${INTERIM_ROOT}/MRI_data/xcpd_task/custom_confounds/${task
 wd=${INTERIM_ROOT}/wd/xcpd_task/${task}/sub-${subj_label}
 mkdir -p "$output" "$custom_confounds_root" "$wd"
 
+fmriprep_input=""
+if [ -d "${fmriprep_Path}/sub-${subj_label}/fmriprep" ]; then
+  fmriprep_input="${fmriprep_Path}/sub-${subj_label}/fmriprep"
+elif [ -d "${fmriprep_Path}/sub-${subj_label}" ]; then
+  fmriprep_input="${fmriprep_Path}"
+elif [ -d "${fmriprep_Path}/fmriprep" ]; then
+  fmriprep_input="${fmriprep_Path}/fmriprep"
+else
+  fmriprep_input="${fmriprep_Path}"
+fi
+
 python -m scripts.build_task_xcpd_confounds \
   --subject "${subj}" \
   --task "${task}" \
   --out-root "${custom_confounds_root}" \
-  --fmriprep-dir "${fmriprep_Path}" \
+  --fmriprep-dir "${fmriprep_input}" \
   --task-psych-dir "${TASK_PSYCH_DIR}" \
   --fir-window-seconds 20
 
@@ -59,8 +70,30 @@ fslic=/ibmgpfs/cuizaixu_lab/xulongzhou/tool/freesurfer
 templateflow=/ibmgpfs/cuizaixu_lab/xulongzhou/tool/templateflow
 export SINGULARITYENV_TEMPLATEFLOW_HOME=$templateflow
 
+fmriprep_bind_src="${fmriprep_input}"
+fmriprep_bind_extra=""
+if [ ! -f "${fmriprep_input}/dataset_description.json" ]; then
+  wrapper="${wd}/fmriprep_wrapper"
+  mkdir -p "${wrapper}"
+  cat > "${wrapper}/dataset_description.json" <<EOF
+{
+  "Name": "fMRIPrep derivatives wrapper",
+  "BIDSVersion": "1.6.0",
+  "DatasetType": "derivative"
+}
+EOF
+  # Bind the subject folder into a wrapper root that includes dataset_description.json,
+  # without writing into the original fMRIPrep directory.
+  fmriprep_bind_src="${wrapper}"
+  if [ -d "${fmriprep_input}/sub-${subj_label}" ]; then
+    fmriprep_bind_extra="-B ${fmriprep_input}/sub-${subj_label}:/fmriprep/sub-${subj_label}"
+  else
+    fmriprep_bind_extra="-B ${fmriprep_input}:/fmriprep/sub-${subj_label}"
+  fi
+fi
+
 singularity run --cleanenv \
-  -B $fmriprep_Path:/fmriprep \
+  -B $fmriprep_bind_src:/fmriprep \
   -B $output:/output \
   -B $wd:/wd \
   -B $fslic:/fslic \
@@ -68,6 +101,7 @@ singularity run --cleanenv \
   -B $custom_confounds_root:/custom_confounds \
   -B /ibmgpfs/cuizaixu_lab/xuhaoshu/tmp:/tmp \
   -B $temp_dir:$HOME \
+  ${fmriprep_bind_extra} \
   /ibmgpfs/cuizaixu_lab/xulongzhou/apps/singularity/xcpd-0.7.1rc5.simg \
   /fmriprep /output participant \
   --participant_label ${subj_label} --task-id ${task} \
