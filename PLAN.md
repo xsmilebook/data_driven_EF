@@ -15,6 +15,6 @@ Create a DDM decision report under `docs/reports/` based on the provided task-by
 [ ] Update `docs/workflow.md`, `PROGRESS.md`, and add a dated session log under `docs/sessions/` describing what was changed, how to reproduce, and known risks/limitations.
 
 ## Open questions
-- Should we target true hierarchical HDDM (PyMC-based) now, or is a fast approximation acceptable for the first iteration?
-- Run scope: all subjects in `data/raw/behavior_data/cibr_app_data/` or a specified subset (e.g., first N / QC-passed list)?
-- Where should derived result tables live: embedded in the Markdown report only, or also as a committed CSV under `docs/reports/`?
+- Confirmed: true hierarchical HDDM (PyMC-based, via HSSM/PyMC).
+- Confirmed: run on all workbooks under `data/raw/behavior_data/cibr_app_data/`.
+- Confirmed: embed derived result tables in the Markdown report only (no committed CSV).
