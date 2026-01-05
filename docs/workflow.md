@@ -56,7 +56,10 @@ EFNY 相关假设配置在 `configs/paths.yaml` 的 `dataset` 段落中。数据
      - block/state 回归量：canonical HRF（SPM HRF）卷积。
        - NBACK：`state_pure_0back`、`state_pure_2back`（如存在混合段：`state_mixed`）。
        - SWITCH：`state_pure_red`、`state_pure_blue`、`state_mixed`。
-       - SST：`state_part1`、`state_part2`（按 `Trial_loop.thisTrialN < 60` 分段）。
+       - SST：
+         - 若行为日志为 120 试次：仅生成单个 block（`state_part1`）。
+         - 若行为日志为 180 试次：生成两个 block（`state_part1`/`state_part2`），且在第 90 与 91 试次之间通常存在约 15 s 的注视间隔。
+         - 若存在 `Trial_loop_list`：优先用 `loop1/loop2`（或等价命名）识别两个 block；每个 loop 可能包含 1 行“无刺激”记录（不产生 stimulus 事件，但会影响 block 持续时间）。
      - event 回归量：FIR（以 TR 为 bin，窗口默认为 20 秒）。
        - 共通：`stimulus`（刺激呈现）、`response`（按键 onset = `key_resp.started + key_resp.rt`）。
        - SST 额外：`banana`（当 `bad` 列包含 banana 时，以 `Trial_image_3.started` 作为事件 onset）。

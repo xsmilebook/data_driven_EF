@@ -279,6 +279,11 @@ def _task_expected_block_types(task: str) -> list[str]:
         return ["state_part1", "state_part2"]
     raise ValueError(task)
 
+def _block_types_present(task: str, block_events: Iterable[Event]) -> list[str]:
+    present = {e.trial_type for e in block_events}
+    order = _task_expected_block_types(task)
+    return [t for t in order if t in present]
+
 
 def _task_event_types(task: str) -> list[str]:
     if task == "sst":
@@ -365,16 +370,54 @@ def _build_events_from_psychopy(rows: list[dict[str, str]], task: str) -> tuple[
                 event_events.append(Event(onset=float(ks + rt) - t0, duration=0.0, trial_type="response"))
 
     elif task == "sst":
-        parts: dict[str, list[dict[str, str]]] = {"state_part1": [], "state_part2": []}
-        for r in trial_rows:
-            tn = _int_or_none(r.get("Trial_loop.thisTrialN"))
-            label = "state_part1" if tn is not None and tn < 60 else "state_part2"
-            parts[label].append(r)
+        # Some subjects have 120 trials (single block).
+        # Some subjects have 180 trials (two blocks), with an ~15s fixation gap between trial 90 and 91.
+        # When available, use Trial_loop_list to identify loop1/loop2 (each loop may include an extra row with no stimulus).
+        loop_key = "Trial_loop_list"
+        groups: list[tuple[str, list[dict[str, str]]]] = []
+        if loop_key in trial_rows[0]:
+            by_loop: dict[str, list[dict[str, str]]] = {}
+            for r in trial_rows:
+                v = (r.get(loop_key) or "").strip()
+                if v:
+                    by_loop.setdefault(v, []).append(r)
+            if len(by_loop) >= 2:
+                for k, trs in by_loop.items():
+                    first_t = min(_float_or_none(r.get("Trial.started")) for r in trs if _float_or_none(r.get("Trial.started")) is not None)
+                    groups.append((k, trs))
+                groups.sort(key=lambda kv: min(_float_or_none(r.get("Trial.started")) for r in kv[1] if _float_or_none(r.get("Trial.started")) is not None))
 
-        for label in ("state_part1", "state_part2"):
-            trs = parts[label]
-            if not trs:
-                continue
+        if not groups:
+            # Fallback: infer by trial count. If >= 180 trials, split into two blocks at TrialN 90.
+            tns = [_int_or_none(r.get("Trial_loop.thisTrialN")) for r in trial_rows]
+            tns = [t for t in tns if t is not None]
+            is_two_block = False
+            if tns:
+                is_two_block = (max(tns) >= 179) or (len(set(tns)) >= 170)
+            if is_two_block:
+                b1, b2 = [], []
+                for r in trial_rows:
+                    tn = _int_or_none(r.get("Trial_loop.thisTrialN"))
+                    if tn is None:
+                        continue
+                    (b1 if tn < 90 else b2).append(r)
+                if b1:
+                    groups.append(("block1", b1))
+                if b2:
+                    groups.append(("block2", b2))
+            else:
+                groups.append(("block1", trial_rows))
+
+        # Map to fixed labels for downstream consistency.
+        label_map = {}
+        if len(groups) == 1:
+            label_map[groups[0][0]] = "state_part1"
+        else:
+            label_map[groups[0][0]] = "state_part1"
+            label_map[groups[1][0]] = "state_part2"
+
+        for _, trs in groups[:2]:
+            label = label_map[_]
             trial_start = min(_float_or_none(r.get("Trial.started")) for r in trs if _float_or_none(r.get("Trial.started")) is not None)
             trial_stop = max(_float_or_none(r.get("Trial.stopped")) or _float_or_none(r.get("Trial.started")) for r in trs)
             onset = float(trial_start) - t0
@@ -448,7 +491,7 @@ def main() -> int:
     timepoints = np.arange(0, n_volumes * float(tr), dt, dtype=float)
     hrf = _spm_hrf(dt)
 
-    block_types = _task_expected_block_types(args.task)
+    block_types = _block_types_present(args.task, block_events)
     event_types = _task_event_types(args.task)
     task_columns: list[str] = []
     cols: dict[str, np.ndarray] = {}
@@ -465,6 +508,13 @@ def main() -> int:
 
     mat = np.column_stack([cols[c] for c in task_columns]).astype(float)
     mat[~np.isfinite(mat)] = 0.0
+
+    # Drop all-zero columns (e.g., single-block SST may not have state_part2;
+    # banana FIR columns may be all zero for subjects with no banana events).
+    keep_idx = [i for i in range(mat.shape[1]) if float(np.abs(mat[:, i]).sum()) > 0.0]
+    if keep_idx and len(keep_idx) < mat.shape[1]:
+        mat = mat[:, keep_idx]
+        task_columns = [task_columns[i] for i in keep_idx]
 
     out_root.mkdir(parents=True, exist_ok=True)
     out_tsv = out_root / confounds_tsv.name

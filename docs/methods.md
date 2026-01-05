@@ -15,7 +15,7 @@
 ### 影像预处理与 FC 构建
 
 - rs-fMRI 预处理由 xcp-d 执行（`src/imaging_preprocess/xcpd_36p.sh`），输出用于后续 FC 计算的清洗时序。
-- task-fMRI 预处理同样使用 xcp-d，但在去噪（36P + 0.01–0.1 Hz）基础上额外回归任务诱发 HRF（block canonical HRF + event FIR）；入口为 `src/imaging_preprocess/xcpd_task_36p_taskreg.sh`，其自定义任务 confounds 由 `python -m scripts.build_task_xcpd_confounds` 从 Psychopy 行为 CSV 构建，并通过 xcp-d 的 `--custom_confounds <folder>` 加载（要求 TSV 文件名与对应 fMRIPrep confounds TSV basename 完全一致）。
+- task-fMRI 预处理同样使用 xcp-d，但在去噪（36P + 0.01–0.1 Hz）基础上额外回归任务诱发 HRF（block canonical HRF + event FIR）；入口为 `src/imaging_preprocess/xcpd_task_36p_taskreg.sh`，其自定义任务 confounds 由 `python -m scripts.build_task_xcpd_confounds` 从 Psychopy 行为 CSV 构建，并通过 xcp-d 的 `--custom_confounds <folder>` 加载（要求 TSV 文件名与对应 fMRIPrep confounds TSV basename 完全一致）。SST 的 block/state 划分以 `Trial_loop_list` 的 loop1/loop2（如存在）优先；否则按试次数量识别 120（单 block）与 180（双 block，90/91 之间存在注视间隔）。
 - 头动 QC 指标由 `src/imaging_preprocess/screen_head_motion_efny.py` 汇总；阈值与字段以脚本为准。
 - FC 计算使用 Schaefer 分区（`src/imaging_preprocess/compute_fc_schaefer.py`），随后进行 Fisher-Z（`src/imaging_preprocess/fisher_z_fc.py`）。
 - 向量化特征在 `src/imaging_preprocess/convert_fc_vector.py` 中生成，作为建模输入 X。

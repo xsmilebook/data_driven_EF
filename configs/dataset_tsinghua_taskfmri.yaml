@@ -7,5 +7,5 @@ external_inputs:
   fmriprep_task_dirs:
     nback: /ibmgpfs/cuizaixu_lab/xuxiaoyu/songxinwei/fmri_task/Tsinghua/Tsinghua_nback/fmriprep_task
     sst: /ibmgpfs/cuizaixu_lab/xuxiaoyu/songxinwei/fmri_task/Tsinghua/Tsinghua_sst/fmriprep_task
-    switch: /ibmgpfs/cuizaixu_lab/xuxiaoyu/songxinwei/fmri_task/Tsinghua/Tsinghua_nback/fmriprep_switch
+    switch: /ibmgpfs/cuizaixu_lab/xuxiaoyu/songxinwei/fmri_task/Tsinghua/Tsinghua_switch/fmriprep_task
 

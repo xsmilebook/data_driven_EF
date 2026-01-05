@@ -18,6 +18,8 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Implemented SLURM-ready hierarchical SSM runners that save posterior traces and summaries under `data/processed/table/metrics/ssm/`: `scripts/fit_ssm_task.py` (2AFC DDM tasks) and `scripts/fit_race4_task.py` (4-choice Stroop tasks), plus collection utility `scripts/collect_ssm_results.py`.
 - Added task-fMRI XCP-D task-regression pipeline (xcpd-0.7.1rc5) using `--custom_confounds` with task regressors built from Psychopy logs: `scripts/build_task_xcpd_confounds.py`, `src/imaging_preprocess/xcpd_task_36p_taskreg.sh`, and `src/imaging_preprocess/batch_run_xcpd_task.sh`; documented usage in `docs/workflow.md` and `docs/methods.md`.
 - Made the task-fMRI runner robust to missing/unwritable `dataset_description.json` in fMRIPrep roots by creating a temporary wrapper root and bind-mounting `sub-<label>` into it.
+- Added a task-fMRI xcp-d workflow report: `docs/reports/task_fmri_xcpd_pipeline.md`.
+- Updated SST block/state regressors to support both 120-trial (single block) and 180-trial (two-block with inter-block fixation) variants, preferring `Trial_loop_list` loop identifiers when available.
 - Added a generator for task-fMRI subject lists from Psychopy logs: `scripts/build_taskfmri_sublist.py` (writes `data/processed/table/sublist/taskfmri_sublist.txt`).
 - Standardized task-fMRI subject IDs in `taskfmri_sublist.txt` to the BIDS participant label format without `sub-` (required by xcp-d `--participant_label`).
 
