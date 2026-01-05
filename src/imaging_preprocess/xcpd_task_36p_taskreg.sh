@@ -81,7 +81,8 @@ if [ ! -f "${fmriprep_input}/dataset_description.json" ]; then
 {
   "Name": "fMRIPrep derivatives wrapper",
   "BIDSVersion": "1.6.0",
-  "DatasetType": "derivative"
+  "DatasetType": "derivative",
+  "GeneratedBy": [{"Name": "data_driven_EF/xcpd_task_36p_taskreg.sh"}]
 }
 EOF
   # Bind the subject folder into a wrapper root that includes dataset_description.json,

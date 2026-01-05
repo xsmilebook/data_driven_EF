@@ -502,7 +502,12 @@ def _write_dataset_description(out_root: Path) -> None:
     path = out_root / "dataset_description.json"
     if path.exists():
         return
-    obj = {"Name": "Custom Confounds (Task Regression)", "BIDSVersion": "1.6.0", "DatasetType": "derivative"}
+    obj = {
+        "Name": "Custom Confounds (Task Regression)",
+        "BIDSVersion": "1.6.0",
+        "DatasetType": "derivative",
+        "GeneratedBy": [{"Name": "data_driven_EF/scripts.build_task_xcpd_confounds"}],
+    }
     path.write_text(json.dumps(obj, indent=2), encoding="utf-8")
 
 
