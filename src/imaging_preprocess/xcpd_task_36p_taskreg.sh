@@ -67,8 +67,10 @@ temp_dir=/ibmgpfs/cuizaixu_lab/xuhaoshu/trash/sub-${subj_label}
 mkdir -p "$temp_dir"
 
 fslic=/ibmgpfs/cuizaixu_lab/xulongzhou/tool/freesurfer
+fs_subjects_dir=/ibmgpfs/cuizaixu_lab/liyang/BrainProject25/Tsinghua_data/freesurfer
 templateflow=/ibmgpfs/cuizaixu_lab/xulongzhou/tool/templateflow
 export SINGULARITYENV_TEMPLATEFLOW_HOME=$templateflow
+export SINGULARITYENV_SUBJECTS_DIR=/freesurfer
 
 fmriprep_bind_src="${fmriprep_input}"
 fmriprep_bind_extra=""
@@ -97,16 +99,19 @@ singularity run --cleanenv \
   -B $output:/output \
   -B $wd:/wd \
   -B $fslic:/fslic \
+  -B $fs_subjects_dir:/freesurfer \
   -B $templateflow:$templateflow \
   -B $custom_confounds_root:/custom_confounds \
   -B /ibmgpfs/cuizaixu_lab/xuhaoshu/tmp:/tmp \
   -B $temp_dir:$HOME \
   ${fmriprep_bind_extra} \
-  /ibmgpfs/cuizaixu_lab/xulongzhou/apps/singularity/xcpd-0.7.1rc5.simg \
+  /ibmgpfs/cuizaixu_lab/congjing/singularity/xcp_d-0.10.0.simg \
   /fmriprep /output participant \
+  --input-type fmriprep \
+  --mode none \
   --participant_label ${subj_label} --task-id ${task} \
-  --nuisance-regressors 36P \
-  --custom_confounds /custom_confounds \
+  --datasets custom=/custom_confounds \
+  --nuisance-regressors /custom_confounds/confounds_config.yml \
   --fs-license-file /fslic/license.txt \
   -w /wd --nthreads 3 --mem-gb 60 \
   --despike \

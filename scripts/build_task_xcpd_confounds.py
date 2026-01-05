@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
 """
-Build custom confounds for XCP-D task regression (block HRF + event FIR).
+Build a BIDS-derivatives dataset of task regressors for XCP-D task regression (block HRF + event FIR).
 
-For xcpd-0.7.1rc5, XCP-D expects:
-- `--custom_confounds <FOLDER>` (a folder)
-- inside that folder, a TSV file whose *filename matches* the fMRIPrep confounds TSV basename.
+For xcp_d >= 0.10.0, the recommended pattern is:
+- `--datasets custom=/path/to/custom_confounds`
+- `--nuisance-regressors /path/to/custom_config.yml`
+
+where `/path/to/custom_confounds` is a valid BIDS-derivatives dataset (has `dataset_description.json`),
+and contains per-subject confounds TSVs whose basenames match the fMRIPrep confounds TSVs.
 
 This script reads:
 - Psychopy behavior CSVs under task_psych_dir (e.g., data/raw/MRI_data/task_psych/)
 - fMRIPrep confounds TSV + BOLD JSON (for N volumes and TR)
 
 And writes:
-- <out_root>/<...desc-confounds_timeseries.tsv> (task regressor matrix; filename matches fMRIPrep confounds TSV)
+- <out_root>/dataset_description.json
+- <out_root>/confounds_config.yml
+- <out_root>/sub-<label>/func/<...desc-confounds_timeseries.tsv> (task regressor matrix; basename matches fMRIPrep confounds TSV)
 """
 
 from __future__ import annotations
@@ -31,6 +36,46 @@ import numpy as np
 from src.path_config import load_dataset_config, load_paths_config, resolve_dataset_roots
 
 
+_CONF_36P_COLUMNS = [
+    "trans_x",
+    "trans_x_derivative1",
+    "trans_x_derivative1_power2",
+    "trans_x_power2",
+    "trans_y",
+    "trans_y_derivative1",
+    "trans_y_derivative1_power2",
+    "trans_y_power2",
+    "trans_z",
+    "trans_z_derivative1",
+    "trans_z_derivative1_power2",
+    "trans_z_power2",
+    "rot_x",
+    "rot_x_derivative1",
+    "rot_x_power2",
+    "rot_x_derivative1_power2",
+    "rot_y",
+    "rot_y_derivative1",
+    "rot_y_power2",
+    "rot_y_derivative1_power2",
+    "rot_z",
+    "rot_z_derivative1",
+    "rot_z_power2",
+    "rot_z_derivative1_power2",
+    "global_signal",
+    "global_signal_derivative1",
+    "global_signal_power2",
+    "global_signal_derivative1_power2",
+    "csf",
+    "csf_derivative1",
+    "csf_power2",
+    "csf_derivative1_power2",
+    "white_matter",
+    "white_matter_derivative1",
+    "white_matter_power2",
+    "white_matter_derivative1_power2",
+]
+
+
 @dataclass(frozen=True)
 class Event:
     onset: float
@@ -42,7 +87,7 @@ def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser()
     ap.add_argument("--subject", required=True, help="BIDS participant label, with or without 'sub-' prefix.")
     ap.add_argument("--task", required=True, choices=["nback", "sst", "switch"])
-    ap.add_argument("--out-root", required=True, help="Output folder for XCP-D --custom_confounds.")
+    ap.add_argument("--out-root", required=True, help="Output root for custom confounds BIDS-derivatives dataset.")
     ap.add_argument("--behavior-file", default=None, help="Optional explicit Psychopy CSV path.")
     ap.add_argument("--fmriprep-dir", default=None, help="Optional explicit fMRIPrep derivatives root.")
     ap.add_argument("--task-psych-dir", default=None, help="Optional explicit task_psych directory.")
@@ -452,6 +497,56 @@ def _write_tsv(path: Path, columns: list[str], matrix: np.ndarray) -> None:
             w.writerow([f"{x:.8f}" for x in row.tolist()])
 
 
+def _write_dataset_description(out_root: Path) -> None:
+    out_root.mkdir(parents=True, exist_ok=True)
+    path = out_root / "dataset_description.json"
+    if path.exists():
+        return
+    obj = {"Name": "Custom Confounds (Task Regression)", "BIDSVersion": "1.6.0", "DatasetType": "derivative"}
+    path.write_text(json.dumps(obj, indent=2), encoding="utf-8")
+
+
+def _write_confounds_config(path: Path, task_columns: list[str]) -> None:
+    # XCP-D YAML format: each confound group specifies a dataset and a BIDS query, plus columns.
+    yml = [
+        "name: 36P_plus_task",
+        "description: |",
+        "  36P nuisance regressors plus task regressors (block HRF + event FIR).",
+        "confounds:",
+        "  preproc_confounds:",
+        "    dataset: preprocessed",
+        "    query:",
+        "      space: null",
+        "      cohort: null",
+        "      res: null",
+        "      den: null",
+        "      desc: confounds",
+        "      extension: .tsv",
+        "      suffix: timeseries",
+        "    columns:",
+    ]
+    for c in _CONF_36P_COLUMNS:
+        yml.append(f"    - {c}")
+    yml.extend(
+        [
+            "  task_confounds:",
+            "    dataset: custom",
+            "    query:",
+            "      space: null",
+            "      cohort: null",
+            "      res: null",
+            "      den: null",
+            "      desc: confounds",
+            "      extension: .tsv",
+            "      suffix: timeseries",
+            "    columns:",
+        ]
+    )
+    for c in task_columns:
+        yml.append(f"    - {c}")
+    path.write_text("\n".join(yml) + "\n", encoding="utf-8")
+
+
 def main() -> int:
     args = parse_args()
     subject = _strip_sub_prefix(args.subject)
@@ -516,9 +611,10 @@ def main() -> int:
         mat = mat[:, keep_idx]
         task_columns = [task_columns[i] for i in keep_idx]
 
-    out_root.mkdir(parents=True, exist_ok=True)
-    out_tsv = out_root / confounds_tsv.name
+    _write_dataset_description(out_root)
+    out_tsv = out_root / f"sub-{subject}" / "func" / confounds_tsv.name
     _write_tsv(out_tsv, task_columns, mat)
+    _write_confounds_config(out_root / "confounds_config.yml", task_columns)
 
     print(f"behavior_file={behavior_file}")
     print(f"confounds_tsv={confounds_tsv}")

@@ -21,21 +21,26 @@ mkdir -p $temp_dir
 
 fslic=/ibmgpfs/cuizaixu_lab/xulongzhou/tool/freesurfer
 templateflow=/ibmgpfs/cuizaixu_lab/xulongzhou/tool/templateflow
+fs_subjects_dir=/ibmgpfs/cuizaixu_lab/liyang/BrainProject25/Tsinghua_data/freesurfer
 wd=${INTERIM_ROOT}/wd/xcpd/sub-${subj}
 mkdir -p $wd
 output=${xcpd_Path}
 
 export SINGULARITYENV_TEMPLATEFLOW_HOME=$templateflow
+export SINGULARITYENV_SUBJECTS_DIR=/freesurfer
 singularity run --cleanenv \
         -B $fmriprep_Path:/fmriprep \
         -B $output:/output \
         -B $wd:/wd \
         -B $fslic:/fslic \
+        -B $fs_subjects_dir:/freesurfer \
         -B $templateflow:$templateflow \
 		-B /ibmgpfs/cuizaixu_lab/xuhaoshu/tmp:/tmp \
         -B $temp_dir:$HOME \
-        /ibmgpfs/cuizaixu_lab/xulongzhou/apps/singularity/xcpd-0.7.1rc5.simg \
+        /ibmgpfs/cuizaixu_lab/congjing/singularity/xcp_d-0.10.0.simg \
         /fmriprep /output participant \
+        --input-type fmriprep \
+        --mode none \
         --participant_label ${subj} --task-id rest \
         --fs-license-file /fslic/license.txt \
         -w /wd --nthreads 2 --mem-gb 40 \

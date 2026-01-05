@@ -1,6 +1,6 @@
 # Task fMRI 的 XCP-D 处理流程（当前实现）
 
-本文档说明本仓库中 **task-fMRI** 的 xcp-d（`xcpd-0.7.1rc5`）后处理流程：在完成 fMRIPrep 的前提下，执行去噪与滤波，并额外回归任务诱发信号（block/state + event），以获得更接近 resting-state 的残差时序用于后续分析。
+本文档说明本仓库中 **task-fMRI** 的 xcp-d（`xcp_d-0.10.0`）后处理流程：在完成 fMRIPrep 的前提下，执行去噪与滤波，并额外回归任务诱发信号（block/state + event），以获得更接近 resting-state 的残差时序用于后续分析。
 
 ## 1. 目标与总体思路
 
@@ -13,20 +13,21 @@
 
 ### 1.2 实现路径
 
-本仓库当前实现采用 `xcpd-0.7.1rc5` 支持的 **custom confounds** 机制：
+本仓库当前实现采用 `xcp_d-0.10.0` 支持的 **custom confounds dataset + YAML 配置** 机制：
 
 - 先从 Psychopy 行为 CSV 生成一份与该 run 的 fMRIPrep confounds TSV **同名**的自定义 confounds TSV（每个 TR 一行，每列一个任务回归量）。
 - 再调用 xcp-d：
-  - `--nuisance-regressors 36P`：使用内置 36P 去噪策略；
-  - `--custom_confounds <folder>`：在回归中附加自定义任务回归量（task regressors）。
+  - `--datasets custom=<folder>`：挂载自定义 confounds 的 BIDS derivative dataset；
+  - `--nuisance-regressors <yaml>`：使用 YAML confounds 配置（36P + task regressors）。
 
 ## 2. 依赖与输入
 
 ### 2.1 依赖
 
-- xcp-d 容器：`xcpd-0.7.1rc5`
+- xcp-d 容器：`xcp_d-0.10.0`
 - 前置处理：fMRIPrep 已完成（task-fMRI 对应的 derivatives）
 - Psychopy 行为记录：`data/raw/MRI_data/task_psych/`
+- FreeSurfer subjects dir（可选但建议）：`/ibmgpfs/cuizaixu_lab/liyang/BrainProject25/Tsinghua_data/freesurfer`（包含 `sub-*/surf,label,mri,...`）
 
 ### 2.2 输入目录与配置
 
@@ -56,7 +57,7 @@ sbatch src/imaging_preprocess/xcpd_task_36p_taskreg.sh THU20231119141SYQ nback
 该脚本包含两个关键阶段：
 
 1) **构建 task 回归量 confounds**：调用 `python -m scripts.build_task_xcpd_confounds`。  
-2) **运行 xcp-d**：在 `36P` 的基础上通过 `--custom_confounds` 注入 task regressors。
+2) **运行 xcp-d**：通过 `--datasets custom=...` + `--nuisance-regressors confounds_config.yml` 注入 task regressors，并在 `--mode none` 下显式指定滤波与运动参数。
 
 ### 3.2 批量提交
 
@@ -73,9 +74,10 @@ bash src/imaging_preprocess/batch_run_xcpd_task.sh data/processed/table/sublist/
 
 ### 4.1 输出文件与命名约束（关键）
 
-`xcpd-0.7.1rc5` 的 `--custom_confounds <folder>` 机制要求：
+`xcp_d-0.10.0` 的 custom confounds dataset 机制要求：
 
-- `<folder>` 内必须存在一个 TSV；
+- `<folder>` 本身是一个 BIDS-derivatives dataset（包含 `dataset_description.json`）；
+- TSV 位于 `<folder>/sub-<label>/func/`；
 - TSV 文件名必须与该 run 的 fMRIPrep confounds TSV 的 **basename 完全一致**（例如 `sub-XXX_task-sst_desc-confounds_timeseries.tsv`）。
 
 当前生成脚本：
@@ -84,7 +86,9 @@ bash src/imaging_preprocess/batch_run_xcpd_task.sh data/processed/table/sublist/
 
 其输出为：
 
-- `<out-root>/<basename>`：与 fMRIPrep `*_desc-confounds_timeseries.tsv` 同名的 TSV，包含 task regressors（每 TR 一行）。
+- `<out-root>/dataset_description.json`
+- `<out-root>/confounds_config.yml`（36P + task 列名）
+- `<out-root>/sub-<label>/func/<basename>`：与 fMRIPrep `*_desc-confounds_timeseries.tsv` 同名的 TSV，包含 task regressors（每 TR 一行）。
 
 ### 4.2 时间对齐与 TR/volume 读取
 
@@ -135,14 +139,16 @@ event regressors 用于回归事件相关的诱发成分，采用 FIR（finite i
 
 ## 5. xcp-d 参数（当前设置）
 
-当前 task-fMRI 的 xcp-d 调用核心参数为：
+当前 task-fMRI 的 xcp-d 调用核心参数为（概念上）：
 
-- `--nuisance-regressors 36P`
-- `--custom_confounds /custom_confounds`
+- `--input-type fmriprep`
+- `--mode none`
+- `--datasets custom=/custom_confounds`
+- `--nuisance-regressors /custom_confounds/confounds_config.yml`
 - `--despike`
 - `--lower-bpf=0.01 --upper-bpf=0.1`
 - `--motion-filter-type lp --band-stop-min 6`
-- `--fd-thresh -1`（禁用基于 FD 的 scrubbing；因此 `--min-time` 等 scrubbing 相关参数不生效，这是预期行为）
+- `--fd-thresh -1`（禁用基于 FD 的 scrubbing）
 
 ## 6. 输出目录结构
 
@@ -166,7 +172,7 @@ event regressors 用于回归事件相关的诱发成分，采用 FIR（finite i
 
 优先检查：
 
-1) 自定义 confounds TSV 文件名是否与 fMRIPrep confounds TSV basename 完全一致；  
+1) 自定义 confounds TSV 是否位于 `<out-root>/sub-<label>/func/`，且文件名是否与 fMRIPrep confounds TSV basename 完全一致；  
 2) TR 与 volume 数是否与 fMRIPrep 对齐；  
 3) 行为时间零点（`MRI_Signal_s.started`）是否对应真实扫描起点；  
 4) 是否选择了正确的行为 CSV（同一被试同任务可能存在多个记录）。

@@ -20,6 +20,8 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Made the task-fMRI runner robust to missing/unwritable `dataset_description.json` in fMRIPrep roots by creating a temporary wrapper root and bind-mounting `sub-<label>` into it.
 - Added a task-fMRI xcp-d workflow report: `docs/reports/task_fmri_xcpd_pipeline.md`.
 - Updated SST block/state regressors to support both 120-trial (single block) and 180-trial (two-block with inter-block fixation) variants, preferring `Trial_loop_list` loop identifiers when available.
+- Upgraded xcp-d execution to `xcp_d-0.10.0` and aligned task-regression injection with the official `--datasets custom=...` + YAML confounds config pattern; added FreeSurfer subjects dir binding.
+- Kept the xcp-d parameter set minimal (no explicit output-type/censoring flags); focused changes on container path updates and bind mounts.
 - Added a generator for task-fMRI subject lists from Psychopy logs: `scripts/build_taskfmri_sublist.py` (writes `data/processed/table/sublist/taskfmri_sublist.txt`).
 - Standardized task-fMRI subject IDs in `taskfmri_sublist.txt` to the BIDS participant label format without `sub-` (required by xcp-d `--participant_label`).
 - Added self-contained, shareable task-fMRI xcp-d direct scripts with hard-coded paths: `temp/run_xcpd_task_direct.sh` and `temp/batch_run_xcpd_task_direct.sh` (documented in `docs/workflow.md` and `docs/reports/task_fmri_xcpd_pipeline.md`).
