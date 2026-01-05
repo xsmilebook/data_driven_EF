@@ -117,6 +117,6 @@ singularity run --cleanenv \
   --despike \
   --lower-bpf=0.01 --upper-bpf=0.1 \
   --motion-filter-type lp --band-stop-min 6 \
-  --fd-thresh -1
+  --fd-thresh 100
 
 rm -rf "$wd"

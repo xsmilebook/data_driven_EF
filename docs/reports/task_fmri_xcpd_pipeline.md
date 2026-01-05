@@ -148,7 +148,7 @@ event regressors 用于回归事件相关的诱发成分，采用 FIR（finite i
 - `--despike`
 - `--lower-bpf=0.01 --upper-bpf=0.1`
 - `--motion-filter-type lp --band-stop-min 6`
-- `--fd-thresh -1`（禁用基于 FD 的 scrubbing）
+- `--fd-thresh 100`（将 FD 阈值设得足够大以避免实际 scrubbing；同时满足 xcp_d 0.10.0 的“非负”约束）
 
 ## 6. 输出目录结构
 
