@@ -122,9 +122,13 @@ singularity run --cleanenv \
   --linc-qc n \
   --abcc-qc n \
   --min-coverage 0 \
-  --smoothing 0 \
+  --create-matrices all \
+  --head-radius 50 \
+  --bpf-order 2 \
+  --resource-monitor \
+  --smoothing 2 \
   --despike n \
-  --lower-bpf=0.01 --upper-bpf=0.1 \
+  --lower-bpf 0.01 --upper-bpf 0.1 \
   --motion-filter-type lp --band-stop-min 6 \
   --fd-thresh 100
 

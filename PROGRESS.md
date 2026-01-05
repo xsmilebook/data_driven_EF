@@ -30,6 +30,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Standardized task-fMRI subject IDs in `taskfmri_sublist.txt` to the BIDS participant label format without `sub-` (required by xcp-d `--participant_label`).
 - Added self-contained, shareable task-fMRI xcp-d direct scripts with hard-coded paths: `temp/run_xcpd_task_direct.sh` and `temp/batch_run_xcpd_task_direct.sh` (documented in `docs/workflow.md` and `docs/reports/task_fmri_xcpd_pipeline.md`).
 - Fixed BIDS-derivatives validation for task custom confounds by adding `GeneratedBy.Name` to `dataset_description.json` (prevents `BIDSDerivativesValidationError` in xcp-d/pybids).
+- Fixed a task-fMRI runner parameter regression so `src/imaging_preprocess/xcpd_task_36p_taskreg.sh` matches the unified xcp-d preset (incl. `--create-matrices all`, `--head-radius 50`, `--bpf-order 2`, `--resource-monitor`, `--smoothing 2`).
 
 
 ## In progress
