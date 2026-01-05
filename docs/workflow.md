@@ -41,8 +41,10 @@ EFNY 相关假设配置在 `configs/paths.yaml` 的 `dataset` 段落中。数据
    - 目标：在 36P + 0.01–0.1 Hz 滤波的基础上，将任务诱发共激活信号作为 confounds 一并回归。
    - 脚本：
      - 单被试单任务：`src/imaging_preprocess/xcpd_task_36p_taskreg.sh`
-     - 批处理（SLURM 提交）：`src/imaging_preprocess/batch_run_xcpd_task.sh`
-     - task confounds 生成（Python）：`python -m scripts.build_task_xcpd_confounds`
+     - 写死路径、可直接分享运行：`temp/run_xcpd_task_direct.sh`（不依赖 `configs/` 与 `scripts.render_paths`）
+     - 写死路径、批量提交（SLURM）：`temp/batch_run_xcpd_task_direct.sh`（不依赖 `configs/` 与 `scripts.render_paths`）
+      - 批处理（SLURM 提交）：`src/imaging_preprocess/batch_run_xcpd_task.sh`
+      - task confounds 生成（Python）：`python -m scripts.build_task_xcpd_confounds`
    - 依赖：
      - xcp-d 容器版本：`xcpd-0.7.1rc5`
      - Psychopy 行为记录：`data/raw/MRI_data/task_psych/`（可通过配置覆盖）

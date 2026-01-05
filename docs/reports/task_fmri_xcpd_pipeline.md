@@ -48,6 +48,11 @@
 sbatch src/imaging_preprocess/xcpd_task_36p_taskreg.sh THU20231119141SYQ nback
 ```
 
+此外，为便于在同一集群环境中快速分享“拿来就跑”的版本，本仓库提供了写死路径的等价脚本：
+
+- `temp/run_xcpd_task_direct.sh`（不依赖 `configs/` 与 `scripts.render_paths`，直接内联当前配置的路径）
+- `temp/batch_run_xcpd_task_direct.sh`（批量提交版本，内部调用 `temp/run_xcpd_task_direct.sh`）
+
 该脚本包含两个关键阶段：
 
 1) **构建 task 回归量 confounds**：调用 `python -m scripts.build_task_xcpd_confounds`。  
