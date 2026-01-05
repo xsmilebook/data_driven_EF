@@ -23,6 +23,9 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Upgraded xcp-d execution to `xcp_d-0.10.0` and aligned task-regression injection with the official `--datasets custom=...` + YAML confounds config pattern; added FreeSurfer subjects dir binding.
 - Kept the xcp-d parameter set minimal (no explicit output-type/censoring flags); focused changes on container path updates and bind mounts.
 - Set `--fd-thresh 100` (nonnegative) to effectively disable scrubbing under `xcp_d-0.10.0`.
+- Disabled smoothing and despiking (`--smoothing 0`, `--despike n`) so task-fMRI processing matches the rest pipeline apart from task-regression confounds.
+- Updated rest/task-fMRI runner defaults and documentation to CIFTI output (`--file-format cifti`) and `--min-coverage 0`.
+- Unified rest/task xcp-d flags to a validated reference preset: `--output-type censored`, `--create-matrices all`, `--head-radius 50`, `--bpf-order 2`, `--resource-monitor`, and `--smoothing 2` (kept `--despike n`).
 - Added a generator for task-fMRI subject lists from Psychopy logs: `scripts/build_taskfmri_sublist.py` (writes `data/processed/table/sublist/taskfmri_sublist.txt`).
 - Standardized task-fMRI subject IDs in `taskfmri_sublist.txt` to the BIDS participant label format without `sub-` (required by xcp-d `--participant_label`).
 - Added self-contained, shareable task-fMRI xcp-d direct scripts with hard-coded paths: `temp/run_xcpd_task_direct.sh` and `temp/batch_run_xcpd_task_direct.sh` (documented in `docs/workflow.md` and `docs/reports/task_fmri_xcpd_pipeline.md`).

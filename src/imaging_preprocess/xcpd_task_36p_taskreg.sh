@@ -114,7 +114,15 @@ singularity run --cleanenv \
   --nuisance-regressors /custom_confounds/confounds_config.yml \
   --fs-license-file /fslic/license.txt \
   -w /wd --nthreads 3 --mem-gb 60 \
-  --despike \
+  --file-format cifti \
+  --output-type censored \
+  --combine-runs n \
+  --warp-surfaces-native2std n \
+  --linc-qc n \
+  --abcc-qc n \
+  --min-coverage 0 \
+  --smoothing 0 \
+  --despike n \
   --lower-bpf=0.01 --upper-bpf=0.1 \
   --motion-filter-type lp --band-stop-min 6 \
   --fd-thresh 100

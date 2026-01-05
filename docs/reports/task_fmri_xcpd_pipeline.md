@@ -143,10 +143,22 @@ event regressors 用于回归事件相关的诱发成分，采用 FIR（finite i
 
 - `--input-type fmriprep`
 - `--mode none`
+- `--file-format cifti`（要求 fMRIPrep 提供 `space-fsLR_den-91k` 的 CIFTI 时序）
+- `--output-type censored`
+- `--combine-runs n`
+- `--warp-surfaces-native2std n`
+- `--linc-qc n`
+- `--abcc-qc n`
+- `--min-coverage 0`（不基于覆盖率剔除 parcels；当未选择 atlas 或跳过 parcellation 时该参数不影响结果）
+- `--create-matrices all`（生成下游常用衍生矩阵；若未选择 atlas/跳过 parcellation，则相关产物不会生成）
+- `--head-radius 50`（用于将角速度换算为位移的头半径，单位 mm）
+- `--bpf-order 2`（带通滤波器阶数）
+- `--resource-monitor`（记录资源使用情况，便于 HPC 诊断）
+- `--smoothing 2`（轻度空间平滑，单位 mm；与已验证可运行的参考配置保持一致）
+- `--despike n`（禁用 despike；其余参数与 rest 的 xcp-d 口径保持一致）
 - `--datasets custom=/custom_confounds`
 - `--nuisance-regressors /custom_confounds/confounds_config.yml`
-- `--despike`
-- `--lower-bpf=0.01 --upper-bpf=0.1`
+- `--lower-bpf 0.01 --upper-bpf 0.1`
 - `--motion-filter-type lp --band-stop-min 6`
 - `--fd-thresh 100`（将 FD 阈值设得足够大以避免实际 scrubbing；同时满足 xcp_d 0.10.0 的“非负”约束）
 

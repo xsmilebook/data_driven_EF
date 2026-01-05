@@ -45,8 +45,20 @@ singularity run --cleanenv \
         --fs-license-file /fslic/license.txt \
         -w /wd --nthreads 2 --mem-gb 40 \
         --nuisance-regressors 36P \
-        --despike \
-        --lower-bpf=0.01 --upper-bpf=0.1 \
+        --file-format cifti \
+        --output-type censored \
+        --combine-runs n \
+        --warp-surfaces-native2std n \
+        --linc-qc n \
+        --abcc-qc n \
+        --min-coverage 0 \
+        --create-matrices all \
+        --head-radius 50 \
+        --bpf-order 2 \
+        --resource-monitor \
+        --smoothing 2 \
+        --despike n \
+        --lower-bpf 0.01 --upper-bpf 0.1 \
         --motion-filter-type lp --band-stop-min 6 \
         --fd-thresh 100
 

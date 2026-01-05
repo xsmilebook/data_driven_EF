@@ -14,9 +14,11 @@
 
 ### 影像预处理与 FC 构建
 
-- rs-fMRI 预处理由 xcp-d 执行（`src/imaging_preprocess/xcpd_36p.sh`），输出用于后续 FC 计算的清洗时序。
+- rs-fMRI 预处理由 xcp-d 执行（`src/imaging_preprocess/xcpd_36p.sh`），输出用于后续 FC 计算的清洗时序；当前输出采用 CIFTI（`--file-format cifti`），并将 `--min-coverage` 设为 `0`（不基于覆盖率剔除 parcels）。
 - task-fMRI 预处理同样使用 xcp-d，但在去噪（36P + 0.01–0.1 Hz）基础上额外回归任务诱发 HRF（block canonical HRF + event FIR）；入口为 `src/imaging_preprocess/xcpd_task_36p_taskreg.sh`。其自定义任务 confounds 由 `python -m scripts.build_task_xcpd_confounds` 从 Psychopy 行为 CSV 构建为一个 BIDS derivative dataset，并通过 xcp-d 的 `--datasets custom=<folder>` 与 `--nuisance-regressors <yaml>`（36P + task 列）加载（要求 TSV basename 与对应 fMRIPrep confounds TSV 完全一致）。SST 的 block/state 划分以 `Trial_loop_list` 的 loop1/loop2（如存在）优先；否则按试次数量识别 120（单 block）与 180（双 block，90/91 之间存在注视间隔）。
-- `xcp_d-0.10.0` 的 `--fd-thresh` 要求非负；本项目当前将 `--fd-thresh` 设为足够大的值（`100`）以避免实际 scrubbing，从而避免因 censoring 导致时序长度不一致。
+- `xcp_d-0.10.0` 的 `--mode none` 需要显式提供若干参数（如 `--file-format`、`--output-type`、`--combine-runs`、`--linc-qc`、`--abcc-qc`、`--min-coverage`、`--warp-surfaces-native2std`、`--smoothing`、`--despike`）。本项目将 `--fd-thresh` 设为足够大的值（`100`）以避免实际 scrubbing，从而避免因 censoring 导致时序长度不一致。
+- 为与已验证可运行的参考配置一致，本项目将 `--smoothing` 设为 `2`（单位 mm）并将 `--despike` 设为 `n`（禁用 despike）。
+- 当前 `task-fMRI` 的输出采用 CIFTI（`--file-format cifti`），并将 `--min-coverage` 设为 `0`（不基于覆盖率剔除 parcels；当未选择 atlas 或跳过 parcellation 时该参数不影响结果）。
 - 头动 QC 指标由 `src/imaging_preprocess/screen_head_motion_efny.py` 汇总；阈值与字段以脚本为准。
 - FC 计算使用 Schaefer 分区（`src/imaging_preprocess/compute_fc_schaefer.py`），随后进行 Fisher-Z（`src/imaging_preprocess/fisher_z_fc.py`）。
 - 向量化特征在 `src/imaging_preprocess/convert_fc_vector.py` 中生成，作为建模输入 X。

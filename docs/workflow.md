@@ -37,6 +37,7 @@ EFNY 相关假设配置在 `configs/paths.yaml` 的 `dataset` 段落中。数据
    - 脚本：`src/imaging_preprocess/batch_run_xcpd.sh`、`src/imaging_preprocess/xcpd_36p.sh`
    - 输入：`data/raw/MRI_data/`
    - 输出：`data/interim/MRI_data/xcpd_rest`
+   - 当前参数要点（xcp_d-0.10.0）：`--file-format cifti`、`--output-type censored`、`--min-coverage 0`、`--smoothing 2`、`--despike n`、`--fd-thresh 100`。
 2) task-fMRI 预处理（xcp-d：去噪 + 去除任务诱发 HRF）。
    - 目标：在 36P + 0.01–0.1 Hz 滤波的基础上，将任务诱发共激活信号作为 confounds 一并回归。
    - 脚本：
@@ -53,8 +54,9 @@ EFNY 相关假设配置在 `configs/paths.yaml` 的 `dataset` 段落中。数据
      - FreeSurfer subjects dir（可选但建议）：`/ibmgpfs/cuizaixu_lab/liyang/BrainProject25/Tsinghua_data/freesurfer/`（包含 `sub-*/surf,label,mri,...`），脚本会 bind 到容器内 `/freesurfer` 并设置 `SUBJECTS_DIR=/freesurfer`。
    - 输出：
      - xcp-d 结果：`data/interim/MRI_data/xcpd_task/<task>/`
-     - 自定义 confounds（供 xcp-d `--custom_confounds` 使用）：`data/interim/MRI_data/xcpd_task/custom_confounds/<task>/sub-<label>/`
-       - 该文件夹内的 TSV **文件名必须与 fMRIPrep 的** `*_desc-confounds_timeseries.tsv` **完全一致**，xcp-d 才能自动匹配并加载。
+     - 自定义 confounds（供 `--datasets custom=/custom_confounds` 使用）：`data/interim/MRI_data/xcpd_task/custom_confounds/<task>/sub-<label>/`
+       - 该目录是一个 BIDS derivative dataset（包含 `dataset_description.json` 与 `confounds_config.yml`）。
+       - task regressors TSV 位于 `sub-<label>/func/`，且 **文件名必须与 fMRIPrep 的** `*_desc-confounds_timeseries.tsv` **完全一致**，xcp-d 才能自动匹配并加载。
    - 回归口径（按任务诱发 HRF 去除）：
      - block/state 回归量：canonical HRF（SPM HRF）卷积。
        - NBACK：`state_pure_0back`、`state_pure_2back`（如存在混合段：`state_mixed`）。
@@ -69,6 +71,14 @@ EFNY 相关假设配置在 `configs/paths.yaml` 的 `dataset` 段落中。数据
    - 关键对齐假设：
      - 扫描起点：使用 Psychopy CSV 中首个 `MRI_Signal_s.started` 作为时间 0；缺失时回退到 `Begin_fix.started`，再回退到 0。
      - NBACK/SWITCH 的 block 类型优先由 `Trial_loop_list` 推断（行为试次行中 `Task_img` 常为空）。
+   - `xcp_d-0.10.0` 的 `--mode none` 要求显式设置若干参数，否则会直接报错；当前脚本固定为：
+     - `--file-format cifti`、`--output-type censored`、`--combine-runs n`
+     - `--warp-surfaces-native2std n`、`--linc-qc n`、`--abcc-qc n`
+     - `--min-coverage 0`、`--create-matrices all`、`--head-radius 50`
+     - `--lower-bpf 0.01 --upper-bpf 0.1`、`--bpf-order 2`
+     - `--motion-filter-type lp --band-stop-min 6`、`--resource-monitor`
+     - `--smoothing 2`、`--despike n`
+     - `--fd-thresh 100`（避免实际 scrubbing）
 2) 头动 QC 汇总。
    - 脚本：`src/imaging_preprocess/screen_head_motion_efny.py`
    - 输出：`data/interim/table/qc/rest_fd_summary.csv`
