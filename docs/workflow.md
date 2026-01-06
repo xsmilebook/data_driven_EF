@@ -201,6 +201,23 @@ python -m scripts.eda_behavior_trials --dataset EFNY --config configs/paths.yaml
 - 报告写入 `configs/paths.yaml` 的 `docs_reports_root`（默认 `docs/reports/`），文件名根据工作簿自动生成。
 - 可通过 `--excel-file`（绝对路径或仓库相对路径）与 `--report-out` 覆盖默认输入/输出位置。
 
+### 行为刺激一致性分组（全样本）
+
+目的：基于每位被试 Excel 工作簿中各 sheet 的 `正式阶段刺激图片/Item名` 列进行一致性分组。允许部分被试缺少某些任务（sheet）：只要两名被试**共同存在**的任务中刺激条目完全一致，则可分到同一组（缺失的任务不作为判定依据）。
+
+运行：
+
+```bash
+python temp/group_app_stimulus_groups.py --dataset EFNY --config configs/paths.yaml
+```
+
+输入与输出：
+
+- 输入目录：`data/raw/behavior_data/cibr_app_data/`（由 `configs/paths.yaml` 的 `dataset.behavioral.app_data_dir` 控制）。
+- 输出目录：`data/interim/behavioral_preprocess/stimulus_groups/`（由 `dataset.behavioral.interim_preprocess_dir` 控制）。
+  - 每组一个 `group_###_sublist.txt`
+  - 汇总清单：`groups_manifest.csv`、`groups_manifest.json`
+
 ### DDM/HDDM 决策与层级建模（PyMC-based）
 
 目的：基于任务口径与样本特征生成 DDM/HDDM 决策文档，并在可行范围内进行层级 HDDM（回归）计算与基础效果评估（如条件效应后验区间、LOO 指标）。

@@ -1,0 +1,10 @@
+[
+  {
+    "group_id": "group_001",
+    "n_subjects": 2,
+    "subjects": "THU_20231014_131_ZXM;THU_20231014_132_LYX",
+    "signature_sha256": "76c070a9de1f122171a7d5994bf4749bf5dfb6ae4a749b1145c010abd008dc3a",
+    "sheet_count": 16,
+    "note": null
+  }
+]
