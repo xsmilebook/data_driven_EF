@@ -131,9 +131,51 @@ def _read_psychopy_rows(path: Path) -> list[dict[str, str]]:
         reader = csv.DictReader(f)
         return [dict(r) for r in reader]
 
+def _extract_subject_label_from_task_psych_dirname(folder_name: str) -> str | None:
+    m = re.match(r"^sub-([A-Za-z0-9]+)$", folder_name)
+    if m:
+        return m.group(1)
+
+    m = re.match(r"^THU_(\d{8})_(\d+)_([A-Za-z]+)$", folder_name)
+    if m:
+        date8, num, code = m.groups()
+        return f"THU{date8}{num}{code.upper()}"
+
+    # XY Psychopy folders: XY_YYYYMMDD_NUM_CODE (CODE may include underscores).
+    m = re.match(r"^XY_(\d{8})_(\d+)_([A-Za-z0-9_]+)$", folder_name)
+    if m:
+        date8, num, code = m.groups()
+        return f"XY{date8}{num}{code.replace('_', '').upper()}"
+
+    return None
+
 
 def _find_behavior_file(task_psych_dir: Path, subject_label: str, task: str) -> Path:
     label = _strip_sub_prefix(subject_label)
+
+    # Prefer an exact match against a subject folder name when possible.
+    subj_dir: Path | None = None
+    for child in task_psych_dir.iterdir():
+        if not child.is_dir():
+            continue
+        extracted = _extract_subject_label_from_task_psych_dirname(child.name)
+        if extracted and extracted == label:
+            subj_dir = child
+            break
+    if subj_dir is not None:
+        candidates: list[Path] = []
+        for p in subj_dir.glob("*.csv"):
+            name = p.name.lower()
+            if task == "sst":
+                ok = "_sst_" in name
+            else:
+                ok = f"_{task}_" in name
+            if ok:
+                candidates.append(p)
+        if candidates:
+            candidates = sorted(set(candidates), key=lambda p: p.stat().st_mtime, reverse=True)
+            return candidates[0]
+
     m = re.match(r"^(THU)(\d{8})(\d+)([A-Za-z]+)$", label)
     patterns: list[str] = []
     if m:

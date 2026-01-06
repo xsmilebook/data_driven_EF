@@ -66,6 +66,12 @@ python -m scripts.build_task_xcpd_confounds \
   --task-psych-dir "${TASK_PSYCH_DIR}" \
   --fir-window-seconds 20
 
+if [ ! -f "${custom_confounds_root}/confounds_config.yml" ]; then
+  echo "ERROR: custom confounds config not found: ${custom_confounds_root}/confounds_config.yml" 1>&2
+  echo "Check whether task_psych_dir and subject naming match, and whether the behavior CSV exists for task=${task}." 1>&2
+  exit 1
+fi
+
 temp_dir=/ibmgpfs/cuizaixu_lab/xuhaoshu/trash/sub-${subj_label}
 mkdir -p "$temp_dir"
 
