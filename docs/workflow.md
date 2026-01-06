@@ -317,7 +317,12 @@ bash src/imaging_preprocess/batch_run_xcpd_task.sh \
   EFNY_XY
 ```
 
-说明：XY 的 `task_psych_xy` 目录通常采用 BIDS 风格文件夹命名（`sub-<LABEL>`，例如 `sub-XY20240124104JYX`）。本项目生成的 `taskfmri_sublist.txt` 需要写入 `<LABEL>`（不包含 `sub-` 前缀），以满足 xcp-d `--participant_label` 的要求。
+说明：XY 的 `task_psych_xy` 目录可能采用两种命名：
+
+- BIDS 风格：`sub-<LABEL>`（例如 `sub-XY20240719168CTY`）。
+- Psychopy 原始风格：`XY_YYYYMMDD_NUM_CODE`（例如 `XY_20240719_168_CTY` 或 `XY_20240724_173_CY_156`）。
+
+本项目生成 sublist 时会写入 `<LABEL>`（不包含 `sub-` 前缀）；对于 Psychopy 原始风格会自动转换为 `XY<YYYYMMDD><NUM><CODE>` 并去掉下划线（例如 `XY_20240719_168_CTY -> XY20240719168CTY`，`XY_20240724_173_CY_156 -> XY20240724173CY156`），以匹配 fMRIPrep 的 `sub-XY...` 命名与 xcp-d `--participant_label` 的要求。
 
 - 单被试单任务提交：
 

@@ -36,6 +36,14 @@ def _extract_subject_label(folder_name: str) -> str | None:
     if m:
         return m.group(1)
 
+    # XY Psychopy folders may follow: XY_YYYYMMDD_NUM_CODE (CODE may include underscores).
+    # Convert to the fMRIPrep participant label format: XYYYYYMMDDNUMCODE (no underscores).
+    m = re.match(r"^XY_(\d{8})_(\d+)_([A-Za-z0-9_]+)$", folder_name)
+    if m:
+        date8, num, code = m.groups()
+        code_clean = code.replace("_", "").upper()
+        return f"XY{date8}{num}{code_clean}"
+
     # THU task_psych folders historically follow: THU_YYYYMMDD_NUM_CODE
     m = re.match(r"^THU_(\d{8})_(\d+)_([A-Za-z]+)$", folder_name)
     if not m:

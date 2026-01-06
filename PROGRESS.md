@@ -35,6 +35,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Updated `scripts/build_taskfmri_sublist.py` to support BIDS-style XY folders named `sub-<LABEL>` (writes `<LABEL>` to the sublist so xcp-d can match `--participant_label`).
 - Added copy-paste commands for THU/XY task-fMRI sublist generation and SLURM submission to `docs/workflow.md`.
 - Standardized dataset labels to `EFNY_THU` and `EFNY_XY` for clearer CLI usage and log separation.
+- Updated XY task-fMRI sublist generation to convert Psychopy folder names like `XY_YYYYMMDD_NUM_CODE` to participant labels like `XY<YYYYMMDD><NUM><CODE>` (underscores removed) to match fMRIPrep `sub-XY...`.
 - Added an app-behavioral grouping utility (`temp/group_app_stimulus_groups.py`) that groups subjects by matching per-sheet sequences on overlapping tasks (missing sheets allowed) using the `正式阶段正确答案` column, with numeric values normalized by stripping leading zeros and an SST-specific 97-row anomaly handled by ignoring the invalid last row, and writes per-group sublists under `data/interim/behavioral_preprocess/stimulus_groups/` (config: `dataset.behavioral.interim_preprocess_dir`).
 
 
