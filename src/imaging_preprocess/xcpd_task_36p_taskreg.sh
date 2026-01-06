@@ -9,8 +9,10 @@ module load singularity
 
 subj=$1
 task=$2
+dataset_config=${3:-configs/dataset_tsinghua_taskfmri.yaml}
+dataset_name=${4:-EFNY_THU}
 if [ -z "$subj" ] || [ -z "$task" ]; then
-  echo "Usage: $0 <SUBJECT_LABEL> <TASK: nback|sst|switch>" 1>&2
+  echo "Usage: $0 <SUBJECT_LABEL> <TASK: nback|sst|switch> [DATASET_CONFIG] [DATASET_NAME]" 1>&2
   exit 2
 fi
 
@@ -22,7 +24,7 @@ case "$task" in
   *) echo "Invalid task: $task (expected nback|sst|switch)" 1>&2; exit 2 ;;
 esac
 
-eval "$(python -m scripts.render_paths --dataset THU_TASK --config configs/paths.yaml --dataset-config configs/dataset_tsinghua_taskfmri.yaml --format bash)"
+eval "$(python -m scripts.render_paths --dataset ${dataset_name} --config configs/paths.yaml --dataset-config ${dataset_config} --format bash)"
 
 case "$task" in
   nback) fmriprep_Path=${FMRIPREP_TASK_NBACK_DIR} ;;
@@ -31,17 +33,18 @@ case "$task" in
 esac
 
 if [ -z "$fmriprep_Path" ]; then
-  echo "ERROR: fmriprep path for task=$task is not configured in configs/dataset_tsinghua_taskfmri.yaml" 1>&2
+  echo "ERROR: fmriprep path for task=$task is not configured in ${dataset_config}" 1>&2
   exit 1
 fi
 if [ -z "$TASK_PSYCH_DIR" ]; then
-  echo "ERROR: TASK_PSYCH_DIR is not configured in configs/dataset_tsinghua_taskfmri.yaml" 1>&2
+  echo "ERROR: TASK_PSYCH_DIR is not configured in ${dataset_config}" 1>&2
   exit 1
 fi
 
-output=${INTERIM_ROOT}/MRI_data/xcpd_task/${task}
-custom_confounds_root=${INTERIM_ROOT}/MRI_data/xcpd_task/custom_confounds/${task}/sub-${subj_label}
-wd=${INTERIM_ROOT}/wd/xcpd_task/${task}/sub-${subj_label}
+xcpd_task_dirname=${XCPD_TASK_DIRNAME:-xcpd_task}
+output=${INTERIM_ROOT}/MRI_data/${xcpd_task_dirname}/${task}
+custom_confounds_root=${INTERIM_ROOT}/MRI_data/${xcpd_task_dirname}/custom_confounds/${task}/sub-${subj_label}
+wd=${INTERIM_ROOT}/wd/${xcpd_task_dirname}/${task}/sub-${subj_label}
 mkdir -p "$output" "$custom_confounds_root" "$wd"
 
 fmriprep_input=""
@@ -67,7 +70,7 @@ temp_dir=/ibmgpfs/cuizaixu_lab/xuhaoshu/trash/sub-${subj_label}
 mkdir -p "$temp_dir"
 
 fslic=/ibmgpfs/cuizaixu_lab/xulongzhou/tool/freesurfer
-fs_subjects_dir=/ibmgpfs/cuizaixu_lab/liyang/BrainProject25/Tsinghua_data/freesurfer
+fs_subjects_dir=${FREESURFER_SUBJECTS_DIR:-/ibmgpfs/cuizaixu_lab/liyang/BrainProject25/Tsinghua_data/freesurfer}
 templateflow=/ibmgpfs/cuizaixu_lab/xulongzhou/tool/templateflow
 export SINGULARITYENV_TEMPLATEFLOW_HOME=$templateflow
 export SINGULARITYENV_SUBJECTS_DIR=/freesurfer

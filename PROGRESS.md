@@ -31,6 +31,10 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Added self-contained, shareable task-fMRI xcp-d direct scripts with hard-coded paths: `temp/run_xcpd_task_direct.sh` and `temp/batch_run_xcpd_task_direct.sh` (documented in `docs/workflow.md` and `docs/reports/task_fmri_xcpd_pipeline.md`).
 - Fixed BIDS-derivatives validation for task custom confounds by adding `GeneratedBy.Name` to `dataset_description.json` (prevents `BIDSDerivativesValidationError` in xcp-d/pybids).
 - Fixed a task-fMRI runner parameter regression so `src/imaging_preprocess/xcpd_task_36p_taskreg.sh` matches the unified xcp-d preset (incl. `--create-matrices all`, `--head-radius 50`, `--bpf-order 2`, `--resource-monitor`, `--smoothing 2`).
+- Added EFNY-XY (Xiangya) task-fMRI support via `configs/dataset_xiangya_taskfmri.yaml` and dataset-config aware runners that save outputs under `data/interim/MRI_data/xcpd_task_xy/`.
+- Updated `scripts/build_taskfmri_sublist.py` to support BIDS-style XY folders named `sub-<LABEL>` (writes `<LABEL>` to the sublist so xcp-d can match `--participant_label`).
+- Added copy-paste commands for THU/XY task-fMRI sublist generation and SLURM submission to `docs/workflow.md`.
+- Standardized dataset labels to `EFNY_THU` and `EFNY_XY` for clearer CLI usage and log separation.
 - Added an app-behavioral grouping utility (`temp/group_app_stimulus_groups.py`) that groups subjects by matching per-sheet sequences on overlapping tasks (missing sheets allowed) using the `正式阶段正确答案` column, with numeric values normalized by stripping leading zeros and an SST-specific 97-row anomaly handled by ignoring the invalid last row, and writes per-group sublists under `data/interim/behavioral_preprocess/stimulus_groups/` (config: `dataset.behavioral.interim_preprocess_dir`).
 
 

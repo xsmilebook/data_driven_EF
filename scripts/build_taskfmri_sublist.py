@@ -19,7 +19,7 @@ def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=None, help="Output path for taskfmri_sublist.txt")
     ap.add_argument("--require-all", action="store_true", help="Require nback+sst+switch logs per subject.")
-    ap.add_argument("--dataset", type=str, default="THU_TASK")
+    ap.add_argument("--dataset", type=str, default="EFNY_THU")
     ap.add_argument("--config", dest="paths_config", type=str, default="configs/paths.yaml")
     ap.add_argument(
         "--dataset-config",
@@ -31,7 +31,12 @@ def parse_args() -> argparse.Namespace:
 
 
 def _extract_subject_label(folder_name: str) -> str | None:
-    # Expected folder: THU_YYYYMMDD_NUM_CODE
+    # XY folders may already be BIDS-style subject folders: sub-<LABEL>
+    m = re.match(r"^sub-([A-Za-z0-9]+)$", folder_name)
+    if m:
+        return m.group(1)
+
+    # THU task_psych folders historically follow: THU_YYYYMMDD_NUM_CODE
     m = re.match(r"^THU_(\d{8})_(\d+)_([A-Za-z]+)$", folder_name)
     if not m:
         return None

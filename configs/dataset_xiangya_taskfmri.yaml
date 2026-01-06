@@ -1,0 +1,17 @@
+external_inputs:
+  # Relative to RAW_ROOT (defaults to data/raw).
+  task_psych_dir: MRI_data/task_psych_xy
+
+  # fMRIPrep derivative roots for each task-fMRI dataset.
+  # These are typically absolute paths on the cluster.
+  fmriprep_task_dirs:
+    nback: /ibmgpfs/cuizaixu_lab/xuxiaoyu/songxinwei/fmri_task/Xiangya/Xiangya_nback/fmriprep_task
+    sst: /ibmgpfs/cuizaixu_lab/xuxiaoyu/songxinwei/fmri_task/Xiangya/Xiangya_sst/fmriprep_task
+    switch: /ibmgpfs/cuizaixu_lab/xuxiaoyu/songxinwei/fmri_task/Xiangya/XY_switch/fmriprep_task
+
+  # FreeSurfer SUBJECTS_DIR (contains sub-*/surf,label,mri,...).
+  freesurfer_subjects_dir: /ibmgpfs/cuizaixu_lab/liyang/BrainProject25/Xiangya_data/freesurfer
+
+outputs:
+  # Save task-fMRI xcp-d outputs separately from THU runs.
+  xcpd_task_dirname: xcpd_task_xy

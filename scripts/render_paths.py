@@ -53,12 +53,16 @@ def main() -> int:
         repo_root=repo_root,
     )
     external_inputs = dataset_cfg.get("external_inputs", {})
+    outputs_cfg = dataset_cfg.get("outputs", {})
     fmriprep_dir = ""
     task_psych_dir = ""
+    freesurfer_subjects_dir = ""
+    xcpd_task_dirname = ""
     fmriprep_task_dirs: dict[str, str] = {}
     if isinstance(external_inputs, dict):
         fmriprep_dir = str(external_inputs.get("fmriprep_dir", "") or "")
         task_psych_dir = str(external_inputs.get("task_psych_dir", "") or "")
+        freesurfer_subjects_dir = str(external_inputs.get("freesurfer_subjects_dir", "") or "")
         # Accept either a mapping (recommended) or per-task keys.
         raw_task_dirs = external_inputs.get("fmriprep_task_dirs", {})
         if isinstance(raw_task_dirs, dict):
@@ -70,6 +74,9 @@ def main() -> int:
             v = external_inputs.get(k)
             if v:
                 fmriprep_task_dirs[task] = str(v)
+
+    if isinstance(outputs_cfg, dict):
+        xcpd_task_dirname = str(outputs_cfg.get("xcpd_task_dirname", "") or "")
 
     lines: list[str] = []
     lines.append(_bash_export("PROJECT_DIR", str(roots["repo_root"])))
@@ -83,6 +90,12 @@ def main() -> int:
         lines.append(_bash_export("FMRIPREP_DIR", _resolve_maybe_relative(fmriprep_dir, base=roots["repo_root"])))
     if task_psych_dir:
         lines.append(_bash_export("TASK_PSYCH_DIR", _resolve_maybe_relative(task_psych_dir, base=roots["raw_root"])))
+    if freesurfer_subjects_dir:
+        lines.append(
+            _bash_export("FREESURFER_SUBJECTS_DIR", _resolve_maybe_relative(freesurfer_subjects_dir, base=roots["repo_root"]))
+        )
+    if xcpd_task_dirname:
+        lines.append(_bash_export("XCPD_TASK_DIRNAME", xcpd_task_dirname))
     for task, path in sorted(fmriprep_task_dirs.items()):
         env_name = f"FMRIPREP_TASK_{task.upper()}_DIR"
         lines.append(_bash_export(env_name, _resolve_maybe_relative(path, base=roots["repo_root"])))

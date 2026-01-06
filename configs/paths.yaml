@@ -15,6 +15,20 @@ raw_root: data/raw
 interim_root: data/interim
 processed_root: data/processed
 
+# Optional named datasets (share the same repo roots by default).
+# These names are primarily used to separate logs and to make CLI usage explicit.
+datasets:
+  EFNY_THU:
+    raw_root: data/raw
+    interim_root: data/interim
+    processed_root: data/processed
+    outputs_root: outputs
+  EFNY_XY:
+    raw_root: data/raw
+    interim_root: data/interim
+    processed_root: data/processed
+    outputs_root: outputs
+
 # Single-dataset settings (EFNY only).
 dataset:
   files:

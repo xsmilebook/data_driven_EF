@@ -271,13 +271,53 @@ xcp-d：
 
 task-fMRI xcp-d（任务回归）：
 
-- 配置文件：`configs/dataset_tsinghua_taskfmri.yaml`（指定 task_psych_dir 与各任务 fMRIPrep 根目录）。
-- 被试列表（建议路径，可在命令行覆盖）：`data/processed/table/sublist/taskfmri_sublist.txt`
-- 批量提交：
+在集群上建议在仓库根目录（`data_driven_EF/`）执行以下命令。
+
+**(A) THU（Tsinghua）数据：生成 sublist + 批量提交**
+
+1) 生成被试列表（建议输出到独立文件，避免与其他来源混淆）：
 
 ```bash
-bash src/imaging_preprocess/batch_run_xcpd_task.sh data/processed/table/sublist/taskfmri_sublist.txt "nback sst switch"
+python -m scripts.build_taskfmri_sublist \
+  --dataset EFNY_THU \
+  --config configs/paths.yaml \
+  --dataset-config configs/dataset_tsinghua_taskfmri.yaml \
+  --out data/processed/table/sublist/taskfmri_sublist_thu.txt
 ```
+
+2) 批量提交 xcp-d（nback/sst/switch）：
+
+```bash
+bash src/imaging_preprocess/batch_run_xcpd_task.sh \
+  data/processed/table/sublist/taskfmri_sublist_thu.txt \
+  "nback sst switch" \
+  configs/dataset_tsinghua_taskfmri.yaml \
+  EFNY_THU
+```
+
+**(B) EFNY-XY（Xiangya）数据：生成 sublist + 批量提交（输出分开保存）**
+
+1) 生成被试列表：
+
+```bash
+python -m scripts.build_taskfmri_sublist \
+  --dataset EFNY_XY \
+  --config configs/paths.yaml \
+  --dataset-config configs/dataset_xiangya_taskfmri.yaml \
+  --out data/processed/table/sublist/taskfmri_sublist_xy.txt
+```
+
+2) 批量提交（产物将保存到 `data/interim/MRI_data/xcpd_task_xy/`，日志保存到 `outputs/logs/EFNY_XY/xcpd_task_xy/`）：
+
+```bash
+bash src/imaging_preprocess/batch_run_xcpd_task.sh \
+  data/processed/table/sublist/taskfmri_sublist_xy.txt \
+  "nback sst switch" \
+  configs/dataset_xiangya_taskfmri.yaml \
+  EFNY_XY
+```
+
+说明：XY 的 `task_psych_xy` 目录通常采用 BIDS 风格文件夹命名（`sub-<LABEL>`，例如 `sub-XY20240124104JYX`）。本项目生成的 `taskfmri_sublist.txt` 需要写入 `<LABEL>`（不包含 `sub-` 前缀），以满足 xcp-d `--participant_label` 的要求。
 
 - 单被试单任务提交：
 
