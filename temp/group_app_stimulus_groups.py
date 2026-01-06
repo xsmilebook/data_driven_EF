@@ -83,6 +83,12 @@ def _sheet_items(
     group_column_name: str,
     compare_mode: str,
 ) -> list[str]:
+    if "任务" in df.columns and len(df) == 97:
+        # Known app export anomaly: SST sheet may contain 97 rows where the last row is invalid.
+        # Do not include the last row in grouping comparisons.
+        task_name = str(df["任务"].iloc[0]).strip()
+        if task_name.upper() == "SST":
+            df = df.iloc[:-1].copy()
     col = _find_group_column(list(df.columns), target=group_column_name)
     if not col:
         raise KeyError(f"missing grouping column {group_column_name!r}")

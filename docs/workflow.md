@@ -205,6 +205,8 @@ python -m scripts.eda_behavior_trials --dataset EFNY --config configs/paths.yaml
 
 目的：基于每位被试 Excel 工作簿中各 sheet 的 `正式阶段正确答案` 列进行一致性分组。允许部分被试缺少某些任务（sheet）：只要两名被试**共同存在**的任务中答案序列完全一致，则可分到同一组（缺失的任务不作为判定依据）。
 
+注意：已观测到 SST sheet 可能出现 97 行（最后一行无效）；当前分组比较会忽略该无效行。详见 `docs/reports/app_data_format.md`。
+
 运行：
 
 ```bash
