@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.path_config import load_dataset_config, load_paths_config, resolve_dataset_roots
 
 
-DEFAULT_ITEM_COL = "正式阶段刺激图片/Item名"
+DEFAULT_GROUP_COL = "正式阶段正确答案"
 
 
 @dataclass(frozen=True)
@@ -26,7 +26,7 @@ class WorkbookStimProfile:
     note: str | None = None
 
 
-def _normalize_item_cell(value: object) -> str | None:
+def _normalize_group_cell(value: object) -> str | None:
     if value is None:
         return None
     s = str(value).strip()
@@ -51,7 +51,7 @@ def _normalize_header(value: object) -> str:
     return "".join(s.split())
 
 
-def _find_item_column(columns: list[object], *, target: str) -> str | None:
+def _find_group_column(columns: list[object], *, target: str) -> str | None:
     target_norm = _normalize_header(target)
     candidates: list[str] = []
     for c in columns:
@@ -63,7 +63,7 @@ def _find_item_column(columns: list[object], *, target: str) -> str | None:
 
     for c_str in candidates:
         c_norm = _normalize_header(c_str)
-        if "正式阶段刺激图片" in c_norm and "item" in c_norm.lower():
+        if "正式阶段正确答案" in c_norm:
             return c_str
     return None
 
@@ -80,14 +80,14 @@ def _extract_subject_id_from_filename(excel_path: Path) -> str:
 def _sheet_items(
     df: pd.DataFrame,
     *,
-    item_column_name: str,
+    group_column_name: str,
     compare_mode: str,
 ) -> list[str]:
-    col = _find_item_column(list(df.columns), target=item_column_name)
+    col = _find_group_column(list(df.columns), target=group_column_name)
     if not col:
-        raise KeyError(f"missing item column {item_column_name!r}")
+        raise KeyError(f"missing grouping column {group_column_name!r}")
     raw = df[col].tolist()
-    items = [v for v in (_normalize_item_cell(x) for x in raw) if v is not None]
+    items = [v for v in (_normalize_group_cell(x) for x in raw) if v is not None]
     if compare_mode == "set":
         return sorted(set(items))
     return items
@@ -96,7 +96,7 @@ def _sheet_items(
 def _compute_signature(
     excel_path: Path,
     *,
-    item_column_name: str,
+    group_column_name: str,
     compare_mode: str,
 ) -> tuple[dict[str, str], int, str | None]:
     xl = pd.ExcelFile(excel_path)
@@ -107,7 +107,7 @@ def _compute_signature(
             df = xl.parse(sheet, dtype="object")
             items = _sheet_items(
                 df,
-                item_column_name=item_column_name,
+                group_column_name=group_column_name,
                 compare_mode=compare_mode,
             )
             canonical = json.dumps(items, ensure_ascii=False, separators=(",", ":"))
@@ -115,7 +115,7 @@ def _compute_signature(
         except Exception:
             missing.append(str(sheet))
 
-    note = f"missing_item_column_in_sheets={','.join(missing)}" if missing else None
+    note = f"missing_group_column_in_sheets={','.join(missing)}" if missing else None
     return sheet_sigs, len(xl.sheet_names), note
 
 
@@ -157,8 +157,8 @@ def _resolve_interim_behavior_dir(dataset_cfg: dict, roots: dict[str, Path]) -> 
 def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser(
         description=(
-            "Group subjects by identical app-task stimulus items across all Excel sheets "
-            f"(column: {DEFAULT_ITEM_COL})."
+            "Group subjects by identical app-task sequences across all Excel sheets "
+            f"(column: {DEFAULT_GROUP_COL})."
         )
     )
     ap.add_argument("--dataset", type=str, default=None)
@@ -179,7 +179,7 @@ def parse_args() -> argparse.Namespace:
             "<interim_root>/<dataset.behavioral.interim_preprocess_dir>/stimulus_groups."
         ),
     )
-    ap.add_argument("--item-column", type=str, default=DEFAULT_ITEM_COL)
+    ap.add_argument("--group-column", type=str, default=DEFAULT_GROUP_COL)
     ap.add_argument(
         "--compare-mode",
         choices=["sequence", "set"],
@@ -236,7 +236,7 @@ def main() -> int:
         subject_id = _extract_subject_id_from_filename(fp)
         sheet_sigs, sheet_count, note = _compute_signature(
             fp,
-            item_column_name=args.item_column,
+            group_column_name=args.group_column,
             compare_mode=args.compare_mode,
         )
         profiles.append(

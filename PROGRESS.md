@@ -31,7 +31,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Added self-contained, shareable task-fMRI xcp-d direct scripts with hard-coded paths: `temp/run_xcpd_task_direct.sh` and `temp/batch_run_xcpd_task_direct.sh` (documented in `docs/workflow.md` and `docs/reports/task_fmri_xcpd_pipeline.md`).
 - Fixed BIDS-derivatives validation for task custom confounds by adding `GeneratedBy.Name` to `dataset_description.json` (prevents `BIDSDerivativesValidationError` in xcp-d/pybids).
 - Fixed a task-fMRI runner parameter regression so `src/imaging_preprocess/xcpd_task_36p_taskreg.sh` matches the unified xcp-d preset (incl. `--create-matrices all`, `--head-radius 50`, `--bpf-order 2`, `--resource-monitor`, `--smoothing 2`).
-- Added an app-behavioral stimulus grouping utility (`temp/group_app_stimulus_groups.py`) that groups subjects by matching per-sheet item stimuli on overlapping tasks (missing sheets allowed), with numeric item IDs normalized by stripping leading zeros, and writes per-group sublists under `data/interim/behavioral_preprocess/stimulus_groups/` (config: `dataset.behavioral.interim_preprocess_dir`).
+- Added an app-behavioral grouping utility (`temp/group_app_stimulus_groups.py`) that groups subjects by matching per-sheet sequences on overlapping tasks (missing sheets allowed) using the `正式阶段正确答案` column, with numeric values normalized by stripping leading zeros, and writes per-group sublists under `data/interim/behavioral_preprocess/stimulus_groups/` (config: `dataset.behavioral.interim_preprocess_dir`).
 
 
 ## In progress
