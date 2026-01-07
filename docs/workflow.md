@@ -295,6 +295,8 @@ bash src/imaging_preprocess/batch_run_xcpd_task.sh \
   EFNY_THU
 ```
 
+说明：`batch_run_xcpd_task.sh` 默认会跳过已成功完成的 `subject×task`（判定依据：输出目录下同时存在 `sub-<LABEL>.html`、`log/*/xcp_d.toml` 与 `func/*desc-denoised_bold.dtseries.nii`）。如需强制重跑，可在命令前加 `XCPD_FORCE=1`。
+
 **(B) EFNY-XY（Xiangya）数据：生成 sublist + 批量提交（输出分开保存）**
 
 1) 生成被试列表：

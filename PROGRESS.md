@@ -37,6 +37,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Standardized dataset labels to `EFNY_THU` and `EFNY_XY` for clearer CLI usage and log separation.
 - Updated XY task-fMRI sublist generation to convert Psychopy folder names like `XY_YYYYMMDD_NUM_CODE` to participant labels like `XY<YYYYMMDD><NUM><CODE>` (underscores removed) to match fMRIPrep `sub-XY...`.
 - Fixed XY task confounds discovery so `scripts/build_task_xcpd_confounds.py` can locate behavior CSVs under `task_psych_xy/XY_.../`, preventing missing `/custom_confounds/confounds_config.yml` at xcp-d runtime.
+- Made `src/imaging_preprocess/batch_run_xcpd_task.sh` skip already-successful subject×task outputs by default (override with `XCPD_FORCE=1`).
 - Added an app-behavioral grouping utility (`temp/group_app_stimulus_groups.py`) that groups subjects by matching per-sheet sequences on overlapping tasks (missing sheets allowed) using the `正式阶段正确答案` column, with numeric values normalized by stripping leading zeros and an SST-specific 97-row anomaly handled by ignoring the invalid last row, and writes per-group sublists under `data/interim/behavioral_preprocess/stimulus_groups/` (config: `dataset.behavioral.interim_preprocess_dir`).
 
 
