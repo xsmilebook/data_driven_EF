@@ -424,14 +424,31 @@ def _detect_t0(rows: list[dict[str, str]]) -> float:
 
 def _build_events_from_psychopy(rows: list[dict[str, str]], task: str) -> tuple[list[Event], list[Event]]:
     t0 = _detect_t0(rows)
-    trial_rows = []
-    for r in rows:
-        trial_started = _float_or_none(r.get("Trial.started"))
-        if trial_started is None:
-            continue
-        trial_rows.append(r)
+
+    def _row_time(r: dict[str, str], keys: list[str]) -> float | None:
+        for k in keys:
+            v = _float_or_none(r.get(k))
+            if v is not None:
+                return float(v)
+        return None
+
+    if task in {"nback", "switch"}:
+        trial_start_keys = ["Trial.started", "Trial_fix.started", "Trial_text.started", "key_resp.started"]
+        trial_stop_keys = ["Trial.stopped", "Trial_text.stopped", "Trial_fix.stopped", "key_resp.stopped"]
+        trial_row_keys = ["Trial.started", "Trial_text.started", "Trial_fix.started"]
+    elif task == "sst":
+        trial_start_keys = ["Trial.started", "Trial_image_1.started", "Trial_fix.started", "key_resp.started"]
+        trial_stop_keys = ["Trial.stopped", "Trial_image_1.stopped", "Trial_fix.stopped", "key_resp.stopped"]
+        trial_row_keys = ["Trial.started", "Trial_image_1.started", "Trial_fix.started"]
+    else:
+        raise ValueError(task)
+
+    trial_rows = [r for r in rows if any(_float_or_none(r.get(k)) is not None for k in trial_row_keys)]
     if not trial_rows:
-        raise ValueError("No trial rows found (missing Trial.started).")
+        raise ValueError(
+            "No trial rows found (missing expected trial timing columns). "
+            f"task={task} expected_any_of={trial_row_keys}"
+        )
 
     block_events: list[Event] = []
     event_events: list[Event] = []
@@ -445,11 +462,12 @@ def _build_events_from_psychopy(rows: list[dict[str, str]], task: str) -> tuple[
             blocks.setdefault(idx, []).append(r)
 
         for _, trs in sorted(blocks.items(), key=lambda kv: kv[0]):
-            trial_start = min(_float_or_none(r.get("Trial.started")) for r in trs if _float_or_none(r.get("Trial.started")) is not None)
-            trial_stop = max(
-                _float_or_none(r.get("Trial.stopped")) or _float_or_none(r.get("Trial_text.stopped")) or _float_or_none(r.get("Trial.started"))
-                for r in trs
-            )
+            starts = [t for t in (_row_time(r, trial_start_keys) for r in trs) if t is not None]
+            stops = [t for t in (_row_time(r, trial_stop_keys) for r in trs) if t is not None]
+            if not starts:
+                continue
+            trial_start = min(starts)
+            trial_stop = max(stops) if stops else trial_start
             block_hint = ""
             for r in trs:
                 v = (r.get("Task_img") or "").strip()
@@ -502,9 +520,8 @@ def _build_events_from_psychopy(rows: list[dict[str, str]], task: str) -> tuple[
                     by_loop.setdefault(v, []).append(r)
             if len(by_loop) >= 2:
                 for k, trs in by_loop.items():
-                    first_t = min(_float_or_none(r.get("Trial.started")) for r in trs if _float_or_none(r.get("Trial.started")) is not None)
                     groups.append((k, trs))
-                groups.sort(key=lambda kv: min(_float_or_none(r.get("Trial.started")) for r in kv[1] if _float_or_none(r.get("Trial.started")) is not None))
+                groups.sort(key=lambda kv: min(t for t in (_row_time(r, trial_start_keys) for r in kv[1]) if t is not None))
 
         if not groups:
             # Fallback: infer by trial count. If >= 180 trials, split into two blocks at TrialN 90.
@@ -537,8 +554,12 @@ def _build_events_from_psychopy(rows: list[dict[str, str]], task: str) -> tuple[
 
         for _, trs in groups[:2]:
             label = label_map[_]
-            trial_start = min(_float_or_none(r.get("Trial.started")) for r in trs if _float_or_none(r.get("Trial.started")) is not None)
-            trial_stop = max(_float_or_none(r.get("Trial.stopped")) or _float_or_none(r.get("Trial.started")) for r in trs)
+            starts = [t for t in (_row_time(r, trial_start_keys) for r in trs) if t is not None]
+            stops = [t for t in (_row_time(r, trial_stop_keys) for r in trs) if t is not None]
+            if not starts:
+                continue
+            trial_start = min(starts)
+            trial_stop = max(stops) if stops else trial_start
             onset = float(trial_start) - t0
             duration = max(0.0, float(trial_stop) - float(trial_start))
             block_events.append(Event(onset=onset, duration=duration, trial_type=label))
