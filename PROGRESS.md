@@ -42,6 +42,8 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Added an app-behavioral grouping utility (`temp/group_app_stimulus_groups.py`) that groups subjects by matching per-sheet sequences on overlapping tasks (missing sheets allowed) using the `正式阶段正确答案` column, with numeric values normalized by stripping leading zeros and an SST-specific 97-row anomaly handled by ignoring the invalid last row, and writes per-group sublists under `data/interim/behavioral_preprocess/stimulus_groups/` (config: `dataset.behavioral.interim_preprocess_dir`).
 - Added a scanner for repeated task Psychopy CSV logs per subject×task: `temp/find_repeated_task_psych_csvs.py` (report: `data/interim/MRI_data/repeated_task_psych_file/repeated_task_psych_files.tsv`).
 - Switched task-fMRI behavior CSV selection to use the filename timestamp (`YYYY-MM-DD_HHhMM.SS.mmm`) when multiple logs exist for a subject×task.
+- Standardized task-fMRI behavior data documentation and added SST 180-trial and THU/XY Psychopy-format notes: `docs/reports/task_fmri_beh_data_handbook.md`.
+- Adjusted task-fMRI block/state timing to use stimulus presentation columns (not fixation) in `scripts/build_task_xcpd_confounds.py`.
 
 
 ## In progress

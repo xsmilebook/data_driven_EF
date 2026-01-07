@@ -432,14 +432,18 @@ def _build_events_from_psychopy(rows: list[dict[str, str]], task: str) -> tuple[
                 return float(v)
         return None
 
+    # IMPORTANT: Trial_fix is a fixation period, while Trial_text/Trial_image_1 is stimulus onset.
+    # For event regressors we always use stimulus onset columns.
+    # For block/state regressors, we prefer stimulus timing for block start/stop to avoid shifting
+    # the canonical HRF regressors earlier by the fixation duration.
     if task in {"nback", "switch"}:
-        trial_start_keys = ["Trial.started", "Trial_fix.started", "Trial_text.started", "key_resp.started"]
-        trial_stop_keys = ["Trial.stopped", "Trial_text.stopped", "Trial_fix.stopped", "key_resp.stopped"]
-        trial_row_keys = ["Trial.started", "Trial_text.started", "Trial_fix.started"]
+        trial_start_keys = ["Trial_text.started", "Trial.started", "Trial_fix.started", "key_resp.started"]
+        trial_stop_keys = ["Trial_text.stopped", "Trial.stopped", "key_resp.stopped", "Trial_fix.stopped"]
+        trial_row_keys = ["Trial_text.started", "Trial.started", "Trial_fix.started"]
     elif task == "sst":
-        trial_start_keys = ["Trial.started", "Trial_image_1.started", "Trial_fix.started", "key_resp.started"]
-        trial_stop_keys = ["Trial.stopped", "Trial_image_1.stopped", "Trial_fix.stopped", "key_resp.stopped"]
-        trial_row_keys = ["Trial.started", "Trial_image_1.started", "Trial_fix.started"]
+        trial_start_keys = ["Trial_image_1.started", "Trial.started", "Trial_fix.started", "key_resp.started"]
+        trial_stop_keys = ["Trial_image_1.stopped", "Trial.stopped", "key_resp.stopped", "Trial_fix.stopped"]
+        trial_row_keys = ["Trial_image_1.started", "Trial.started", "Trial_fix.started"]
     else:
         raise ValueError(task)
 
