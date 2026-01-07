@@ -123,7 +123,7 @@ singularity run --cleanenv \
   --datasets custom=/custom_confounds \
   --nuisance-regressors /custom_confounds/confounds_config.yml \
   --fs-license-file /fslic/license.txt \
-  -w /wd --nthreads 3 --mem-gb 60 \
+  -w /wd --nthreads 2 --mem-gb 40 \
   --file-format cifti \
   --output-type censored \
   --combine-runs n \
