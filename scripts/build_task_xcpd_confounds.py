@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+from datetime import datetime
 import glob
 import json
 import re
@@ -131,6 +132,39 @@ def _read_psychopy_rows(path: Path) -> list[dict[str, str]]:
         reader = csv.DictReader(f)
         return [dict(r) for r in reader]
 
+
+_PSYCHOPY_TS_RE = re.compile(r"_(\d{4}-\d{2}-\d{2})_(\d{2})h(\d{2})\.(\d{2})\.(\d{3})(?=\.|$)")
+
+
+def _psychopy_timestamp_from_filename(name: str) -> datetime | None:
+    """Parse Psychopy timestamp from filename (YYYY-MM-DD_HHhMM.SS.mmm)."""
+    m = _PSYCHOPY_TS_RE.search(name)
+    if not m:
+        return None
+    date_s, hh, mm, ss, ms = m.groups()
+    try:
+        base = datetime.strptime(date_s, "%Y-%m-%d")
+        return base.replace(
+            hour=int(hh),
+            minute=int(mm),
+            second=int(ss),
+            microsecond=int(ms) * 1000,
+        )
+    except Exception:
+        return None
+
+
+def _choose_newest_by_filename_timestamp(paths: list[Path]) -> Path:
+    """Choose newest CSV by filename timestamp; fall back to mtime if missing."""
+
+    def key(p: Path) -> tuple[int, datetime, float]:
+        ts = _psychopy_timestamp_from_filename(p.name)
+        if ts is None:
+            return (0, datetime.min, p.stat().st_mtime)
+        return (1, ts, p.stat().st_mtime)
+
+    return sorted(set(paths), key=key, reverse=True)[0]
+
 def _extract_subject_label_from_task_psych_dirname(folder_name: str) -> str | None:
     m = re.match(r"^sub-([A-Za-z0-9]+)$", folder_name)
     if m:
@@ -173,8 +207,7 @@ def _find_behavior_file(task_psych_dir: Path, subject_label: str, task: str) -> 
             if ok:
                 candidates.append(p)
         if candidates:
-            candidates = sorted(set(candidates), key=lambda p: p.stat().st_mtime, reverse=True)
-            return candidates[0]
+            return _choose_newest_by_filename_timestamp(candidates)
 
     m = re.match(r"^(THU)(\d{8})(\d+)([A-Za-z]+)$", label)
     patterns: list[str] = []
@@ -203,8 +236,7 @@ def _find_behavior_file(task_psych_dir: Path, subject_label: str, task: str) -> 
 
     if not matches:
         raise FileNotFoundError(f"No behavior CSV found for subject={label}, task={task} under {task_psych_dir}")
-    matches = sorted(set(matches), key=lambda p: p.stat().st_mtime, reverse=True)
-    return matches[0]
+    return _choose_newest_by_filename_timestamp(matches)
 
 
 def _resolve_defaults(args: argparse.Namespace) -> tuple[Path | None, Path | None]:

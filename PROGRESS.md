@@ -39,6 +39,8 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Fixed XY task confounds discovery so `scripts/build_task_xcpd_confounds.py` can locate behavior CSVs under `task_psych_xy/XY_.../`, preventing missing `/custom_confounds/confounds_config.yml` at xcp-d runtime.
 - Made `src/imaging_preprocess/batch_run_xcpd_task.sh` skip already-successful subject×task outputs by default (override with `XCPD_FORCE=1`).
 - Added an app-behavioral grouping utility (`temp/group_app_stimulus_groups.py`) that groups subjects by matching per-sheet sequences on overlapping tasks (missing sheets allowed) using the `正式阶段正确答案` column, with numeric values normalized by stripping leading zeros and an SST-specific 97-row anomaly handled by ignoring the invalid last row, and writes per-group sublists under `data/interim/behavioral_preprocess/stimulus_groups/` (config: `dataset.behavioral.interim_preprocess_dir`).
+- Added a scanner for repeated task Psychopy CSV logs per subject×task: `temp/find_repeated_task_psych_csvs.py` (report: `data/interim/MRI_data/repeated_task_psych_file/repeated_task_psych_files.tsv`).
+- Switched task-fMRI behavior CSV selection to use the filename timestamp (`YYYY-MM-DD_HHhMM.SS.mmm`) when multiple logs exist for a subject×task.
 
 
 ## In progress
