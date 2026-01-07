@@ -5,6 +5,16 @@
 #SBATCH --cpus-per-task=4
 #SBATCH -p q_fat_c
 
+# network settings for compute note
+export http_proxy=10.11.100.5:3128 
+export HTTP_PROXY=10.11.100.5:3128
+export https_proxy=10.11.100.5:3128
+export HTTPS_PROXY=10.11.100.5:3128
+export ftp_proxy=10.11.100.5:3128
+export FTP_PROXY=10.11.100.5:3128
+export all_proxy=10.11.100.5:3128
+export ALL_PROXY=10.11.100.5:3128
+
 module load singularity
 
 subj=$1
