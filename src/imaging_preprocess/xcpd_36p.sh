@@ -28,6 +28,28 @@ output=${xcpd_Path}
 
 export SINGULARITYENV_TEMPLATEFLOW_HOME=$templateflow
 export SINGULARITYENV_SUBJECTS_DIR=/freesurfer
+
+# Hard-coded proxy for compute nodes (host:port).
+export http_proxy=http://10.11.100.5:3128
+export HTTP_PROXY=http://10.11.100.5:3128
+export https_proxy=http://10.11.100.5:3128
+export HTTPS_PROXY=http://10.11.100.5:3128
+export ftp_proxy=http://10.11.100.5:3128
+export FTP_PROXY=http://10.11.100.5:3128
+export all_proxy=http://10.11.100.5:3128
+export ALL_PROXY=http://10.11.100.5:3128
+
+# Pass proxy into the container (this script uses `singularity run --cleanenv`).
+# Note: urllib3 requires proxy URLs to include scheme (http:// or https://).
+proxy_url="http://10.11.100.5:3128"
+export SINGULARITYENV_http_proxy="${proxy_url}"
+export SINGULARITYENV_HTTP_PROXY="${proxy_url}"
+export SINGULARITYENV_https_proxy="${proxy_url}"
+export SINGULARITYENV_HTTPS_PROXY="${proxy_url}"
+export SINGULARITYENV_ftp_proxy="${proxy_url}"
+export SINGULARITYENV_FTP_PROXY="${proxy_url}"
+export SINGULARITYENV_all_proxy="${proxy_url}"
+export SINGULARITYENV_ALL_PROXY="${proxy_url}"
 singularity run --cleanenv \
         -B $fmriprep_Path:/fmriprep \
         -B $output:/output \

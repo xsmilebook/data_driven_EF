@@ -44,6 +44,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Switched task-fMRI behavior CSV selection to use the filename timestamp (`YYYY-MM-DD_HHhMM.SS.mmm`) when multiple logs exist for a subject×task.
 - Standardized task-fMRI behavior data documentation and added SST 180-trial and THU/XY Psychopy-format notes: `docs/reports/task_fmri_beh_data_handbook.md`.
 - Adjusted task-fMRI block/state timing to use stimulus presentation columns (not fixation) in `scripts/build_task_xcpd_confounds.py`.
+- Hard-coded proxy envvars (with scheme, e.g. `http://host:port`) for xcp-d runs and passed them into Singularity via `SINGULARITYENV_*` to avoid `ProxySchemeUnknown` errors on compute nodes.
 
 
 ## In progress

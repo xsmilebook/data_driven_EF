@@ -6,14 +6,14 @@
 #SBATCH -p q_fat_c
 
 # network settings for compute note
-export http_proxy=10.11.100.5:3128 
-export HTTP_PROXY=10.11.100.5:3128
-export https_proxy=10.11.100.5:3128
-export HTTPS_PROXY=10.11.100.5:3128
-export ftp_proxy=10.11.100.5:3128
-export FTP_PROXY=10.11.100.5:3128
-export all_proxy=10.11.100.5:3128
-export ALL_PROXY=10.11.100.5:3128
+export http_proxy=http://10.11.100.5:3128
+export HTTP_PROXY=http://10.11.100.5:3128
+export https_proxy=http://10.11.100.5:3128
+export HTTPS_PROXY=http://10.11.100.5:3128
+export ftp_proxy=http://10.11.100.5:3128
+export FTP_PROXY=http://10.11.100.5:3128
+export all_proxy=http://10.11.100.5:3128
+export ALL_PROXY=http://10.11.100.5:3128
 
 module load singularity
 
@@ -90,6 +90,18 @@ fs_subjects_dir=${FREESURFER_SUBJECTS_DIR:-/ibmgpfs/cuizaixu_lab/liyang/BrainPro
 templateflow=/ibmgpfs/cuizaixu_lab/xulongzhou/tool/templateflow
 export SINGULARITYENV_TEMPLATEFLOW_HOME=$templateflow
 export SINGULARITYENV_SUBJECTS_DIR=/freesurfer
+
+# Pass proxy into the container (this script uses `singularity run --cleanenv`).
+# Note: urllib3 requires proxy URLs to include scheme (http:// or https://).
+proxy_url="http://10.11.100.5:3128"
+export SINGULARITYENV_http_proxy="${proxy_url}"
+export SINGULARITYENV_HTTP_PROXY="${proxy_url}"
+export SINGULARITYENV_https_proxy="${proxy_url}"
+export SINGULARITYENV_HTTPS_PROXY="${proxy_url}"
+export SINGULARITYENV_ftp_proxy="${proxy_url}"
+export SINGULARITYENV_FTP_PROXY="${proxy_url}"
+export SINGULARITYENV_all_proxy="${proxy_url}"
+export SINGULARITYENV_ALL_PROXY="${proxy_url}"
 
 fmriprep_bind_src="${fmriprep_input}"
 fmriprep_bind_extra=""
