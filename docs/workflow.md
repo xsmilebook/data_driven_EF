@@ -203,20 +203,26 @@ python -m scripts.eda_behavior_trials --dataset EFNY --config configs/paths.yaml
 
 ### 行为刺激一致性分组（全样本）
 
-目的：基于每位被试 Excel 工作簿中各 sheet 的 `正式阶段正确答案` 列进行一致性分组。允许部分被试缺少某些任务（sheet）：只要两名被试**共同存在**的任务中答案序列完全一致，则可分到同一组（缺失的任务不作为判定依据）。
+目的：基于每位被试 Excel 工作簿中各 sheet 的关键列进行一致性分组。允许部分被试缺少某些任务（sheet）：只要两名被试**共同存在**的任务中对应序列完全一致，则可分到同一组（缺失的任务不作为判定依据）。
 
 注意：已观测到 SST sheet 可能出现 97 行（最后一行无效）；当前分组比较会忽略该无效行。详见 `docs/reports/app_data_format.md`。
 
 运行：
 
 ```bash
-python temp/group_app_stimulus_groups.py --dataset EFNY --config configs/paths.yaml
+# 1) 按“正式阶段正确答案”分组
+python temp/group_app_stimulus_groups.py --dataset EFNY --config configs/paths.yaml --grouping answer
+
+# 2) 按“正式阶段刺激图片/Item名”分组
+python temp/group_app_stimulus_groups.py --dataset EFNY --config configs/paths.yaml --grouping item
 ```
 
 输入与输出：
 
 - 输入目录：`data/raw/behavior_data/cibr_app_data/`（由 `configs/paths.yaml` 的 `dataset.behavioral.app_data_dir` 控制）。
-- 输出目录：`data/interim/behavioral_preprocess/stimulus_groups/`（由 `dataset.behavioral.interim_preprocess_dir` 控制）。
+- 输出目录（由 `dataset.behavioral.interim_preprocess_dir` 控制）：
+  - 答案分组：`data/interim/behavioral_preprocess/groups_by_answer/`
+  - 刺激分组：`data/interim/behavioral_preprocess/groups_by_item/`
   - 每组一个 `group_###_sublist.txt`
   - 汇总清单：`groups_manifest.csv`、`groups_manifest.json`
 

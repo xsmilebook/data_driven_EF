@@ -14,7 +14,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.path_config import load_dataset_config, load_paths_config, resolve_dataset_roots
 
 
-DEFAULT_GROUP_COL = "正式阶段正确答案"
+DEFAULT_ITEM_COL = "正式阶段刺激图片/Item名"
+DEFAULT_ANSWER_COL = "正式阶段正确答案"
 
 
 @dataclass(frozen=True)
@@ -26,7 +27,7 @@ class WorkbookStimProfile:
     note: str | None = None
 
 
-def _normalize_group_cell(value: object) -> str | None:
+def _normalize_cell(value: object) -> str | None:
     if value is None:
         return None
     s = str(value).strip()
@@ -51,7 +52,12 @@ def _normalize_header(value: object) -> str:
     return "".join(s.split())
 
 
-def _find_group_column(columns: list[object], *, target: str) -> str | None:
+def _find_group_column(
+    columns: list[object],
+    *,
+    target: str,
+    grouping: str,
+) -> str | None:
     target_norm = _normalize_header(target)
     candidates: list[str] = []
     for c in columns:
@@ -63,8 +69,12 @@ def _find_group_column(columns: list[object], *, target: str) -> str | None:
 
     for c_str in candidates:
         c_norm = _normalize_header(c_str)
-        if "正式阶段正确答案" in c_norm:
-            return c_str
+        if grouping == "answer":
+            if "正式阶段正确答案" in c_norm:
+                return c_str
+        elif grouping == "item":
+            if "正式阶段刺激图片" in c_norm and "item" in c_norm.lower():
+                return c_str
     return None
 
 
@@ -81,6 +91,7 @@ def _sheet_items(
     df: pd.DataFrame,
     *,
     group_column_name: str,
+    grouping: str,
     compare_mode: str,
 ) -> list[str]:
     if "任务" in df.columns and len(df) == 97:
@@ -89,11 +100,11 @@ def _sheet_items(
         task_name = str(df["任务"].iloc[0]).strip()
         if task_name.upper() == "SST":
             df = df.iloc[:-1].copy()
-    col = _find_group_column(list(df.columns), target=group_column_name)
+    col = _find_group_column(list(df.columns), target=group_column_name, grouping=grouping)
     if not col:
         raise KeyError(f"missing grouping column {group_column_name!r}")
     raw = df[col].tolist()
-    items = [v for v in (_normalize_group_cell(x) for x in raw) if v is not None]
+    items = [v for v in (_normalize_cell(x) for x in raw) if v is not None]
     if compare_mode == "set":
         return sorted(set(items))
     return items
@@ -103,6 +114,7 @@ def _compute_signature(
     excel_path: Path,
     *,
     group_column_name: str,
+    grouping: str,
     compare_mode: str,
 ) -> tuple[dict[str, str], int, str | None]:
     xl = pd.ExcelFile(excel_path)
@@ -114,6 +126,7 @@ def _compute_signature(
             items = _sheet_items(
                 df,
                 group_column_name=group_column_name,
+                grouping=grouping,
                 compare_mode=compare_mode,
             )
             canonical = json.dumps(items, ensure_ascii=False, separators=(",", ":"))
@@ -164,12 +177,18 @@ def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser(
         description=(
             "Group subjects by identical app-task sequences across all Excel sheets "
-            f"(column: {DEFAULT_GROUP_COL})."
+            f"(default: {DEFAULT_ANSWER_COL})."
         )
     )
     ap.add_argument("--dataset", type=str, default=None)
     ap.add_argument("--config", dest="paths_config", type=str, default="configs/paths.yaml")
     ap.add_argument("--dataset-config", dest="dataset_config", type=str, default=None)
+    ap.add_argument(
+        "--grouping",
+        choices=["answer", "item"],
+        default="answer",
+        help="Grouping mode: answer uses 正式阶段正确答案; item uses 正式阶段刺激图片/Item名.",
+    )
     ap.add_argument(
         "--input-dir",
         type=str,
@@ -182,10 +201,15 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help=(
             "Override output dir (absolute or repo-relative). Default: "
-            "<interim_root>/<dataset.behavioral.interim_preprocess_dir>/stimulus_groups."
+            "<interim_root>/<dataset.behavioral.interim_preprocess_dir>/<grouping_dir>."
         ),
     )
-    ap.add_argument("--group-column", type=str, default=DEFAULT_GROUP_COL)
+    ap.add_argument(
+        "--group-column",
+        type=str,
+        default="",
+        help="Override grouping column name. Default depends on --grouping.",
+    )
     ap.add_argument(
         "--compare-mode",
         choices=["sequence", "set"],
@@ -227,7 +251,8 @@ def main() -> int:
         p = Path(args.out_dir)
         out_dir = p if p.is_absolute() else (repo_root / p)
     else:
-        out_dir = _resolve_interim_behavior_dir(dataset_cfg, roots) / "stimulus_groups"
+        default_dir = "groups_by_answer" if args.grouping == "answer" else "groups_by_item"
+        out_dir = _resolve_interim_behavior_dir(dataset_cfg, roots) / default_dir
 
     excel_files = sorted([p for p in input_dir.glob("*.xlsx") if not p.name.startswith("~$")])
     if not excel_files:
@@ -238,11 +263,15 @@ def main() -> int:
         excel_files = excel_files[: args.max_files]
 
     profiles: list[WorkbookStimProfile] = []
+    group_col = (args.group_column or "").strip()
+    if not group_col:
+        group_col = DEFAULT_ANSWER_COL if args.grouping == "answer" else DEFAULT_ITEM_COL
     for fp in excel_files:
         subject_id = _extract_subject_id_from_filename(fp)
         sheet_sigs, sheet_count, note = _compute_signature(
             fp,
-            group_column_name=args.group_column,
+            group_column_name=group_col,
+            grouping=args.grouping,
             compare_mode=args.compare_mode,
         )
         profiles.append(
@@ -285,6 +314,9 @@ def main() -> int:
                 "group_id": out_group_id,
                 "n_subjects": len(subject_ids),
                 "subjects": ";".join(subject_ids),
+                "grouping": args.grouping,
+                "group_column": group_col,
+                "compare_mode": args.compare_mode,
                 "n_sheets_constraints": len(g.constraints),
                 "example_subject": subject_ids[0] if subject_ids else "",
                 "note": g.members[0].note if g.members else None,

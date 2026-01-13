@@ -25,7 +25,7 @@
 
 ### 2.2 当前临时处理策略（用于分组比较）
 
-在现阶段的分组（`temp/group_app_stimulus_groups.py`）中：
+在现阶段的分组（`temp/group_app_stimulus_groups.py`）中（无论按 `正式阶段刺激图片/Item名` 还是按 `正式阶段正确答案`）：
 
 - 当某个 sheet 满足：
   - 存在 `任务` 列，且 `len(df) == 97`
@@ -34,8 +34,12 @@
 
 该处理仅用于分组对比，不代表最终清洗口径。
 
+## 2.3 当前分组输出位置
+
+- 按 `正式阶段正确答案`：`data/interim/behavioral_preprocess/groups_by_answer/`
+- 按 `正式阶段刺激图片/Item名`：`data/interim/behavioral_preprocess/groups_by_item/`
+
 ## 3. 后续工作（计划）
 
 - 基于当前分组过程与对比输出，系统化汇总所有结构异常（包括但不限于：行数异常、列名不一致、空行/重复行、关键列缺失）。
 - 在 `src/behavioral_preprocess/` 下实现正式的、可复现的统一清洗脚本，并将该异常处理（如 SST 97 行）纳入规范化步骤。
-

@@ -18,6 +18,7 @@ This repository treats `ARCHITECTURE.md` as the source of truth for the stable l
 - Do not modify runtime artifacts under `data/` or `outputs/`.
 - Do not change directory names or structure unless explicitly requested.
 - Keep diffs minimal; avoid refactors not tied to the request.
+- Clean up temporary smoke-test outputs under `temp/` (e.g., `temp/smoke_*`) immediately after validation; do not leave test artifacts in the repo.
 
 ## Engineering conventions (when requested)
 
