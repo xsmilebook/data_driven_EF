@@ -52,7 +52,9 @@ dataset:
     # Optional: set to an explicit list to restrict Y; leave empty to use all metrics.
     selected_measures: []
     app_data_dir: behavior_data/cibr_app_data
+    app_sequence_dir: behavior_data/app_sequence
     interim_preprocess_dir: behavioral_preprocess
+    corrected_app_excel_dir: behavior_data/cibr_app_data_corrected_excel
     # Reference file for exploratory analysis / sanity checks (single-subject workbook).
     reference_game_data_file: THU_20250829_759_JZC_景志成_GameData.xlsx
     task_prefixes: [GNG, FLANKER, SST, ColorStroop, EmotionStroop, CPT, DCCS, DT, EmotionSwitch, KT, oneback_number, twoback_number, oneback_spatial, twoback_spatial, oneback_emotion, twoback_emotion]

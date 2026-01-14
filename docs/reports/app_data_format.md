@@ -39,6 +39,14 @@
 - 按 `正式阶段正确答案`：`data/interim/behavioral_preprocess/groups_by_answer/`
 - 按 `正式阶段刺激图片/Item名`：`data/interim/behavioral_preprocess/groups_by_item/`
 
+## 2.4 序列更正输出位置
+
+若需要基于 visit 序列配置对“刺激/答案序列”进行一致化更正（不覆盖原始工作簿），更正版工作簿输出到：
+
+- `data/processed/behavior_data/cibr_app_data_corrected_excel/`（run 目录结构详见 `docs/workflow.md`）
+
+更正过程与全样本统计见：`docs/reports/app_sequence_correction_report.md`。
+
 ## 3. 后续工作（计划）
 
 - 基于当前分组过程与对比输出，系统化汇总所有结构异常（包括但不限于：行数异常、列名不一致、空行/重复行、关键列缺失）。

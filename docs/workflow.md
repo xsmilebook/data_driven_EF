@@ -226,6 +226,27 @@ python temp/group_app_stimulus_groups.py --dataset EFNY --config configs/paths.y
   - 每组一个 `group_###_sublist.txt`
   - 汇总清单：`groups_manifest.csv`、`groups_manifest.json`
 
+### APP 序列推断与更正（生成更正版 Excel）
+
+目的：结合 `data/raw/behavior_data/app_sequence/` 的 visit1–visit4 序列配置，对 APP 行为工作簿中 `正式阶段刺激图片/Item名` 与 `正式阶段正确答案` 进行一致化更正，并将更正版工作簿输出到 **新的** `data/processed/` 目录（不覆盖原始文件）。
+
+运行：
+
+```bash
+python -m scripts.correct_app_workbooks --dataset EFNY --config configs/paths.yaml --run-id corrected_v1
+```
+
+输入与输出（由 `configs/paths.yaml` 控制）：
+
+- 输入工作簿：`data/raw/behavior_data/cibr_app_data/`（`dataset.behavioral.app_data_dir`）
+- 序列配置：`data/raw/behavior_data/app_sequence/`（`dataset.behavioral.app_sequence_dir`）
+- 输出根目录：`data/processed/behavior_data/cibr_app_data_corrected_excel/`（`dataset.behavioral.corrected_app_excel_dir`）
+  - 更正版 Excel：`run_<RUN_ID>/subjects/`
+  - 逐被试推断与诊断：`run_<RUN_ID>/decisions/<subject_id>.json`
+  - 总清单：`run_<RUN_ID>/manifest.csv`
+
+说明：序列不一致机制与本次更正策略的报告见 `docs/reports/app_sequence_correction_report.md` 与 `docs/reports/app_data_format.md`。
+
 ### DDM/HDDM 决策与层级建模（PyMC-based）
 
 目的：基于任务口径与样本特征生成 DDM/HDDM 决策文档，并在可行范围内进行层级 HDDM（回归）计算与基础效果评估（如条件效应后验区间、LOO 指标）。
