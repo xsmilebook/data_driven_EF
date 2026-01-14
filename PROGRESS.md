@@ -43,6 +43,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Added a repository rule to remove smoke-test outputs under `temp/` immediately after validation to avoid leaving ad-hoc artifacts.
 - Added a detailed app behavioral data correction plan to `PLAN.md` (infer corrected stimulus+answer sequences across visit versions without overwriting raw workbooks).
 - Added a visit-config-based app workbook corrector (`scripts/correct_app_workbooks.py`) that writes per-subject corrected Excel files to `data/processed/behavior_data/cibr_app_data_corrected_excel/` and logs per-task diagnostics; documented in `docs/reports/app_sequence_correction_report.md`.
+- Added a heuristic classifier for whether a workbook was generated from device-side txt export vs web export using the presence of the `空屏时长` column in all task sheets; wrote `export_source` evidence into `manifest.csv` and `decisions/*.json` for each correction run.
 - Added a scanner for repeated task Psychopy CSV logs per subject×task: `temp/find_repeated_task_psych_csvs.py` (report: `data/interim/MRI_data/repeated_task_psych_file/repeated_task_psych_files.tsv`).
 - Switched task-fMRI behavior CSV selection to use the filename timestamp (`YYYY-MM-DD_HHhMM.SS.mmm`) when multiple logs exist for a subject×task.
 - Standardized task-fMRI behavior data documentation and added SST 180-trial and THU/XY Psychopy-format notes: `docs/reports/task_fmri_beh_data_handbook.md`.

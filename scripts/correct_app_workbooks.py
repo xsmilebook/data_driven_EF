@@ -11,6 +11,7 @@ from src.behavioral_preprocess.app_data.app_sequence_correction import (
     build_effective_visit_sequences,
     correct_workbook,
     extract_observed_task_data,
+    infer_export_source_by_blank_screen,
     infer_subject_visit,
     load_all_visits_sequences,
     parse_subject_id_from_filename,
@@ -124,6 +125,7 @@ def main() -> int:
     for idx, fp in enumerate(excel_files, start=1):
         subject_id = parse_subject_id_from_filename(fp)
         print(f"[{idx}/{len(excel_files)}] {subject_id}")
+        export_decision = infer_export_source_by_blank_screen(fp)
         observed = extract_observed_task_data(fp)
         inf = infer_subject_visit(fp, subject_id, observed, visits)
 
@@ -155,6 +157,14 @@ def main() -> int:
                     "expected_visit": inf.expected_visit,
                     "score": inf.score,
                     "scores_by_visit": inf.scores_by_visit,
+                    "export_source": export_decision.export_source,
+                    "export_source_evidence": {
+                        "blank_screen_col": "空屏时长",
+                        "blank_screen_in_all_sheets": export_decision.blank_screen_in_all_sheets,
+                        "relevant_sheets": export_decision.relevant_sheets,
+                        "sheets_with_blank_screen_col": export_decision.sheets_with_blank_screen_col,
+                        "sheets_missing_blank_screen_col": export_decision.sheets_missing_blank_screen_col,
+                    },
                     "tasks": task_rows,
                 },
                 ensure_ascii=False,
@@ -171,6 +181,8 @@ def main() -> int:
                 "inferred_visit": inf.inferred_visit,
                 "expected_visit": inf.expected_visit,
                 "score": inf.score,
+                "export_source": export_decision.export_source,
+                "blank_screen_in_all_sheets": export_decision.blank_screen_in_all_sheets,
                 "out_excel": str(out_excel.relative_to(out_dir)),
             }
         )

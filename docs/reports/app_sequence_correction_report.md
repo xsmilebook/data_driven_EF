@@ -104,8 +104,10 @@ APP 数据导出存在“同一份工作簿内，不同字段来源不同”的�
 - 逐被试推断与任务级诊断：`data/processed/behavior_data/cibr_app_data_corrected_excel/run_corrected_v1/decisions/<subject_id>.json`
 - 本次使用的“补齐后的 visit 序列库”：`data/processed/behavior_data/cibr_app_data_corrected_excel/run_corrected_v1/sequence_library/effective_visits_sequences.json`
 
+其中 `manifest.csv` 与 `decisions/*.json` 额外包含“导出来源（txt 导出 vs 网站导出）”的启发式判别字段（见 `docs/reports/app_data_format.md`）。
+
 ## 6. 局限与下一步（正式清洗脚本）
 
 - visit3 的“子版本”（2025/07/09、2025/07/17、2025/07/29）目前仅通过答案匹配进行间接吸收，尚未构建任务级的细粒度版本库；后续需要在 `data/raw/behavior_data/app_sequence/` 上补齐子版本或从数据中反推子版本并固化。
-- “工作簿是否由 txt 生成”的判别目前仍属于启发式：可进一步引入更多格式特征（列缺失模式、行数模式、同日跨设备差异、刺激列与参照序列的全任务一致性等）并输出可审计的证据链。
+- “工作簿是否由 txt 导出生成”的判别仍属于启发式，但已加入一个强特征并输出可审计证据：若 `空屏时长` 列在所有任务 sheet 中都存在，则判定为 `txt_export`；否则判定为 `web_export`（证据字段写入 `decisions/*.json` 与 `manifest.csv`）。后续仍可叠加更多格式特征以提高鲁棒性与可解释性。
 - 建议将本次推断逻辑固化为正式的统一清洗脚本（放入 `src/behavioral_preprocess/app_data/`，并提供稳定 CLI 入口），同时保留人工复核入口（输出疑似异常的被试与任务列表）。

@@ -14,6 +14,7 @@ import pandas as pd
 
 ITEM_COL = "正式阶段刺激图片/Item名"
 ANSWER_COL = "正式阶段正确答案"
+BLANK_SCREEN_COL = "空屏时长"
 
 
 def parse_subject_id_from_filename(excel_path: Path) -> str:
@@ -138,6 +139,65 @@ class TaskSequence:
     items_norm: list[str | None]
     answers_norm: list[str | None]
     source: str
+
+
+@dataclass(frozen=True)
+class ExportSourceDecision:
+    export_source: str
+    relevant_sheets: int
+    sheets_with_blank_screen_col: int
+    blank_screen_in_all_sheets: bool
+    sheets_missing_blank_screen_col: list[str]
+
+
+def infer_export_source_by_blank_screen(excel_path: Path) -> ExportSourceDecision:
+    wb = openpyxl.load_workbook(excel_path, read_only=True, data_only=True)
+    relevant: list[str] = []
+    with_col: list[str] = []
+    missing: list[str] = []
+    target_norm = _normalize_header(BLANK_SCREEN_COL)
+    item_norm = _normalize_header(ITEM_COL)
+    answer_norm = _normalize_header(ANSWER_COL)
+    task_norm = _normalize_header("任务")
+
+    for sheet_name in wb.sheetnames:
+        ws = wb[sheet_name]
+        try:
+            header = next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+        except StopIteration:
+            continue
+        header_norms = {_normalize_header(v) for v in header if v is not None}
+        if not header_norms:
+            continue
+        is_relevant = (item_norm in header_norms) or (answer_norm in header_norms) or (task_norm in header_norms)
+        if not is_relevant:
+            continue
+        relevant.append(sheet_name)
+        if target_norm in header_norms:
+            with_col.append(sheet_name)
+        else:
+            missing.append(sheet_name)
+
+    wb.close()
+
+    if not relevant:
+        return ExportSourceDecision(
+            export_source="unknown",
+            relevant_sheets=0,
+            sheets_with_blank_screen_col=0,
+            blank_screen_in_all_sheets=False,
+            sheets_missing_blank_screen_col=[],
+        )
+
+    blank_in_all = len(missing) == 0
+    export_source = "txt_export" if blank_in_all else "web_export"
+    return ExportSourceDecision(
+        export_source=export_source,
+        relevant_sheets=len(relevant),
+        sheets_with_blank_screen_col=len(with_col),
+        blank_screen_in_all_sheets=blank_in_all,
+        sheets_missing_blank_screen_col=missing,
+    )
 
 
 def _detect_items_key(obj: dict[str, Any]) -> str | None:
