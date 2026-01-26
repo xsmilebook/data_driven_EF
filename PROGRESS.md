@@ -54,6 +54,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Removed duplicate APP corrected outputs in `run_corrected_v1` to match `_excluded_duplicates`, updating manifests accordingly.
 - Analyzed 2025-12-07/12-13 low-score APP subjects and documented visit-mismatch evidence in `docs/notes/app_data_problem.md`.
 - Added a consolidated APP visit sequence change note covering visit1–visit4 differences in `docs/reports/visit_sequence_changes.md`.
+- Audited 20231014–20250707 APP subjects for visit1 consistency and documented task/subject mismatches in `docs/reports/visit1_consistency_20231014_20250707.md`.
 
 
 ## In progress

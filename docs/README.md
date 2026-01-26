@@ -9,6 +9,7 @@
 - `docs/data_dictionary.md`: 术语/字段说明（仍在完善）。
 - `docs/reports/`: 研究计划与总结。
 - `docs/reports/visit_sequence_changes.md`: APP visit 序列改动说明（visit1–visit4）。
+- `docs/reports/visit1_consistency_20231014_20250707.md`: 20231014–20250707 期间与 visit1 一致性检查。
 
 ## Notes 与 sessions 的区别
 
