@@ -53,6 +53,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Hard-coded proxy envvars (with scheme, e.g. `http://host:port`) for xcp-d runs and passed them into Singularity via `SINGULARITYENV_*` to avoid `ProxySchemeUnknown` errors on compute nodes.
 - Removed duplicate APP corrected outputs in `run_corrected_v1` to match `_excluded_duplicates`, updating manifests accordingly.
 - Analyzed 2025-12-07/12-13 low-score APP subjects and documented visit-mismatch evidence in `docs/notes/app_data_problem.md`.
+- Added a consolidated APP visit sequence change note covering visit1–visit4 differences in `docs/reports/visit_sequence_changes.md`.
 
 
 ## In progress

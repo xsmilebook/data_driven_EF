@@ -8,6 +8,7 @@
 - `docs/methods.md`: 方法学说明（面向论文；可能不完整）。
 - `docs/data_dictionary.md`: 术语/字段说明（仍在完善）。
 - `docs/reports/`: 研究计划与总结。
+- `docs/reports/visit_sequence_changes.md`: APP visit 序列改动说明（visit1–visit4）。
 
 ## Notes 与 sessions 的区别
 
