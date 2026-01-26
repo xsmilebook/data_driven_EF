@@ -159,6 +159,19 @@ visit 推断以“答案序列匹配”为核心：对每个候选 visit（visit
 
 其中 `manifest.csv` 与 `decisions/*.json` 额外包含“导出来源（txt 导出 vs 网站导出）”的启发式判别字段（见 `docs/reports/app_data_format.md`）。
 
+### 5.1 手动剔除重复记录（与 `_excluded_duplicates` 对齐）
+
+为与 `data/raw/behavior_data/cibr_app_data/_excluded_duplicates/` 的去重结果保持一致，已在 `run_corrected_v1` 中移除以下重复被试的更正输出（含 `subjects/`、`decisions/` 与 `manifest.*` 对应条目）：
+
+- `THU_20231217_144_LSC_李斯晨_GameData.xlsx`
+- `THU_20231230_161_ZJY_张佳茵_GameData.xlsx`
+- `THU_20240120_183_DKZ_邓楷哲_GameData.xlsx`
+- `THU_20241130_435_CJT_陈嘉桐_GameData.xlsx`
+- `THU_20250605_601_ZYY_朱洋仪_GameData.xlsx`
+- `THU_20250613_602_ZWZ_张威志_GameData.xlsx`
+- `THU_20250709_628_ZSY_张烁杨_GameData.xlsx`
+- `THU_20250725_684_LC_刘元博_GameData.xlsx`（保留 `THU_20250725_684_LC_李晨_GameData.xlsx`）
+
 ## 6. 局限与下一步（正式清洗脚本）
 
 - visit3 的“子版本”（2025/07/09、2025/07/17、2025/07/29）目前仅通过答案匹配进行间接吸收，尚未构建任务级的细粒度版本库；后续需要在 `data/raw/behavior_data/app_sequence/` 上补齐子版本或从数据中反推子版本并固化。

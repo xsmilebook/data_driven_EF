@@ -51,6 +51,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Standardized task-fMRI behavior data documentation and added SST 180-trial and THU/XY Psychopy-format notes: `docs/reports/task_fmri_beh_data_handbook.md`.
 - Adjusted task-fMRI block/state timing to use stimulus presentation columns (not fixation) in `scripts/build_task_xcpd_confounds.py`.
 - Hard-coded proxy envvars (with scheme, e.g. `http://host:port`) for xcp-d runs and passed them into Singularity via `SINGULARITYENV_*` to avoid `ProxySchemeUnknown` errors on compute nodes.
+- Removed duplicate APP corrected outputs in `run_corrected_v1` to match `_excluded_duplicates`, updating manifests accordingly.
 
 
 ## In progress
