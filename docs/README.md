@@ -10,6 +10,8 @@
 - `docs/reports/`: 研究计划与总结。
 - `docs/reports/visit_sequence_changes.md`: APP visit 序列改动说明（visit1–visit4）。
 - `docs/reports/visit1_consistency_20231014_20250707.md`: 20231014–20250707 期间与 visit1 一致性检查。
+- `docs/reports/app_grouping_audit.md`: APP 序列分组产物（data/interim）一致性审计。
+- `docs/reports/app_data_cleaning_v2_workflow.md`: APP 数据清洗 v2 流程草案（按日期顺序 + 序列类型）。
 
 ## Notes 与 sessions 的区别
 
