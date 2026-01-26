@@ -56,6 +56,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Added a consolidated APP visit sequence change note covering visit1–visit4 differences in `docs/reports/visit_sequence_changes.md`.
 - Audited 20231014–20250707 APP subjects for visit1 consistency and documented task/subject mismatches in `docs/reports/visit1_consistency_20231014_20250707.md`.
 - Audited existing app sequence grouping outputs under `data/interim/behavioral_preprocess/` and drafted a v2 cleaning workflow in `docs/reports/app_data_cleaning_v2_workflow.md`.
+- Archived prior app grouping outputs and regenerated item/answer groupings from the current raw directory (updated `docs/reports/app_grouping_audit.md`).
 
 
 ## In progress
