@@ -52,6 +52,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Adjusted task-fMRI block/state timing to use stimulus presentation columns (not fixation) in `scripts/build_task_xcpd_confounds.py`.
 - Hard-coded proxy envvars (with scheme, e.g. `http://host:port`) for xcp-d runs and passed them into Singularity via `SINGULARITYENV_*` to avoid `ProxySchemeUnknown` errors on compute nodes.
 - Removed duplicate APP corrected outputs in `run_corrected_v1` to match `_excluded_duplicates`, updating manifests accordingly.
+- Analyzed 2025-12-07/12-13 low-score APP subjects and documented visit-mismatch evidence in `docs/notes/app_data_problem.md`.
 
 
 ## In progress

@@ -25,6 +25,35 @@
 visit3
 存在两个stimulus序列，但是实际只用了一个（ZYST_Formal和ZYST_Formal2）
 
+### 2025-12-07/12-13 低分被试复核（非 visit2 证据）
+
+目标被试：
+`THU_20251207_806_ZYW`、`THU_20251213_810_HYL`、`THU_20251213_811_LJY`、`THU_20251213_812_JJQ`、`THU_20251213_813_GC`。
+
+复核方法：使用 `data/raw/behavior_data/cibr_app_data/` 的原始工作簿，按 `sequence_library/effective_visits_sequences.json` 中的 visit1–4 答案序列计算任务级 `_seq_match_score`，再对每个 visit 取平均（不使用日期先验加分）。
+
+总体分数（mean answer match）：
+| subject_id | visit1 | visit2 | visit3 | visit4 |
+| --- | --- | --- | --- | --- |
+| THU_20251207_806_ZYW | 0.494 | 0.552 | 0.545 | 0.500 |
+| THU_20251213_810_HYL | 0.451 | 0.516 | 0.508 | 0.457 |
+| THU_20251213_811_LJY | 0.494 | 0.552 | 0.545 | 0.500 |
+| THU_20251213_812_JJQ | 0.494 | 0.552 | 0.545 | 0.500 |
+| THU_20251213_813_GC | 0.494 | 0.552 | 0.545 | 0.500 |
+
+证据要点（visit2 与其他 visit 有差异的任务）：
+1. **明显偏离 visit2 的任务**（五位被试一致）：  
+   - `FLANKER`：visit2=0.438，而 visit1/3/4=1.000（visit2 明显更差）。  
+   - `Emotion1Back`：visit3=0.733 > visit2=0.633。  
+   - `EmotionStroop`：visit3=0.344 > visit2=0.271。  
+   - `Spatial1Back`：visit1=0.733 > visit2=0.633。  
+   - `Number2Back`：visit1/3/4=1.000 > visit2=0.950（差异较小但稳定）。  
+   - `Emotion2Back`：visit4=0.733 > visit2=0.633（visit4 不在该时间窗，提示序列混杂或答案版本不一致）。
+2. **仍支持 visit2 的任务**：`DT`、`FZSS`、`SST`、`ColorStroop`、`Spatial2Back` 在多数被试上 visit2 得分最高或明显更高。
+
+结论（当前证据）：  
+这些被试的答案序列同时对 visit2 与其他 visit（尤其 visit3/visit1）呈现混合匹配，且多个任务在“与 visit2 不同的序列”上更高，支持“**并非纯 visit2**”。若需强行归类，证据更倾向 **visit3（Emotion1Back/EmotionStroop）+ visit1（Spatial1Back）** 的混合模式，而非单一 visit2。
+
 ## APP导出问题描述
 对于APP数据的导出，存在以下问题：
 1. 被试进行任务时都使用设备本地存储的正式阶段刺激图片/Item名与正式阶段正确答案。但导出时正式阶段正确答案，正式阶段被试按键，相对时间(秒)等信息都是由执行任务所在设备保存的txt文件导出，但是正式阶段刺激图片/Item名信息由网站后台导出；
