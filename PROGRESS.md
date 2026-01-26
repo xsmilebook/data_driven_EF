@@ -57,6 +57,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Audited 20231014–20250707 APP subjects for visit1 consistency and documented task/subject mismatches in `docs/reports/visit1_consistency_20231014_20250707.md`.
 - Audited existing app sequence grouping outputs under `data/interim/behavioral_preprocess/` and drafted a v2 cleaning workflow in `docs/reports/app_data_cleaning_v2_workflow.md`.
 - Archived prior app grouping outputs and regenerated item/answer groupings from the current raw directory (updated `docs/reports/app_grouping_audit.md`).
+- Built a v2 visit1 sequence library using item group_001 templates plus `app_sequence/visit1` answers under `data/processed/behavior_data/cibr_app_data_corrected_excel/run_corrected_v2/sequence_library/`.
 
 
 ## In progress
