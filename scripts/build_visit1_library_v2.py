@@ -43,14 +43,15 @@ def _canonical_task_name(raw: str) -> str:
     s = str(raw).strip()
     if not s:
         return s
+    s = s.strip("_- ")
     rules = {
+        "EmotionStoop": "EmotionStroop",
         "LG": "EmotionSwitch",
         "STROOP": "ColorStroop",
         "SpatialNBack": "Spatial2Back",
         "Emotion2Backformal": "Emotion2Back",
         "Number2Backformal": "Number2Back",
         "Spatial1Backformal": "Spatial1Back",
-        "EmotionStoop": "EmotionStroop",
     }
     if s in rules:
         return rules[s]
