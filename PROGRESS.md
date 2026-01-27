@@ -59,6 +59,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Archived prior app grouping outputs and regenerated item/answer groupings from the current raw directory (updated `docs/reports/app_grouping_audit.md`).
 - Built a v2 visit1 sequence library using item group_001 templates plus `app_sequence/visit1` answers under `data/processed/behavior_data/cibr_app_data_corrected_excel/run_corrected_v2/sequence_library/`.
 - Added a checker to compare group templates vs `app_sequence` items and wrote a visit1 consistency report for items: `docs/reports/visit1_items_template_vs_app_sequence.md`.
+- Documented v2 item handling exceptions for KT/ZYST/SST and added a visit1 answer-group audit within item group_001: `docs/reports/visit1_answer_groups_within_item_group1.md`.
 
 
 ## In progress

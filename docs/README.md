@@ -13,6 +13,7 @@
 - `docs/reports/app_grouping_audit.md`: APP 序列分组产物（data/interim）一致性审计。
 - `docs/reports/app_data_cleaning_v2_workflow.md`: APP 数据清洗 v2 流程草案（按日期顺序 + 序列类型）。
 - `docs/reports/visit1_items_template_vs_app_sequence.md`: 对比 visit1 的 group 模板与 app_sequence 配置的 items 一致性（用于检查配置解析与命名映射）。
+- `docs/reports/visit1_answer_groups_within_item_group1.md`: 在 item group_001 内检查 answer group 分布，并定位答案差异集中任务（用于确认 visit1 答案基线）。
 
 ## Notes 与 sessions 的区别
 
