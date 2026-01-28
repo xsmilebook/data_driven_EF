@@ -15,7 +15,6 @@
 - `docs/reports/visit1_items_template_vs_app_sequence.md`: 对比 visit1 的 group 模板与 app_sequence 配置的 items 一致性（用于检查配置解析与命名映射）。
 - `docs/reports/visit1_answer_groups_within_item_group1.md`: 在 item group_001 内检查 answer group 分布，并定位答案差异集中任务（用于确认 visit1 答案基线）。
 - `docs/reports/item_group_sequence_changes.md`: item 分组（group_001–group_004）刺激序列差异分析。
-- `docs/reports/app_v2_item_replace_answer_group2.md`: 将 answer_group2 的错误 item 序列替换为 item_group1 模板（网站崩溃期参考被试填充错误修正）。
 
 ## Notes 与 sessions 的区别
 
