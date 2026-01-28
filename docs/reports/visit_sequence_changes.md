@@ -4,9 +4,10 @@
 
 ## 数据来源与约束
 
-- 序列配置来源：`data/raw/behavior_data/app_sequence/`。
+- 序列配置来源（历史参考）：`data/raw/behavior_data/app_sequence/`。
 - 采用的有效序列库：`data/processed/behavior_data/cibr_app_data_corrected_excel/run_corrected_v1/sequence_library/effective_visits_sequences.json`。
 - 约束：visit2–visit4 若缺失任务配置，会用 visit1 补齐（因此“未列出的改动”不等于“真实未改动”，仅表示配置中未观察到差异）。
+- 重要说明：由于当前阶段认为 `app_sequence` 配置（尤其是答案序列）**不可靠**，本文件中的“差异概览”仅作为辅助线索与时间线记录；v2 清洗应以工作簿观测到的 `item/answer` 类型分组与日期顺序作为主证据。
 
 ## 时间线（确认记录）
 

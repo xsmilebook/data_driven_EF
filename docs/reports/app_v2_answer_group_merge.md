@@ -6,6 +6,7 @@
 
 - SST：若试次数 > 96，则截断为前 96 个 trial（删除第 96 个 trial 之后的行）。
 - EmotionStroop：若第 13 个 trial 的 `正式阶段正确答案` 为空，且除第 13 个 trial 外其余答案与 `run_corrected_v2/sequence_library/visit1_merged.json` 一致，则用 `AN` 填充第 13 个 trial。
+  - 备注：`visit1_merged.json` 的答案当前来自 item group_001 模板工作簿中抽取到的“观测答案模板”，仅用于定位“单个空值导致的分组差异”并进行可审计修补；不再依赖 `app_sequence` 作为答案真值。
 
 ## 执行摘要
 

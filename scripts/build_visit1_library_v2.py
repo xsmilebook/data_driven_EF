@@ -247,8 +247,9 @@ def _build_visit1_templates_from_group1(
 def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser(
         description=(
-            "Build a visit1 sequence library for v2: infer visit1 item templates from item group_001 "
-            "and parse visit1 items/answers from app_sequence configs."
+            "Build a visit1 sequence library for v2: infer visit1 item/answer templates from item group_001. "
+            "app_sequence configs can be parsed for reference, but v2 should not treat app_sequence-derived "
+            "answers as ground truth."
         )
     )
     ap.add_argument("--dataset", type=str, required=True)
@@ -274,6 +275,7 @@ def main() -> int:
     raw_index = _index_raw_workbooks(raw_app_dir)
 
     templates = _build_visit1_templates_from_group1(group1_subjects=group1_subjects, raw_index=raw_index)
+    # app_sequence is kept as an auxiliary reference only (not used as answer ground truth in v2).
     seqs = _read_app_sequence_visit1(seq_root)
 
     merged: dict[str, Any] = {}
@@ -281,17 +283,14 @@ def main() -> int:
         t = templates.get(task)
         s = seqs.get(task)
         items = t.items if t else None
-        answers = None
-        if s and s.get("answers"):
-            answers = s.get("answers")
-        elif t:
-            answers = t.answers
+        # v2 rule: do NOT use app_sequence-derived answers as ground truth; prefer observed/template answers.
+        answers = (t.answers if t else None)
         note = None
         if t and answers is not None and isinstance(answers, list) and t.n_rows != len(answers):
             note = f"length_mismatch: template_n_rows={t.n_rows} answers_len={len(answers)}"
         merged[task] = {
             "items_source": "item_group1_template" if t else None,
-            "answers_source": "app_sequence_visit1" if (s and s.get('answers')) else ("item_group1_template" if t else None),
+            "answers_source": ("item_group1_template" if t else None),
             "template_subject_id": t.subject_id if t else None,
             "template_file_name": t.file_name if t else None,
             "n_rows": t.n_rows if t else None,
@@ -299,6 +298,7 @@ def main() -> int:
             "answers": answers,
             "note": note,
             "app_sequence_source": (s.get("source") if s else None),
+            "app_sequence_answers": (s.get("answers") if s else None),
         }
 
     # Persist
