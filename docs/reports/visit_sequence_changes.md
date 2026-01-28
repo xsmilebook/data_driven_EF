@@ -38,11 +38,12 @@
 
 ## 与 visit1 完全一致的任务（Item + Answer 均一致）
 
-- visit2 与 visit1 一致：`Emotion1Back`、`Emotion2Back`、`EmotionStroop`、`EmotionSwitch`、`GNG`、`KT`、`ZYST`。
-- visit3 与 visit1 一致：`EmotionSwitch`、`FLANKER`、`GNG`、`KT`、`Number1Back`、`Number2Back`、`ZYST`。
-- visit4 与 visit1 一致：`EmotionSwitch`、`FLANKER`、`GNG`、`KT`、`Number1Back`、`Number2Back`、`ZYST`。
+- visit2 与 visit1 一致：`Emotion1Back`、`Emotion2Back`、`EmotionStroop`、`EmotionSwitch`、`GNG`、`ZYST`。
+- visit3 与 visit1 一致：`EmotionSwitch`、`FLANKER`、`GNG`、`Number1Back`、`Number2Back`、`ZYST`。
+- visit4 与 visit1 一致：`EmotionSwitch`、`FLANKER`、`GNG`、`Number1Back`、`Number2Back`、`ZYST`。
 
 ## 备注
 
 - visit3 的子版本改动（2025/07/09、2025/07/17、2025/07/29）目前未形成独立配置快照，因此在 effective 序列库中不会体现任务级子版本差异；需要时应基于答案序列做子版本聚类或补齐配置快照。
 - 刺激序列与正确答案的来源不同（设备端 vs 网站端）会导致“刺激/答案不一致”的现象，详见 `docs/reports/app_sequence_correction_report.md` 与 `docs/notes/app_data_problem.md`。
+- `KT`：尽管在 effective 序列库（配置侧）中未观察到明确改动，但在工作簿观测到的 item 序列存在差异（且 item 分组对比中出现明显不同），因此在 v2 清洗中应将 `KT` 作为需要纳入 item 证据的任务，而不应按“永远一致”处理。

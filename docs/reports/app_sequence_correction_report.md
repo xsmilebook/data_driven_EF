@@ -179,9 +179,12 @@ visit 推断以“答案序列匹配”为核心：对每个候选 visit（visit
 - “工作簿是否由 txt 导出生成”的判别仍属于启发式，但已加入一个强特征并输出可审计证据：若 `空屏时长` 列在所有任务 sheet 中都存在，则判定为 `txt_export`；否则判定为 `web_export`（证据字段写入 `decisions/*.json` 与 `manifest.csv`）。后续仍可叠加更多格式特征以提高鲁棒性与可解释性。
 - 建议将本次推断逻辑固化为正式的统一清洗脚本（放入 `src/behavioral_preprocess/app_data/`，并提供稳定 CLI 入口），同时保留人工复核入口（输出疑似异常的被试与任务列表）。
 
-### 6.1 v2 清洗中 item 的任务特例（KT / ZYST / SST）
+### 6.1 v2 清洗中 item 的任务特例（ZYST / SST）
 
 在后续 v2 清洗中，item 侧证据不再以“与 visit 配置硬匹配”为唯一标准，而是优先使用“观测到的 item 类型（分组）+ 日期顺序”逐个核查。对于以下三个任务，按人工确认与字段结构，采用特例规则：
 
-- `KT` / `ZYST`：任务序列在项目期间未更换，因此 visit1–visit4 的 **正确 item 均以 item group_001 模板为准**（`run_corrected_v2/sequence_library/visit1_item_group1_templates.json`）。后续做 item 类型比较时 **不纳入** `KT` / `ZYST`。
+- `ZYST`：目前观测到的 item 序列更接近“单一版本”，因此 visit1–visit4 的 **item 可先以 item group_001 模板为基准**（`run_corrected_v2/sequence_library/visit1_item_group1_templates.json`）。后续做 item 类型比较时可选择 **不纳入** `ZYST`（避免字段结构/缺失模式影响整体判定）。
 - `SST`：由于系统问题，工作簿的 `正式阶段刺激图片/Item名` 基本不记录有效 item，因此 `SST` 的 **正确 item 视为“全 null”**（保持 group_001 模板即可）。但 `SST` 的答案序列会随 visit 更换，后续答案推断/核查时仍需纳入 `SST`（仅不把 item 当作证据）。
+
+规则更正：
+- `KT` 与 `FZSS` **需要纳入 item 侧考虑**。`FZSS` 在时间线中存在明确修改记录；`KT` 虽然 item 记录可能稀疏，但已观测到不同 item（例如 `Transport_1` vs `Transport_2`），不应再按“永远不更换”处理。
