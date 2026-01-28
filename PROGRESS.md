@@ -64,6 +64,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Added an item-group (group_001–group_004) sequence-difference report to guide v2 item-based diagnosis (updated to use 18-sheet representatives and include KT/ZYST/SST): `docs/reports/item_group_sequence_changes.md`.
 - Corrected v2 item-evidence rules to include KT and FZSS (updated `docs/reports/app_data_cleaning_v2_workflow.md`, `docs/reports/app_sequence_correction_report.md`, and `docs/reports/visit_sequence_changes.md`).
 - Updated v2 sequence-library policy to not treat app_sequence-derived answers as ground truth; visit1_merged now aligns items to group_001 templates and uses template-derived observed answers (app_sequence kept as reference only).
+- Replaced item sequences for answer_group1 subjects that mismatched item_group1 by overwriting workbook item columns with item_group1 templates (website-crash reference-subject error), and regenerated item groupings (report: `docs/reports/app_v2_item_replace_answer_group1.md`; script: `scripts/app_v2_replace_items_for_answer_group_mismatch.py`).
 
 
 ## In progress
