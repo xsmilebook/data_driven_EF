@@ -1,40 +1,42 @@
 # AGENTS.md
 
-Operational rules for AI-assisted work in `data_driven_EF`.
-This repository treats `ARCHITECTURE.md` as the source of truth for the stable layout. Do not propose structural changes unless explicitly requested.
+`data_driven_EF` 仓库的 AI 协作执行规则。
+本仓库将 `ARCHITECTURE.md` 视为稳定目录结构的唯一事实来源；除非用户明确要求，否则不要提出结构性改动。
 
-## Base workflow
+## 基础工作流
 
-1) Read `ARCHITECTURE.md` before planning or editing.
-2) Execute changes only according to `PLAN.md` or explicit user instructions.
-3) If a change affects usage or structure, update `README.md` and/or `docs/workflow.md`.
-3.1) Once code is modified or new results are generated, supplementary documentation must be added or updated to explain them.
-3.2) Scripts with short runtimes that do not require parallelism can be executed directly; otherwise, perform few-shot testing in the same environment and provide the submission command or sbatch script.
-3.2.1) sbatch submissions are user-only: The assistant must not directly submit sbatch jobs during a session; instead, output reusable sbatch scripts and clear submission commands for the user to execute on the cluster.
-3.3) All sbatch tasks use multi-partition by default: #SBATCH -p q_fat_c,q_fat,q_fat_l (to facilitate scheduling to q_fat/q_fat_l).
-4) Update `PROGRESS.md` after completing a change set.
-5) Log each session in `docs/sessions/` (date-stamped file).
-6) If code or documentation is modified, commit changes via git (write your own commit message).
-7) If the `create-plan` skill is used, write the plan to the root `PLAN.md`.
+1) 在规划或编辑前，先阅读 `ARCHITECTURE.md`。
+2) 仅按 `PLAN.md` 或用户的明确指令执行变更。
+3) 若变更影响用法或结构，需同步更新 `README.md` 和/或 `docs/workflow.md`。
+3.1) 只要代码被修改或生成了新结果，必须新增或更新补充文档进行说明。
+3.2) 运行时间短且不需并行的脚本可直接执行；否则在同环境做少量验证，并提供提交命令或 sbatch 脚本。
+3.2.1) sbatch 只能由用户提交：会话中助手不得直接提交 sbatch 任务；应输出可复用脚本和清晰提交命令供用户执行。
+3.3) 所有 sbatch 任务默认使用多分区：`#SBATCH -p q_fat_c,q_fat,q_fat_l`（便于调度到 q_fat/q_fat_l）。
+4) 每完成一组变更后更新 `PROGRESS.md`。
+5) 每次会话在 `docs/sessions/` 下记录日志（按日期命名）。
+6) 只要修改了代码或文档，必须通过 git 提交（提交信息由助手撰写）。
+7) 若使用 `create-plan` 技能，需将计划写入仓库根目录 `PLAN.md`。
 
-## Scope and constraints
+## 范围与约束
 
-- Default scope is documentation-only unless the user requests engineering changes.
-- Do not modify runtime artifacts under `data/` or `outputs/`.
-- Do not change directory names or structure unless explicitly requested.
-- Keep diffs minimal; avoid refactors not tied to the request.
-- Clean up temporary smoke-test outputs under `temp/` (e.g., `temp/smoke_*`) immediately after validation; do not leave test artifacts in the repo.
+- 默认范围为仅文档，除非用户明确要求工程改动。
+- 不要修改 `data/` 或 `outputs/` 下的运行时产物。
+- 非用户明确要求时，不要改动目录命名或结构。
+- 保持最小差异；避免与当前请求无关的重构。
+- 验证后立即清理 `temp/` 下临时冒烟测试产物（如 `temp/smoke_*`），不要在仓库中残留测试垃圾。
 
-## Engineering conventions (when requested)
+## 工程规范（用户要求工程改动时）
 
-- Use `python -m scripts.<entry>` for execution.
-- Avoid ad-hoc `sys.path` hacks; if unavoidable, confine them to entry points and document why.
-- All filesystem paths must come from `configs/`.
+- 使用 `python -m scripts.<entry>` 作为执行入口。
+- 避免临时 `sys.path` hack；若不可避免，只允许在入口脚本中使用并写明原因。
+- 所有文件系统路径必须来自 `configs/`。
+- 若在 Windows 环境运行，统一使用 `uv` 进行依赖管理：
+- 新增依赖使用 `uv add <package>`。
+- 项目虚拟环境固定为仓库根目录 `.venv`。
 
-## Documentation conventions
+## 文档规范
 
-- Use precise, scientific language.
-- Write all `docs/` content in Chinese; keep filenames in English.
-- Root-level Markdown files must be English only.
-- Keep repository root folder names in English.
-- EFNY-specific notes live in `docs/workflow.md` and `configs/paths.yaml` (dataset section).
+- 使用精确、科学的表述。
+- `docs/` 下文档全部使用中文，文件名保持英文。
+- 仓库根目录文件夹名称保持英文。
+- EFNY 专属说明放在 `docs/workflow.md` 与 `configs/paths.yaml`（dataset section）。
