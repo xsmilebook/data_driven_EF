@@ -66,6 +66,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Updated v2 sequence-library policy to not treat app_sequence-derived answers as ground truth; visit1_merged now aligns items to group_001 templates and uses template-derived observed answers (app_sequence kept as reference only).
 - Replaced item sequences for answer_group1 subjects that mismatched item_group1 by overwriting workbook item columns with item_group1 templates (website-crash reference-subject error), and regenerated item groupings (report: `docs/reports/app_v2_item_replace_answer_group1.md`; script: `scripts/app_v2_replace_items_for_answer_group_mismatch.py`).
 - Translated `AGENTS.md` into Chinese and added a Windows dependency-management rule: use `uv` with `uv add`, and keep the project virtual environment at `.venv`.
+- Exported a visit3 candidate sequence in v2 from `item_group_002` (items) + `answer_group_002` (answers), and compared it against `data/raw/behavior_data/app_sequence/visit3` (report: `docs/reports/visit3_group2_export_comparison.md`; script: `scripts/build_visit3_library_v2.py`).
 
 
 ## In progress
