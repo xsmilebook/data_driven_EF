@@ -68,6 +68,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Translated `AGENTS.md` into Chinese and added a Windows dependency-management rule: use `uv` with `uv add`, and keep the project virtual environment at `.venv`.
 - Exported a visit3 candidate sequence in v2 from `item_group_002` (items) + `answer_group_002` (answers), and compared it against `data/raw/behavior_data/app_sequence/visit3` (report: `docs/reports/visit3_group2_export_comparison.md`; script: `scripts/build_visit3_library_v2.py`).
 - Parsed non-standard `visit3_v1` Excel files into JSON and compared to `answer_group_004` for Spatial/Emotion NBack tasks (report: `docs/reports/visit3_v1_sequence_parsing.md`; script: `scripts/parse_visit3_v1_sequence.py`).
+- Built `visit3_v1` in `run_corrected_v2` from confirmed rules: keep visit3 baseline for non-target tasks, replace Spatial1Back/Spatial2Back from `app_sequence/visit3_v1`, and set Emotion2Back items to null with answers from `answer_group_004` (report: `docs/reports/visit3_v1_from_groups_build.md`; script: `scripts/build_visit3_v1_library_v2.py`).
 
 
 ## In progress
