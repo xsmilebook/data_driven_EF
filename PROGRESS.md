@@ -70,6 +70,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Parsed non-standard `visit3_v1` Excel files into JSON and compared to `answer_group_004` for Spatial/Emotion NBack tasks (report: `docs/reports/visit3_v1_sequence_parsing.md`; script: `scripts/parse_visit3_v1_sequence.py`).
 - Built `visit3_v1` in `run_corrected_v2` from confirmed rules: keep visit3 baseline for non-target tasks, replace Spatial1Back/Spatial2Back from `app_sequence/visit3_v1`, and set Emotion2Back items to null with answers from `answer_group_004` (report: `docs/reports/visit3_v1_from_groups_build.md`; script: `scripts/build_visit3_v1_library_v2.py`).
 - Fixed visit3_v1 sequence export to preserve full trial length (including leading missing answers): Emotion2Back is now 60/60 (items/answers) and row metadata is synchronized across tasks.
+- Applied `visit3_v1` item templates to all `answer_group_004` subjects (36/36) with workbook backup, then moved these subjects from item `group_002` to new item `group_005`; regenerated item-group manifests (report: `docs/reports/app_v2_item_replace_answer_group004.md`; script: `scripts/app_v2_apply_visit3_v1_items_to_answer_group004.py`).
 
 
 ## In progress
