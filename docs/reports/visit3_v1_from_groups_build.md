@@ -40,9 +40,8 @@
 
 - `Spatial1Back`: `items_len=60`, `answers_len=60`
 - `Spatial2Back`: `items_len=60`, `answers_len=60`
-- `Emotion2Back`: `items_len=58`, `answers_len=58`, 且 `items_none_n=58`（全部为空）
+- `Emotion2Back`: `items_len=60`, `answers_len=60`, 且 `items_none_n=60`（全部为空，缺失答案位置保留为 `null`）
 
 `Emotion2Back` 答案来源被试：
 
 - `THU_20250708_623_WYR`
-

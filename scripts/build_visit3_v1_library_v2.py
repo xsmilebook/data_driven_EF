@@ -64,6 +64,19 @@ def _normalize_cell(value: object) -> str | None:
     return s or None
 
 
+def _normalize_answer_keep_none(value: object) -> str | None:
+    # Keep trial count unchanged: missing values remain None.
+    if value is None:
+        return None
+    s = str(value).strip()
+    if not s:
+        return None
+    low = s.lower()
+    if low in {"nan", "none"}:
+        return None
+    return low
+
+
 def _extract_subject_id_from_filename(excel_path: Path) -> str:
     stem = excel_path.stem
     stem = stem.replace("GameData", "").rstrip("_- ")
@@ -89,7 +102,7 @@ def _read_group_subjects(path: Path) -> list[str]:
     return [s.strip() for s in path.read_text(encoding="utf-8").splitlines() if s.strip()]
 
 
-def _read_subject_task_answers(xlsx: Path, task: str) -> list[str]:
+def _read_subject_task_answers(xlsx: Path, task: str) -> list[str | None]:
     wb = openpyxl.load_workbook(xlsx, read_only=True, data_only=True)
     try:
         ws_name = None
@@ -109,11 +122,11 @@ def _read_subject_task_answers(xlsx: Path, task: str) -> list[str]:
                 break
         if ans_idx is None:
             return []
-        out: list[str] = []
+        out: list[str | None] = []
         for r in range(2, ws.max_row + 1):
             v = _normalize_cell(ws.cell(r, ans_idx).value)
-            if v is not None:
-                out.append(v)
+            # Keep full trial count; do not drop missing answers.
+            out.append(v)
         return out
     finally:
         wb.close()
@@ -123,19 +136,22 @@ def _pick_group4_emotion2back_source(
     *,
     group4_subjects: list[str],
     raw_index: dict[str, Path],
-) -> tuple[str, str, list[str]]:
+) -> tuple[str, str, list[str | None]]:
     best_sid = ""
     best_file = ""
-    best_answers: list[str] = []
+    best_answers: list[str | None] = []
+    best_nonnull_n = -1
     for sid in group4_subjects:
         fp = raw_index.get(sid)
         if fp is None:
             continue
         answers = _read_subject_task_answers(fp, "Emotion2Back")
-        if len(answers) > len(best_answers):
+        nonnull_n = sum(1 for x in answers if x is not None)
+        if nonnull_n > best_nonnull_n:
             best_sid = sid
             best_file = fp.name
             best_answers = answers
+            best_nonnull_n = nonnull_n
     if not best_answers:
         raise ValueError("No non-empty Emotion2Back answers found in answer_group_004.")
     return best_sid, best_file, best_answers
@@ -155,8 +171,26 @@ def _load_visit3_v1_task_json(seq_dir: Path, filename: str, key: str) -> tuple[l
         if not isinstance(rec, dict):
             continue
         items.append(rec.get("picData"))
-        answers.append(rec.get("buttonName"))
+        answers.append(_normalize_answer_keep_none(rec.get("buttonName")))
     return items, answers
+
+
+def _reconcile_and_set_rows(task_rec: dict[str, Any]) -> None:
+    items = task_rec.get("items")
+    answers = task_rec.get("answers")
+    if not isinstance(items, list) or not isinstance(answers, list):
+        return
+    li = len(items)
+    la = len(answers)
+    if li != la:
+        m = max(li, la)
+        if li < m:
+            items.extend([None] * (m - li))
+        if la < m:
+            answers.extend([None] * (m - la))
+    n = len(items)
+    task_rec["items_n_rows"] = n
+    task_rec["answers_n_rows"] = n
 
 
 def parse_args() -> argparse.Namespace:
@@ -223,11 +257,13 @@ def main() -> int:
     visit3_v1["Spatial1Back"]["answers"] = sp1_answers
     visit3_v1["Spatial1Back"]["items_source"] = "app_sequence_visit3_v1"
     visit3_v1["Spatial1Back"]["answers_source"] = "app_sequence_visit3_v1"
+    _reconcile_and_set_rows(visit3_v1["Spatial1Back"])
 
     visit3_v1["Spatial2Back"]["items"] = sp2_items
     visit3_v1["Spatial2Back"]["answers"] = sp2_answers
     visit3_v1["Spatial2Back"]["items_source"] = "app_sequence_visit3_v1"
     visit3_v1["Spatial2Back"]["answers_source"] = "app_sequence_visit3_v1"
+    _reconcile_and_set_rows(visit3_v1["Spatial2Back"])
 
     visit3_v1["Emotion2Back"]["items"] = [None] * len(e2_answers)
     visit3_v1["Emotion2Back"]["answers"] = e2_answers
@@ -235,6 +271,12 @@ def main() -> int:
     visit3_v1["Emotion2Back"]["answers_source"] = "answer_group_004_subject"
     visit3_v1["Emotion2Back"]["answer_template_subject_id"] = e2_sid
     visit3_v1["Emotion2Back"]["answer_template_file_name"] = e2_file
+    _reconcile_and_set_rows(visit3_v1["Emotion2Back"])
+
+    # Keep row metadata consistent across all tasks in this version.
+    for rec in visit3_v1.values():
+        if isinstance(rec, dict):
+            _reconcile_and_set_rows(rec)
 
     out_json = out_dir / "visit3_v1_from_groups.json"
     out_meta = out_dir / "visit3_v1_build_meta.json"
@@ -271,4 +313,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
