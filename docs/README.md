@@ -20,6 +20,7 @@
 - `docs/reports/visit3_v1_sequence_parsing.md`: 解析 `visit3_v1`（非规范 Excel）为 JSON，并与 `answer_group_004` 进行对照判断。
 - `docs/reports/visit3_v1_from_groups_build.md`: 在 `run_corrected_v2` 中按规则生成 `visit3_v1`（Spatial1Back/Spatial2Back 来自 `visit3_v1`，Emotion2Back 使用 `answer_group_004` 答案且 item 置空）。
 - `docs/reports/app_v2_item_replace_answer_group004.md`: 将 `answer_group_004` 全部被试替换为 `visit3_v1` item 序列，并将其从 item `group_002` 迁移至 item `group_005`（含原始 xlsx 备份路径与分组核验）。
+- `docs/reports/app_v2_item_replace_subject_765_wzr.md`: 将 `THU_20250921_765_WZR` 的 item 序列更新为 `visit3`（因其 answer group 为 002），并记录备份路径与执行结果。
 
 ## Notes 与 sessions 的区别
 
