@@ -73,6 +73,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Applied `visit3_v1` item templates to all `answer_group_004` subjects (36/36) with workbook backup, then moved these subjects from item `group_002` to new item `group_005`; regenerated item-group manifests (report: `docs/reports/app_v2_item_replace_answer_group004.md`; script: `scripts/app_v2_apply_visit3_v1_items_to_answer_group004.py`).
 - Updated `THU_20250921_765_WZR` item sequence to `visit3` (because answer group is 002), with a per-subject backup and execution log documented in `docs/reports/app_v2_item_replace_subject_765_wzr.md` (script: `scripts/app_v2_apply_visit_items_to_subject.py`).
 - Moved `THU_20250921_765_WZR` from item `group_004` to item `group_002`, and regenerated `groups_by_item` manifests to keep counts/index fields synchronized (`group_002: 139`, `group_004: 0`).
+- Added a conformed export step for confirmed `run_corrected_v2` sequence JSONs: `visit1_confirmed.json`, `visit3_confirmed.json`, `visit3_v1_confirmed.json` under `run_corrected_v2/conformed/`, with source mapping in `conformed/manifest.json` (script: `scripts/export_conformed_sequences_v2.py`).
 
 
 ## In progress
