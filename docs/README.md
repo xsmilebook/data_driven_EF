@@ -17,6 +17,7 @@
 - `docs/reports/item_group_sequence_changes.md`: item 分组（group_001–group_004）刺激序列差异分析。
 - `docs/reports/app_v2_item_replace_answer_group1.md`: 将 answer_group1 中 item≠item_group1 的被试替换为 item_group1 模板（网站崩溃期参考被试填充错误修正）。
 - `docs/reports/visit3_group2_export_comparison.md`: 基于 item_group_002 + answer_group_002 导出 visit3 序列，并与 `app_sequence/visit3` 做一致性比对。
+- `docs/reports/visit3_v1_sequence_parsing.md`: 解析 `visit3_v1`（非规范 Excel）为 JSON，并与 `answer_group_004` 进行对照判断。
 
 ## Notes 与 sessions 的区别
 
