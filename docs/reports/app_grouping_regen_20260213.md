@@ -15,7 +15,7 @@
 - `item_answer_crosstab.csv`：item 组 × answer 组列联表；
 - `summary.json`：汇总统计与映射关系。
 
-## 2. 重建结果
+## 2. 初始重建结果
 
 - 输入工作簿总数：639
 - answer 分组数：7
@@ -40,10 +40,31 @@
 
 上述关系与近期人工修正后的版本演化一致：`item group_001` 内部存在两个 answer 子型，其余 item 组与 answer 组为一对一对应。
 
+## 5. EmotionStroop trial12 修正后的覆盖重建
+
+根据人工确认规则：对 `answer_003` 被试在 `EmotionStroop` 中缺失的第 12 个 trial，
+将“正式阶段正确答案”填充为 `AN`，再覆盖重建 `20260213` 分组。
+
+- 修正对象：`groups_by_answer_regen_20260213/group_003_sublist.txt`（105 名被试）
+- 实际修正：105/105
+- 备份目录：`data/raw/behavior_data/cibr_app_data/_backup_fill_emotionstroop_trial12_AN_20260213_153123/`
+- 修正报告：`data/interim/behavioral_preprocess/grouping_audit_regen_20260213/fill_emotionstroop_trial12_AN_report.json`
+
+覆盖重建后的结果：
+
+- answer 分组数：6
+- item 分组数：6
+- item 与 answer 完全一一对应（`group_001` 到 `group_006`）
+- 被试总数保持 639，不存在 item-only 或 answer-only
+
+最新审计见：
+
+- `data/interim/behavioral_preprocess/grouping_audit_regen_20260213/summary.json`
+- `data/interim/behavioral_preprocess/grouping_audit_regen_20260213/item_answer_crosstab.csv`
+
 ## 4. 复现命令
 
 ```powershell
 python temp/group_app_stimulus_groups.py --grouping answer --out-dir data/interim/behavioral_preprocess/groups_by_answer_regen_20260213
 python temp/group_app_stimulus_groups.py --grouping item --out-dir data/interim/behavioral_preprocess/groups_by_item_regen_20260213
 ```
-
