@@ -23,6 +23,7 @@
 - `docs/reports/app_v2_item_replace_subject_765_wzr.md`: 将 `THU_20250921_765_WZR` 的 item 序列更新为 `visit3`（因其 answer group 为 002），并记录备份路径与执行结果。
 - `docs/reports/app_v2_conformed_sequences.md`: 统一导出 `run_corrected_v2` 中已确认正确的序列 JSON 到 `conformed/`，固定命名与来源映射。
 - `docs/reports/app_v2_visit2_confirmed_build.md`: 基于 `visit2-1125` + `visit3_confirmed` 生成 `visit2_confirmed.json` 的规则、字段映射与核验结果。
+- `docs/reports/app_v2_visit3_v2_confirmed_group008.md`: 依据任务级来源规则生成 `visit3_v2_confirmed`，并将 `answer_group008` 的 raw xlsx item 列替换为该版本，同时迁移 item 分组（`group003 -> group004`）。
 
 ## Notes 与 sessions 的区别
 

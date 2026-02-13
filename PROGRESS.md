@@ -75,6 +75,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 - Moved `THU_20250921_765_WZR` from item `group_004` to item `group_002`, and regenerated `groups_by_item` manifests to keep counts/index fields synchronized (`group_002: 139`, `group_004: 0`).
 - Added a conformed export step for confirmed `run_corrected_v2` sequence JSONs: `visit1_confirmed.json`, `visit3_confirmed.json`, `visit3_v1_confirmed.json` under `run_corrected_v2/conformed/`, with source mapping in `conformed/manifest.json` (script: `scripts/export_conformed_sequences_v2.py`).
 - Added `visit2_confirmed` builder with task-specific mapping rules (CPT=`needClickButton`, DCCS `0/1->Left/Right`, KT from `answers[].answerPicName`, SST first 96, ZYST from `ZYST_Formal.txt`) and fallback to `visit3_confirmed` for tasks missing in visit2; verified group007 is 8/8 exact on all visit2 tasks (`scripts/build_visit2_confirmed_v2.py`).
+- Added `visit3_v2_confirmed` builder from confirmed task-source mapping (visit3 + visit3_v1 + visit2 + visit1 + raw visit3_v2 Spatial2Back), and applied this version to all answer_group008 raw workbooks' item columns with backup; moved answer_group008 subjects from item group_003 to group_004 and regenerated item-group manifests (`scripts/build_visit3_v2_confirmed_v2.py`, `scripts/app_v2_apply_visit3_v2_items_to_answer_group008.py`).
 
 
 ## In progress
