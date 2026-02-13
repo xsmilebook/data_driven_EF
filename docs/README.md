@@ -21,11 +21,12 @@
 - `docs/reports/visit3_v1_from_groups_build.md`: 在 `run_corrected_v2` 中按规则生成 `visit3_v1`（Spatial1Back/Spatial2Back 来自 `visit3_v1`，Emotion2Back 使用 `answer_group_004` 答案且 item 置空）。
 - `docs/reports/app_v2_item_replace_answer_group004.md`: 将 `answer_group_004` 全部被试替换为 `visit3_v1` item 序列，并将其从 item `group_002` 迁移至 item `group_005`（含原始 xlsx 备份路径与分组核验）。
 - `docs/reports/app_v2_item_replace_subject_765_wzr.md`: 将 `THU_20250921_765_WZR` 的 item 序列更新为 `visit3`（因其 answer group 为 002），并记录备份路径与执行结果。
-- `docs/reports/app_v2_conformed_sequences.md`: 统一导出 `run_corrected_v2` 中已确认正确的序列 JSON 到 `conformed/`，固定命名与来源映射。
+- `docs/reports/app_v2_conformed_sequences.md`: 历史导出记录（现已统一迁移到 `run_corrected_v2/confirmed/`）。
 - `docs/reports/app_v2_visit2_confirmed_build.md`: 基于 `visit2-1125` + `visit3_confirmed` 生成 `visit2_confirmed.json` 的规则、字段映射与核验结果。
 - `docs/reports/app_v2_visit3_v2_confirmed_group008.md`: 依据任务级来源规则生成 `visit3_v2_confirmed`，并将 `answer_group008` 的 raw xlsx item 列替换为该版本，同时迁移 item 分组（`group003 -> group004`）。
 - `docs/reports/app_v2_visit1_v1_confirmed_group009.md`: 依据任务级来源规则生成 `visit1_v1_confirmed`，并将 `answer_group009` 的 raw xlsx item 列替换为该版本，同时迁移 item 分组（`group003 -> group006`）。
 - `docs/reports/app_grouping_regen_20260213.md`: 基于当前 raw 目录重建新的 item/answer 分组（不覆盖旧分组），并输出 item×answer 匹配审计结果。
+- `docs/reports/app_raw_data_issues_and_correction_guide.md`: 汇总 `cibr_app_data` 已识别问题、修正规则与执行步骤，并给出 `subject_id-referred_visit` 映射及 confirmed 版本导出规范。
 
 ## Notes 与 sessions 的区别
 
