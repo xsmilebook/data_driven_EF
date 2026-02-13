@@ -24,6 +24,7 @@
 - `docs/reports/app_v2_conformed_sequences.md`: 统一导出 `run_corrected_v2` 中已确认正确的序列 JSON 到 `conformed/`，固定命名与来源映射。
 - `docs/reports/app_v2_visit2_confirmed_build.md`: 基于 `visit2-1125` + `visit3_confirmed` 生成 `visit2_confirmed.json` 的规则、字段映射与核验结果。
 - `docs/reports/app_v2_visit3_v2_confirmed_group008.md`: 依据任务级来源规则生成 `visit3_v2_confirmed`，并将 `answer_group008` 的 raw xlsx item 列替换为该版本，同时迁移 item 分组（`group003 -> group004`）。
+- `docs/reports/app_v2_visit1_v1_confirmed_group009.md`: 依据任务级来源规则生成 `visit1_v1_confirmed`，并将 `answer_group009` 的 raw xlsx item 列替换为该版本，同时迁移 item 分组（`group003 -> group006`）。
 
 ## Notes 与 sessions 的区别
 
