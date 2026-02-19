@@ -17,6 +17,28 @@ python -m scripts.run_single_task --dataset EFNY --config configs/paths.yaml --d
 
 EFNY 相关假设配置在 `configs/paths.yaml` 的 `dataset` 段落中。数据集无关的分析默认值可配置在 `configs/analysis.yaml`。
 
+## v1 存档与 v2 最小骨架
+
+当准备“冻结当前版本并重开 v2”时，先执行存档命令（默认仅预演）：
+
+```bash
+python -m scripts.archive_legacy_snapshot --archive-name v1_freeze_20260219
+```
+
+实际创建存档分支与 tag：
+
+```bash
+python -m scripts.archive_legacy_snapshot --archive-name v1_freeze_20260219 --execute
+```
+
+基于清洗数据运行 v2 最小骨架：
+
+```bash
+python -m scripts.v2_run_pipeline --dataset EFNY --config configs/paths.yaml --dry-run
+```
+
+非 dry-run 会输出 profile 元信息到 `outputs/results/v2/<run-id>/run.json`。
+
 ## data/ 与 outputs/ 约定
 
 - `data/raw/`: 原始输入（不由流水线脚本生成）

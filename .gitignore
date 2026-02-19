@@ -11,8 +11,8 @@ data/processed/
 outputs/
 
 # notebooks & models (runtime artifacts)
-notebooks/
-models/
+/notebooks/
+/models/
 
 # tmp
 tmp/
@@ -24,4 +24,3 @@ __pycache__/
 
 # jupyter
 .ipynb_checkpoints/
-

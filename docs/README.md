@@ -27,6 +27,8 @@
 - `docs/reports/app_v2_visit1_v1_confirmed_group009.md`: 依据任务级来源规则生成 `visit1_v1_confirmed`，并将 `answer_group009` 的 raw xlsx item 列替换为该版本，同时迁移 item 分组（`group003 -> group006`）。
 - `docs/reports/app_grouping_regen_20260213.md`: 基于当前 raw 目录重建新的 item/answer 分组（不覆盖旧分组），并输出 item×answer 匹配审计结果。
 - `docs/reports/app_raw_data_issues_and_correction_guide.md`: 汇总 `cibr_app_data` 已识别问题、修正规则与执行步骤，并给出 `subject_id-referred_visit` 映射及 confirmed 版本导出规范。
+- `docs/reports/v2_minimal_dev_skeleton.md`: 冻结 v1 并基于清洗数据启动 v2 的最小骨架说明。
+- `docs/reports/v2_migration_acceptance_checklist.md`: v1 -> v2 切换的验收门槛与检查项。
 
 ## Notes 与 sessions 的区别
 

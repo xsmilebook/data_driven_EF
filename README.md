@@ -6,6 +6,10 @@
 - 行为指标计算
 - 脑-行为关联分析（仅保留自适应模型：`adaptive_pls` / `adaptive_scca` / `adaptive_rcca`）
 
+当前新增了“v1 存档 + v2 最小骨架”入口，支持在保留历史可追溯性的前提下，基于已清洗数据重新开发：
+- 存档入口：`python -m scripts.archive_legacy_snapshot`
+- v2 骨架入口：`python -m scripts.v2_run_pipeline`
+
 下面仅列出常用脚本的执行方式与关键参数。
 
 ## 目录结构（核心）

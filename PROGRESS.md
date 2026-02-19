@@ -6,6 +6,9 @@ Real-time development log for the refactor of `data_driven_EF`.
 
 ## Completed
 
+- Added a safe legacy-archive CLI (`scripts/archive_legacy_snapshot.py`) for creating branch+annotated-tag snapshots before v2 rewrite (preview by default, execute via `--execute`).
+- Added a v2 minimal pipeline skeleton (`scripts/v2_run_pipeline.py`, `src/models/v2_pipeline.py`) that resolves config paths and profiles cleaned behavioral tables.
+- Added migration docs for v2 bootstrap and cutover gates: `docs/reports/v2_minimal_dev_skeleton.md` and `docs/reports/v2_migration_acceptance_checklist.md`; updated `README.md`, `docs/README.md`, and `docs/workflow.md`.
 - Expanded behavioral metrics computation documentation in `docs/methods.md`.
 - Removed `RT_Mean`/`RT_SD` outputs for SST/GNG/CPT in metrics configuration and docs.
 - Added a single-subject behavioral EDA entrypoint (`scripts/eda_behavior_trials.py`) and generated a per-task trial-count report under `docs/reports/`.
