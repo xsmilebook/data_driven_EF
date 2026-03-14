@@ -81,17 +81,18 @@ python -m scripts.v2_run_pipeline --dataset EFNY --config configs/paths.yaml --d
        - task regressors TSV 位于 `sub-<label>/func/`，且 **文件名必须与 fMRIPrep 的** `*_desc-confounds_timeseries.tsv` **完全一致**，xcp-d 才能自动匹配并加载。
    - 回归口径（按任务诱发 HRF 去除）：
      - block/state 回归量：canonical HRF（SPM HRF）卷积。
-       - NBACK：`state_pure_0back`、`state_pure_2back`（如存在混合段：`state_mixed`）。
-       - SWITCH：`state_pure_red`、`state_pure_blue`、`state_mixed`。
+       - NBACK：`state_pure_0back`、`state_pure_2back`（如存在混合段：`state_mixed`）；`state_*` 仅覆盖正式刺激序列本身，不包含 block 前任务提示图或 fixation。
+       - SWITCH：`state_pure_red`、`state_pure_blue`、`state_mixed`；`state_*` 仅覆盖正式刺激序列本身，不包含 block 前任务提示图或 fixation。
        - SST：
          - 若行为日志为 120 试次：仅生成单个 block（`state_part1`）。
          - 若行为日志为 180 试次：生成两个 block（`state_part1`/`state_part2`），且在第 90 与 91 试次之间通常存在约 15 s 的注视间隔。
          - 若存在 `Trial_loop_list`：优先用 `loop1/loop2`（或等价命名）识别两个 block；每个 loop 可能包含 1 行“无刺激”记录（不产生 stimulus 事件，但会影响 block 持续时间）。
+         - `state_part1/state_part2` 仅覆盖正式刺激序列本身，不包含 run 开始时的 fixation。
      - event 回归量：FIR（以 TR 为 bin，窗口默认为 20 秒）。
-       - 共通：`stimulus`（刺激呈现）、`response`（按键 onset = `key_resp.started + key_resp.rt`）。
-       - SST 额外：`banana`（当 `bad` 列包含 banana 时，以 `Trial_image_3.started` 作为事件 onset）。
+       - 共通：`stimulus`（刺激呈现）、`response`（实际按键 onset = `key_resp.started + key_resp.rt`；`key_resp.started` 本身仅表示开始收集反应）。
+       - SST 额外：`banana`（仅当 `bad` 列包含 banana 时，以 `Trial_image_3.started` 作为事件 onset）。
    - 关键对齐假设：
-     - 扫描起点：使用 Psychopy CSV 中首个 `MRI_Signal_s.started` 作为时间 0；缺失时回退到 `Begin_fix.started`，再回退到 0。
+     - 扫描起点：使用 Psychopy CSV 中首个 `MRI_Signal_s.started + MRI_Signal_s.rt` 作为时间 0；缺失时回退到 `Begin_fix.started`，再回退到 0。
      - NBACK/SWITCH 的 block 类型优先由 `Trial_loop_list` 推断（行为试次行中 `Task_img` 常为空）。
    - `xcp_d-0.10.0` 的 `--mode none` 要求显式设置若干参数，否则会直接报错；当前脚本固定为：
      - `--file-format cifti`、`--output-type censored`、`--combine-runs n`
@@ -411,4 +412,3 @@ Atlas 选择（Schaefer）：
 ### 5) 更新说明
 
 当预处理或文件约定变更时，请在 `docs/sessions/` 记录变更内容、原因与涉及脚本/路径。
-

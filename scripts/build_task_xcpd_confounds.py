@@ -411,10 +411,19 @@ def _task_event_types(task: str) -> list[str]:
 
 
 def _detect_t0(rows: list[dict[str, str]]) -> float:
+    first_started = None
+    first_rt = None
     for r in rows:
-        v = _float_or_none(r.get("MRI_Signal_s.started"))
-        if v is not None:
-            return float(v)
+        started = _float_or_none(r.get("MRI_Signal_s.started"))
+        rt = _float_or_none(r.get("MRI_Signal_s.rt"))
+        if started is not None and rt is not None:
+            return float(started + rt)
+        if first_started is None and started is not None:
+            first_started = float(started)
+        if first_rt is None and rt is not None:
+            first_rt = float(rt)
+    if first_started is not None and first_rt is not None:
+        return float(first_started + first_rt)
     for r in rows:
         v = _float_or_none(r.get("Begin_fix.started"))
         if v is not None:
@@ -432,17 +441,15 @@ def _build_events_from_psychopy(rows: list[dict[str, str]], task: str) -> tuple[
                 return float(v)
         return None
 
-    # IMPORTANT: Trial_fix is a fixation period, while Trial_text/Trial_image_1 is stimulus onset.
-    # For event regressors we always use stimulus onset columns.
-    # For block/state regressors, we prefer stimulus timing for block start/stop to avoid shifting
-    # the canonical HRF regressors earlier by the fixation duration.
+    # IMPORTANT: state_* should cover the formal stimulus sequence only.
+    # Trial_fix and task-name cue periods are excluded from block/state timing.
     if task in {"nback", "switch"}:
-        trial_start_keys = ["Trial_text.started", "Trial.started", "Trial_fix.started", "key_resp.started"]
-        trial_stop_keys = ["Trial_text.stopped", "Trial.stopped", "key_resp.stopped", "Trial_fix.stopped"]
+        trial_start_keys = ["Trial_text.started"]
+        trial_stop_keys = ["Trial_text.stopped"]
         trial_row_keys = ["Trial_text.started", "Trial.started", "Trial_fix.started"]
     elif task == "sst":
-        trial_start_keys = ["Trial_image_1.started", "Trial.started", "Trial_fix.started", "key_resp.started"]
-        trial_stop_keys = ["Trial_image_1.stopped", "Trial.stopped", "key_resp.stopped", "Trial_fix.stopped"]
+        trial_start_keys = ["Trial_image_1.started"]
+        trial_stop_keys = ["Trial_image_1.stopped"]
         trial_row_keys = ["Trial_image_1.started", "Trial.started", "Trial_fix.started"]
     else:
         raise ValueError(task)
@@ -471,7 +478,7 @@ def _build_events_from_psychopy(rows: list[dict[str, str]], task: str) -> tuple[
             if not starts:
                 continue
             trial_start = min(starts)
-            trial_stop = max(stops) if stops else trial_start
+            trial_stop = max(stops) if stops else max(starts)
             block_hint = ""
             for r in trs:
                 v = (r.get("Task_img") or "").strip()
@@ -508,6 +515,7 @@ def _build_events_from_psychopy(rows: list[dict[str, str]], task: str) -> tuple[
             ks = _float_or_none(r.get("key_resp.started"))
             rt = _float_or_none(r.get("key_resp.rt"))
             if ks is not None and rt is not None:
+                # key_resp.started is the start of response collection; the actual keypress is started + rt.
                 event_events.append(Event(onset=float(ks + rt) - t0, duration=0.0, trial_type="response"))
 
     elif task == "sst":
@@ -563,7 +571,7 @@ def _build_events_from_psychopy(rows: list[dict[str, str]], task: str) -> tuple[
             if not starts:
                 continue
             trial_start = min(starts)
-            trial_stop = max(stops) if stops else trial_start
+            trial_stop = max(stops) if stops else max(starts)
             onset = float(trial_start) - t0
             duration = max(0.0, float(trial_stop) - float(trial_start))
             block_events.append(Event(onset=onset, duration=duration, trial_type=label))
@@ -580,6 +588,7 @@ def _build_events_from_psychopy(rows: list[dict[str, str]], task: str) -> tuple[
             ks = _float_or_none(r.get("key_resp.started"))
             rt = _float_or_none(r.get("key_resp.rt"))
             if ks is not None and rt is not None:
+                # key_resp.started is the start of response collection; the actual keypress is started + rt.
                 event_events.append(Event(onset=float(ks + rt) - t0, duration=0.0, trial_type="response"))
     else:
         raise ValueError(task)
