@@ -13,7 +13,7 @@ source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
 conda activate ML
 
 # Set up paths for EFNY dataset
-eval "$(python -m scripts.render_paths --dataset EFNY --config configs/paths.yaml --format bash)"
+eval "$(python3 -m scripts.render_paths --dataset EFNY --config configs/paths.yaml --format bash)"
 PROJECT_ROOT="${PROJECT_DIR}"
 INPUT_PATH="${INTERIM_ROOT}/functional_conn_z/rest"
 SUBLIST_FILE="${PROCESSED_ROOT}/table/sublist/sublist.txt"

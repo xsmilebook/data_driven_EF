@@ -13,7 +13,7 @@
 source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
 conda activate ML
 
-eval "$(python -m scripts.render_paths --dataset EFNY --config configs/paths.yaml --format bash)"
+eval "$(python3 -m scripts.render_paths --dataset EFNY --config configs/paths.yaml --format bash)"
 ROOT_DIR="${PROJECT_DIR}"
 SUBLIST="$PROCESSED_ROOT/table/sublist/rest_valid_sublist.txt"
 SCRIPT="$ROOT_DIR/src/imaging_preprocess/fisher_z_fc.py"
@@ -34,4 +34,3 @@ for ROIS in 100 200 400; do
         --in-dir "$INTERIM_ROOT/functional_conn/rest" \
         --out-dir "$INTERIM_ROOT/functional_conn_z/rest"
 done
-

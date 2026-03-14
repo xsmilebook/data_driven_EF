@@ -23,7 +23,7 @@ export all_proxy=10.11.100.5:3128
 export ALL_PROXY=10.11.100.5:3128
 
 # Define paths
-eval "$(python -m scripts.render_paths --dataset EFNY --config configs/paths.yaml --format bash)"
+eval "$(python3 -m scripts.render_paths --dataset EFNY --config configs/paths.yaml --format bash)"
 ROOT_DIR="${PROJECT_DIR}"
 SUBLIST="$PROCESSED_ROOT/table/sublist/rest_valid_sublist.txt"
 SCRIPT="$ROOT_DIR/src/imaging_preprocess/compute_fc_schaefer.py"

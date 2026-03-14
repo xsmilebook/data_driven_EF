@@ -34,7 +34,7 @@ case "$task" in
   *) echo "Invalid task: $task (expected nback|sst|switch)" 1>&2; exit 2 ;;
 esac
 
-eval "$(python -m scripts.render_paths --dataset ${dataset_name} --config configs/paths.yaml --dataset-config ${dataset_config} --format bash)"
+eval "$(python3 -m scripts.render_paths --dataset ${dataset_name} --config configs/paths.yaml --dataset-config ${dataset_config} --format bash)"
 
 case "$task" in
   nback) fmriprep_Path=${FMRIPREP_TASK_NBACK_DIR} ;;
@@ -68,7 +68,7 @@ else
   fmriprep_input="${fmriprep_Path}"
 fi
 
-python -m scripts.build_task_xcpd_confounds \
+python3 -m scripts.build_task_xcpd_confounds \
   --subject "${subj}" \
   --task "${task}" \
   --out-root "${custom_confounds_root}" \

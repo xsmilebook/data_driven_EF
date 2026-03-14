@@ -1,6 +1,6 @@
 #!/bin/bash
 
-eval "$(python -m scripts.render_paths --dataset EFNY --config configs/paths.yaml --format bash)"
+eval "$(python3 -m scripts.render_paths --dataset EFNY --config configs/paths.yaml --format bash)"
 SUBLIST_FILE="${PROCESSED_ROOT}/table/sublist/mri_sublist.txt"
 LOG_DIR="${LOGS_ROOT}/${DATASET}/xcpd"
 mkdir -p "${LOG_DIR}"

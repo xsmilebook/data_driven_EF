@@ -5,7 +5,7 @@ TASKS=${2:-"nback sst switch"}
 DATASET_CONFIG=${3:-configs/dataset_tsinghua_taskfmri.yaml}
 DATASET_NAME=${4:-EFNY_THU}
 
-eval "$(python -m scripts.render_paths --dataset ${DATASET_NAME} --config configs/paths.yaml --dataset-config ${DATASET_CONFIG} --format bash)"
+eval "$(python3 -m scripts.render_paths --dataset ${DATASET_NAME} --config configs/paths.yaml --dataset-config ${DATASET_CONFIG} --format bash)"
 
 if [ -z "${SUBLIST_FILE}" ]; then
   SUBLIST_FILE="${PROCESSED_ROOT}/table/sublist/taskfmri_sublist.txt"

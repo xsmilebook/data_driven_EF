@@ -87,7 +87,7 @@ else
   fmriprep_input="${fmriprep_Path}"
 fi
 
-python -m scripts.build_task_xcpd_confounds \
+python3 -m scripts.build_task_xcpd_confounds \
   --subject "${subj}" \
   --task "${task}" \
   --out-root "${custom_confounds_root}" \

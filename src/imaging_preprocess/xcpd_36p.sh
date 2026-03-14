@@ -8,7 +8,7 @@
 module load singularity
 subj=$1
 
-eval "$(python -m scripts.render_paths --dataset EFNY --config configs/paths.yaml --format bash)"
+eval "$(python3 -m scripts.render_paths --dataset EFNY --config configs/paths.yaml --format bash)"
 fmriprep_Path=${FMRIPREP_DIR}
 if [ -z "$fmriprep_Path" ]; then
   echo "ERROR: FMRIPREP_DIR is not set. Configure external_inputs.fmriprep_dir in configs/datasets/EFNY.yaml" 1>&2

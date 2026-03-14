@@ -7,6 +7,7 @@ Real-time development log for the refactor of `data_driven_EF`.
 ## Completed
 
 - Corrected task-fMRI custom-confounds timing semantics: `scripts/build_task_xcpd_confounds.py` now aligns task regressors to `MRI_Signal_s.started + MRI_Signal_s.rt`, keeps `state_*` confined to the formal stimulus sequence (excluding cue/fixation), and documents `response` as the actual keypress time (`key_resp.started + key_resp.rt`); updated `docs/workflow.md`, `docs/methods.md`, `docs/reports/task_fmri_beh_data_handbook.md`, and `docs/reports/task_fmri_xcpd_pipeline.md`.
+- Switched imaging-preprocess shell entrypoints from `python` to `python3` for config/path rendering and task-confounds generation, fixing login-node failures caused by the cluster defaulting `python` to Python 2.7.
 - Added a safe legacy-archive CLI (`scripts/archive_legacy_snapshot.py`) for creating branch+annotated-tag snapshots before v2 rewrite (preview by default, execute via `--execute`).
 - Added a v2 minimal pipeline skeleton (`scripts/v2_run_pipeline.py`, `src/models/v2_pipeline.py`) that resolves config paths and profiles cleaned behavioral tables.
 - Added migration docs for v2 bootstrap and cutover gates: `docs/reports/v2_minimal_dev_skeleton.md` and `docs/reports/v2_migration_acceptance_checklist.md`; updated `README.md`, `docs/README.md`, and `docs/workflow.md`.
