@@ -1,18 +1,11 @@
 ﻿# data_driven_EF
+This repository contains end-to-end pipeline for EF analysis:
+- neuroimaging and behavioral data preprocessing
+- functional connectivity (FC) calculation and vectorization
+- behavioral metrics calculation
+- brain-behavior association analysis (only adaptive models: `adaptive_pls` / `adaptive_scca` / `adaptive_rcca`)
 
-本仓库包含 EF（执行功能）研究的端到端流程：
-- 数据 QC / 被试列表
-- 功能连接（FC）计算与向量化
-- 行为指标计算
-- 脑-行为关联分析（仅保留自适应模型：`adaptive_pls` / `adaptive_scca` / `adaptive_rcca`）
-
-当前新增了“v1 存档 + v2 最小骨架”入口，支持在保留历史可追溯性的前提下，基于已清洗数据重新开发：
-- 存档入口：`python -m scripts.archive_legacy_snapshot`
-- v2 骨架入口：`python -m scripts.v2_run_pipeline`
-
-下面仅列出常用脚本的执行方式与关键参数。
-
-## 目录结构（核心）
+## Directory structure (core)
 
 ```
 src/
@@ -23,10 +16,7 @@ src/
   result_summary/        # 结果汇总脚本
 ```
 
-## 输出位置（约定）
+## Output locations (convention)
 
-常用输出：
-- QC / 中间结果：`data/interim/...`
-- 表格与处理后产物：`data/processed/...`
-- 脑-行为关联结果：`outputs/results/...`（可通过 `--output_dir` 指定）
-- 大型数组（如每折 `X_scores/Y_scores`）会保存到同目录下 `artifacts/`，JSON/NPZ 仅保留索引与路径
+Common outputs：
+
