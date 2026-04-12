@@ -8,7 +8,7 @@
 #SBATCH --array=0-10
 
 source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
-conda activate ML
+conda activate hssm_env
 
 project_dir="/ibmgpfs/cuizaixu_lab/xuhaoshu/projects/data_driven_EF"
 paths_config="${project_dir}/configs/paths.yaml"
