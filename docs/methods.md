@@ -156,43 +156,21 @@
 - 外层折的最优参数与内层 CV 统计。
 - 外层测试集典型相关及其均值。
 - 外层训练集典型相关（用于诊断）。
-- 若模型提供，则包含加载（loadings）。
+- 若模型提供，则包含loadings。
 
 汇总输出包括：
 
 - `outer_mean_canonical_correlations` 与 `outer_std_canonical_correlations`
 - 外层测试相关矩阵（用于后续汇总）
 
-结果保存路径：
-
-```
-outputs/results/real/<atlas>/<model_type>/seed_<seed>/
-```
-
 ## 置换检验（逐成分）
-
-当 `task_id > 0` 时，`scripts/run_single_task.py` 进入置换流程。
 
 ### 1) 置换种子与打乱方式
 
 - `permutation_seed = random_state + task_id`
 - 对 Y 做被试行打乱，X 保持不变。
 
-### 2) 真实数据摘要的依赖
-
-置换检验依赖真实数据的逐成分摘要，由以下脚本生成：
-
-- `src/result_summary/summarize_real_loadings_scores.py`
-
-读取路径：
-
-```
-outputs/results/summary/<atlas>/<model_type>/
-```
-
-摘要包含真实数据的逐成分得分与被试得分，用于后续逐成分置换。
-
-### 3) 逐成分置换流程
+### 2) 逐成分置换流程
 
 令 `n_components` 为真实摘要中的成分数量。对每个 `k = 1..n_components`：
 
@@ -205,12 +183,3 @@ outputs/results/summary/<atlas>/<model_type>/
 
 置换结果保存每个 k 的得分与嵌套 CV 细节。
 
-### 4) 输出位置
-
-置换结果保存路径：
-
-```
-outputs/results/perm/<atlas>/<model_type>/seed_<seed>/
-```
-
-元数据包含置换种子与 `configs/analysis.yaml` 中的 `permutation_n_iters`（用于可追溯性记录）。
