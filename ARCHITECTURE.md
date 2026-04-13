@@ -32,12 +32,15 @@ data_driven_EF/                 # 项目根目录
 │   ├── external/               # 外部第三方输入
 │   ├── raw/                    # 原始输入（非脚本产出）
 │   │   ├── THU/
+│   │   │   ├── app_data/       # 原始的行为任务数据
 │   │   │   ├── bids/
 │   │   │   └── metadata/
 │   │   ├── XY/
+│   │   │   ├── app_data/       # 原始的行为任务数据
 │   │   │   ├── bids/
 │   │   │   └── metadata/
 │   │   └── BNU/
+│   │       ├── app_data/       # 原始的行为任务数据
 │   │       ├── bids/
 │   │       └── metadata/
 │   ├── interim/                # 中间衍生结果
