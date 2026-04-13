@@ -28,13 +28,46 @@ data_driven_EF/                 # 项目根目录
 │
 ├── scripts/                    # 执行入口（HPC/主流程脚本）
 │
-├── data/                       # 项目分析数据（不纳入版本控制）
+├── data/                       # 项目分析数据（不纳入版本控制），用于存放数据型对象：预处理结果，connectivity matrix，analysis-ready tables
 │   ├── external/               # 外部第三方输入
 │   ├── raw/                    # 原始输入（非脚本产出）
+│   │   ├── THU/
+│   │   │   ├── bids/
+│   │   │   └── metadata/
+│   │   ├── XY/
+│   │   │   ├── bids/
+│   │   │   └── metadata/
+│   │   └── BNU/
+│   │       ├── bids/
+│   │       └── metadata/
 │   ├── interim/                # 中间衍生结果
+│   │   ├── THU/
+│   │   │   ├── fmriprep/
+│   │   │   ├── xcpd/
+│   │   │   └── qc/
+│   │   ├── XY/
+│   │   │   ├── fmriprep/
+│   │   │   ├── xcpd/
+│   │   │   └── qc/
+│   │   └── BNU/
+│   │       ├── fmriprep/
+│   │       ├── xcpd/
+│   │       └── qc/
 │   └── processed/              # 可复用清洗结果
+│       ├── THU/
+│       │   ├── functional_connectivity/
+│       │   ├── behavioral_metrics/
+│       │   └── demography/
+│       ├── XY/
+│       │   ├── functional_connectivity/
+│       │   ├── behavioral_metrics/
+│       │   └── demography/
+│       └── BNU/
+│           ├── functional_connectivity/
+│           ├── behavioral_metrics/
+│           └── demography/  
 │
-├── outputs/                    # 运行产物（不纳入版本控制）
+├── outputs/                    # 运行产物（不纳入版本控制），用于存放展示型对象：figures、tables、reports、logs
 │   ├── figures/                # 图表输出
 │   ├── logs/                   # 运行日志（脚本/SLURM日志）
 │   ├── results/                # 结果文件
@@ -42,6 +75,5 @@ data_driven_EF/                 # 项目根目录
 │
 ├── tests/                      # 项目测试脚本（不纳入版本控制）
 │
-├── notebooks/                  # 探索性分析（不纳入版本控制）
-└── models/                     # 序列化模型产物（不纳入版本控制）
+└── notebooks/                  # 探索性分析（不纳入版本控制）
 ```
