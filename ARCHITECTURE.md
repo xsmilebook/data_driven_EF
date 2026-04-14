@@ -33,14 +33,17 @@ data_driven_EF/                 # 项目根目录
 │   ├── raw/                    # 原始输入（非脚本产出）
 │   │   ├── THU/
 │   │   │   ├── app_data/       # 原始的行为任务数据
+│   │   │   ├── inventory/       # 原始的量表数据
 │   │   │   ├── bids/
 │   │   │   └── metadata/
 │   │   ├── XY/
 │   │   │   ├── app_data/       # 原始的行为任务数据
+│   │   │   ├── inventory/       # 原始的量表数据
 │   │   │   ├── bids/
 │   │   │   └── metadata/
 │   │   └── BNU/
 │   │       ├── app_data/       # 原始的行为任务数据
+│   │       ├── inventory/       # 原始的量表数据
 │   │       ├── bids/
 │   │       └── metadata/
 │   ├── interim/                # 中间衍生结果
@@ -56,17 +59,17 @@ data_driven_EF/                 # 项目根目录
 │   │       ├── fmriprep/
 │   │       ├── xcpd/
 │   │       └── qc/
-│   └── processed/              # 可复用清洗结果
+│   └── processed/                            # 可复用清洗结果
 │       ├── THU/
-│       │   ├── functional_connectivity/
+│       │   ├── functional_connectivity/      # 功能连接矩阵
 │       │   ├── behavioral_metrics/
 │       │   └── demography/
 │       ├── XY/
-│       │   ├── functional_connectivity/
+│       │   ├── functional_connectivity/      # 功能连接矩阵
 │       │   ├── behavioral_metrics/
 │       │   └── demography/
 │       └── BNU/
-│           ├── functional_connectivity/
+│           ├── functional_connectivity/      # 功能连接矩阵
 │           ├── behavioral_metrics/
 │           └── demography/  
 │
