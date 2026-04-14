@@ -1,4 +1,5 @@
-﻿# data_driven_EF
+# data_driven_EF
+
 This repository contains end-to-end pipeline for EF analysis:
 - neuroimaging and behavioral data preprocessing
 - functional connectivity (FC) calculation and vectorization
@@ -7,16 +8,22 @@ This repository contains end-to-end pipeline for EF analysis:
 
 ## Directory structure (core)
 
-```
+```text
 src/
-  imaging_preprocess/    # 影像预处理与功能连接
-  behavioral_preprocess/ # 行为数据预处理与指标计算
-  models/                # 脑-行为关联（建模评估/嵌套 CV）
-  scripts/               # 入口脚本 + HPC 提交脚本
-  result_summary/        # 结果汇总脚本
+  common.py              # 薄通用工具
+  imaging/               # 影像预处理与影像指标提取
+  behavior/              # app/task-fMRI/量表/demography 预处理
+
+scripts/
+  imaging/               # fmriprep/xcpd/connectivity 入口脚本
+  behavior/              # check_format/clean/metrics/score 入口脚本
 ```
+
+Behavior preprocessing follows a fixed three-stage pattern where possible:
+- `check_format`: check raw file format, column names, and required identifiers
+- `clean`: apply trial-level and subject-level cleaning
+- `metrics` / `score`: compute task metrics or scale scores
 
 ## Output locations (convention)
 
-Common outputs：
-
+Common outputs:
