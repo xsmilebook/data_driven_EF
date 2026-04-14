@@ -21,10 +21,6 @@ data_driven_EF/                 # 项目根目录
 │   ├── sessions/               # 会话记录（yy/mm/dd.md）
 │
 ├── src/                        # 可复用模块（不含硬编码路径）
-│   ├── imaging_preprocess/     # 影像预处理、QC、功能连接计算
-│   ├── behavioral_preprocess/  # 行为数据预处理与指标计算
-│   ├── models/                 # 建模与评估工具
-│   └── result_summary/         # 结果汇总与报告工具
 │
 ├── scripts/                    # 执行入口（HPC/主流程脚本）
 │
