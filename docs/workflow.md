@@ -46,3 +46,14 @@
 - 保持每个脚本职责单一，便于局部重跑。
 - 让用户通过脚本名即可判断其输入、输出和执行阶段。
 - 在不增加过多抽象层的前提下，为多 task 和长耗时影像流程提供清晰边界。
+
+## app_data 清洗参数探索
+
+对于 `app_data` 的探索性试次清洗参数分析，当前在 [notebooks/app_data_eda/app_data_trial_cleaning_parameter_exploration.ipynb](/D:/projects/data_driven_EF/notebooks/app_data_eda/app_data_trial_cleaning_parameter_exploration.ipynb) 中维护独立 notebook。
+
+该 notebook 直接读取 `data/raw/*/app_data/*.xlsx`，围绕 `相对时间(秒)` 提供以下统计：
+
+- 当 `相对时间(秒) < 0.1` 或 `< 0.2` 时，平均每个被试有多少个 sheet 出现无效试次，以及平均每个 sheet 有多少个无效试次。
+- 当每个 sheet 内 `相对时间(秒) > mean + 3 s.d.` 时，平均每个 sheet 有多少个高阈值无效试次。
+
+该 notebook 的定位是参数探索，不替代正式预处理脚本。
