@@ -19,16 +19,17 @@
 
 #### data clean and trial exclusion
 
-- `normalize_columns` 将常见中文列名映射为英文字段（`task`, `trial_index`, `subject_id`, `item`, `answer`, `key`, `rt` 等）。
-- `subject_code` 由文件名去掉 `_GameData.xlsx` 得到（`subject_code_from_filename`）。
-- 任务名映射由 `main.py` 按 sheet 名称解析并规范化。
-- `prepare_trials` 会：
-  - 若缺少 `correct_trial`，基于 `answer == key` 计算；
-  - 将 `rt` 转为数值（`errors='coerce'`），并按 `[rt_min, rt_max]` 过滤；
-  - 在可用 RT 上做 3 SD 修剪；
-  - 若有效试次比例低于 `min_prop`，该任务标记为无效（`ok=False`）。
+被试任务内试次清洗流程（对于data\raw\THU\app_data目录下的所有文件）：
+- 将常见中文列名映射为英文字段（`task`, `trial_index`, `subject_id`, `name`, `item`, `answer`, `key`, `rt`(相对时间) 等）。
+- 由文件名去掉 `_GameData.xlsx` 得到 `subject_code`。
+- 清洗试次规则（对于每个被试的每个任务）：
+  - 若缺少 `correct_trial`，基于 `answer == key` 计算生成该列；
+  - 将 `rt` 转为数值（`errors='coerce'`），并按 `[rt_min, rt_max]` 过滤（默认rt_min=0.2, rt_max=10）；
+  - 若有效试次比例低于 `min_prop=0.5`（默认值），该任务标记为无效（`ok=False`）。
 
 #### 指标计算总流程与定义口径
+
+经过被试任务内试次清洗后，计算指标：
 
 1) N-back（`type: nback`）
 
