@@ -15,100 +15,173 @@
 #### head motion qc
 
 
-### behaioral data preprocess
+### behavioral data preprocess
 
-#### data clean and trial exclusion
+本节定义 THU `app_data` 行为任务预处理的 v1 实现规格。该规格用于后续实现
+`scripts/behavior/app_check_format.py`、`scripts/behavior/app_clean.py` 与
+`scripts/behavior/app_metrics.py`；本节不要求生成运行时结果。
 
-被试任务内试次清洗流程（对于data\raw\THU\app_data目录下的所有文件）：
-- 将常见中文列名映射为英文字段（`task`, `trial_index`, `subject_id`, `name`, `item`, `answer`, `key`, `rt`(相对时间) 等）。
-- 由文件名去掉 `_GameData.xlsx` 得到 `subject_code`。
-- 清洗试次规则（对于每个被试的每个任务）：
-  - 若缺少 `correct_trial`，基于 `answer == key` 计算生成该列；
-  - 将 `rt` 转为数值（`errors='coerce'`），并按 `[rt_min, rt_max]` 过滤（默认rt_min=0.2, rt_max=10）；
-  - 若有效试次比例低于 `min_prop=0.5`（默认值），该任务标记为无效（`ok=False`）。
+#### 数据范围
 
-#### 指标计算总流程与定义口径
+- 输入范围：`data/raw/THU/app_data/*.xlsx`。
+- 数据单位：每个 workbook 视为 1 名被试，每个 sheet 视为 1 个任务表。
+- `subject_code`：由 workbook 文件名移除 `_GameData.xlsx` 后得到。
+- v1 支持当前观察到的 18 类 app 任务 sheet：
+  `FLANKER`、`SST`、`FZSS`、`DT`、`ColorStroop`、`EmotionStroop`、`CPT`、
+  `EmotionSwitch`、`Number1Back`、`Number2Back`、`Spatial1Back`、`Spatial2Back`、
+  `Emotion1Back`、`Emotion2Back`、`KT`、`ZYST`、`DCCS`、`GNG`。
+- XY、BNU、inventory、demography 与 task-fMRI 行为日志不纳入本 v1 口径，后续单独补充。
 
-经过被试任务内试次清洗后，计算指标：
+#### 字段标准化
 
-1) N-back（`type: nback`）
+原始中文列名在读入后映射为稳定英文列名。标准字段如下：
 
-- 试次分类：以 `item` 序列定义 `target`（与 `n_back` 步前相同）与 `nontarget`。
-- 指标：
-  - `ACC`：全部有效试次正确率。
-  - `RT_Mean`/`RT_SD`：全部有效试次 RT 均值与标准差。
-  - `Hit_Rate`：`target` 试次正确率。
-  - `FA_Rate`：`nontarget` 试次错误率。
-  - `dprime`：由 `Hit_Rate` 与 `FA_Rate` 计算。
+- `任务` -> `task`
+- `游戏序号` -> `trial_index`
+- `被试编号（用户账号）` -> `subject_id`
+- `被试姓名（真实姓名)` -> `name`
+- `正式阶段刺激图片/Item名` -> `item`
+- `正式阶段正确答案` -> `answer`
+- `正式阶段被试按键` -> `key`
+- `相对时间(秒)` -> `rt`
+- `SSRT` -> `ssrt_or_ssd`
+- `空屏时长`、`全部时间(秒)`、`crossPicDur` 在 CPT 中保留为任务特异辅助字段。
 
-2) 冲突任务（`type: conflict`；Flanker/ColorStroop/EmotionStroop）
+Excel 原始列中的 `平均反应时(秒)` 与 `正确率` 仅作为原始记录保留，不作为最终
+`RT_Mean` 或 `ACC` 的来源。最终指标必须由标准化试次长表重新计算。
 
-- 条件划分：由 `item` 解析 `congruent` 与 `incongruent`，具体解析规则按任务名区分（例如 Flanker 的末尾方向、Stroop 的图片-文字一致性/序号规则）。
-- 指标：
-  - `ACC`/`RT_Mean`/`RT_SD`：整体正确率与 RT 统计。
-  - `Congruent_ACC`/`Congruent_RT`、`Incongruent_ACC`/`Incongruent_RT`：条件内统计。
-  - `Contrast_RT = Incongruent_RT - Congruent_RT`。
-  - `Contrast_ACC = Incongruent_ACC - Congruent_ACC`。
+#### 格式检查
 
-3) 任务切换（`type: switch`；DCCS/DT/EmotionSwitch）
+`check_format` 阶段只检查原始表结构，不改变输入文件：
 
-- 规则序列：
-  - DCCS：以 `item` 的首字符代表规则。
-  - DT：以 `item` 是否包含 `T/t` 映射为 `TN/CN` 规则。
-  - EmotionSwitch：以 `item` 数字区间映射 emotion/gender 规则。
-- 切换定义：与前一试次规则不同为 `switch`，相同为 `repeat`，并可用 `mixed_from` 丢弃前期非混合段。
-  - 当前 block 约定（EFNY app）：DCCS 的 pure block 为 1–20（mixed 从 21 开始）；DT 与 EmotionSwitch 的 pure block 为 1–64（mixed 从 65 开始）。
-- 指标：
-  - `ACC`/`RT_Mean`/`RT_SD`：整体统计。
-  - `Repeat_ACC`/`Repeat_RT`、`Switch_ACC`/`Switch_RT`：条件内统计。
-  - `Switch_Cost_RT = Switch_RT - Repeat_RT`。
-  - `Switch_Cost_ACC = Switch_ACC - Repeat_ACC`。
+- 检查每个 workbook 是否至少包含 1 个受支持任务 sheet。
+- 检查通用必需列：`任务`、`游戏序号`、`被试编号（用户账号）`、`正式阶段正确答案`、
+  `正式阶段被试按键`、`相对时间(秒)`。
+- 检查任务特异列：SST 必须包含 `SSRT`；CPT 若存在 `空屏时长`、`全部时间(秒)`、
+  `crossPicDur` 则原样保留。
+- 对缺失关键列、空 sheet、未知 sheet 名、重复 `subject_code`-`task` 组合生成 QC 记录。
+- 格式检查不因单个任务失败而中断全体扫描；失败任务在 QC 表中标记，后续清洗跳过。
 
-4) 停止信号任务（`type: sst`）
+#### 试次清洗与排除
 
-- 基于 `SSRT`/`ssd_var` 划分 stop 与 go 试次；stop 试次正确性以“未按键”为抑制成功。
-- go 试次 RT 进行 `rt_max` 与 3 SD 修剪，并要求有效比例不低于 `min_prop`。
-- 指标：
-  - `ACC`：所有试次正确率。
-  - `Stop_ACC`：stop 试次抑制成功率。
-  - `Mean_SSD`：stop 试次 SSD 均值。
-  - `SSRT`：采用积分法，`SSRT = Go_RT_quantile(p) - Mean_SSD`，其中 `p = 1 - Stop_ACC`。
-  - `Go_RT_Mean`/`Go_RT_SD`：go 正确试次 RT 统计。
+清洗以 `subject_code`-`task` 为单位执行，默认参数来自未来
+`configs/behavioral_metrics.yaml`：
 
-5) Go/No-Go 与 CPT（`type: gonogo`）
+- `rt_min=0.2`
+- `rt_max=10`
+- `rt_outlier_sd=3`
+- `min_valid_prop=0.5`
 
-- 试次分类：`answer` 为 true/yes/1 视为 go，false/no/0 视为 nogo。
-- go 试次 RT 进行 `rt_max` 与 3 SD 修剪，并要求有效比例不低于 `min_prop`。
-- 指标：
-  - `ACC`：全体正确率。
-  - `Go_ACC`/`NoGo_ACC`：go/nogo 正确率。
-  - `Go_RT_Mean`/`Go_RT_SD`：go 有效试次 RT 统计。
-  - `dprime`：`Go_ACC` 作为命中率，`1 - NoGo_ACC` 作为虚报率。
+通用清洗规则：
 
-6) ZYST（`type: zyst`）
+- `rt` 使用数值转换，非数值记为缺失。
+- `correct_trial` 由 `answer == key` 派生；比较前去除首尾空白，缺失值不视为相等。
+- `valid_for_acc` 表示该试次可用于准确率或抑制成功率计算。
+- `valid_for_rt` 表示该试次可用于 RT 指标计算。
+- `valid_for_acc` 与 `valid_for_rt` 分开维护。SST stop 试次、GNG/CPT nogo 试次等允许无反应的试次，不因 `rt` 缺失被排除出准确率计算。
+- RT 指标只使用满足 `rt_min <= rt <= rt_max` 的试次，并在任务内进一步排除
+  `rt > mean + rt_outlier_sd * sd` 的高值试次。
+- 任务内 `valid_prop = n_valid_acc / n_trials_raw`；若 `valid_prop < min_valid_prop`，
+  该任务标记为 `ok=False`，指标输出为缺失或不输出，并在 `qc_reason` 中记录原因。
 
-- 试次解析：`trial_index` 解析为 `(trial, subtrial)`，仅保留含 0/1 子试次的 trial。
-- 反应率门槛：`resp_var` 有效数量需达到 `min_resp`。
-- 指标：
-  - `ACC`/`RT_Mean`/`RT_SD`：整体统计。
-  - `T0_ACC`/`T1_ACC`：子试次 0/1 的正确率。
-  - `T1_given_T0_ACC`：在 T0 正确的条件下 T1 正确率。
-  - `T0_RT`/`T1_RT`：子试次 RT 均值。
+#### 指标计算与输出
 
-7) FZSS（`type: fzss`）
+所有指标均基于清洗后的标准化长表计算。比例指标在分母为 0 时记为缺失；`dprime`
+计算需对 0 或 1 的命中率/虚报率做有限样本校正。
 
-- 正确性：以 `answer == key` 定义正确试次。
-- 指标：
-  - `ACC`/`RT_Mean`/`RT_SD`：整体正确率与正确试次 RT 统计。
-  - `Miss_Rate`：在 `answer == right` 子集中，`key != right` 的比例。
-  - `FA_Rate`：在 `answer == left` 子集中，`key == right` 的比例。
-  - `Correct_RT_Mean`/`Correct_RT_SD`：正确试次 RT 统计。
+1. N-back（`Number1Back`、`Number2Back`、`Spatial1Back`、`Spatial2Back`、
+   `Emotion1Back`、`Emotion2Back`）
 
-8) KT（`type: kt`）
+- `n_back` 由任务名中的 `1Back` 或 `2Back` 确定。
+- 以 `item` 序列定义 `target`：当前 `item` 与前 `n_back` 个试次的 `item` 相同。
+- 前 `n_back` 个无法判定 target 的试次不进入 `Hit_Rate` 与 `FA_Rate` 分母。
+- 输出：`ACC`、`RT_Mean`、`RT_SD`、`Hit_Rate`、`FA_Rate`、`dprime`。
 
-- 指标：
-  - `ACC`/`RT_Mean`/`RT_SD`：整体统计。
-  - `Overall_ACC` 与 `Mean_RT` 为与 `ACC`、`RT_Mean` 等价的重复输出，用于下游兼容。
+2. 冲突任务（`FLANKER`、`ColorStroop`、`EmotionStroop`）
+
+- `FLANKER`：由 `item` 中末尾方向组合判定一致/不一致，如 `LL`、`RR` 为
+  `congruent`，`LR`、`RL` 为 `incongruent`。
+- `ColorStroop`：解析 `Pic_<color>_Text_<color>`，图片颜色与文字颜色相同为
+  `congruent`，不同为 `incongruent`。
+- `EmotionStroop`：按任务规则将 `item` 或答案编码映射到情绪一致/不一致条件；若无法解析，记录为条件缺失，不进入条件指标分母。
+- 输出：`ACC`、`RT_Mean`、`RT_SD`、`Congruent_ACC`、`Congruent_RT`、
+  `Incongruent_ACC`、`Incongruent_RT`、`Contrast_RT`、`Contrast_ACC`。
+- `Contrast_RT = Incongruent_RT - Congruent_RT`；`Contrast_ACC = Incongruent_ACC - Congruent_ACC`。
+
+3. 任务切换（`DCCS`、`DT`、`EmotionSwitch`）
+
+- `DCCS`：以 `item` 首字符代表规则。
+- `DT`：以 `item` 中的任务线索映射规则；当前 THU app 记录中优先按既定任务规则解析
+  `CN`/`TN` 或等价编码。
+- `EmotionSwitch`：以 `item` 中的规则线索映射 emotion/gender 规则。
+- 只在 mixed block 计算 switch/repeat 指标：DCCS 从 trial 21 开始；DT 与
+  EmotionSwitch 从 trial 65 开始。
+- 当前试次规则与上一可解析试次规则不同为 `switch`，相同为 `repeat`；mixed block
+  首个可解析试次不进入 switch/repeat 分母。
+- 输出：`ACC`、`RT_Mean`、`RT_SD`、`Repeat_ACC`、`Repeat_RT`、`Switch_ACC`、
+  `Switch_RT`、`Switch_Cost_RT`、`Switch_Cost_ACC`。
+- `Switch_Cost_RT = Switch_RT - Repeat_RT`；`Switch_Cost_ACC = Switch_ACC - Repeat_ACC`。
+
+4. 停止信号任务（`SST`）
+
+- `ssrt_or_ssd` 有数值的试次视为 stop 试次；缺失或 `-` 视为 go 试次。
+- stop 试次正确性为未按键；go 试次正确性为 `answer == key`。
+- go RT 指标仅使用正确 go 试次，并应用 RT 范围与 3 SD 修剪。
+- 输出：`ACC`、`Stop_ACC`、`Mean_SSD`、`SSRT`、`Go_RT_Mean`、`Go_RT_SD`。
+- `SSRT` 采用积分法：`SSRT = Go_RT_quantile(p) - Mean_SSD`，其中
+  `p = 1 - Stop_ACC`。
+
+5. Go/No-Go 与 CPT（`GNG`、`CPT`）
+
+- `answer` 为 `true`、`yes`、`1` 或等价真值时视为 go；`false`、`no`、`0`
+  或等价假值时视为 nogo。
+- go 正确为按键符合目标反应；nogo 正确为无反应或记录为抑制成功。
+- RT 指标仅使用正确 go 试次，并应用 RT 范围与 3 SD 修剪；nogo 试次不进入 RT 分母。
+- 输出：`ACC`、`Go_ACC`、`NoGo_ACC`、`Go_RT_Mean`、`Go_RT_SD`、`dprime`。
+- `dprime` 中 `Go_ACC` 作为命中率，`1 - NoGo_ACC` 作为虚报率。
+
+6. ZYST（`ZYST`）
+
+- `trial_index` 解析为 `(trial, subtrial)`，仅保留包含 0 与 1 两个子试次的 trial
+  进入条件化指标。
+- `T1_given_T0_ACC` 只在 T0 正确的 trial 中计算 T1 正确率。
+- 输出：`ACC`、`RT_Mean`、`RT_SD`、`T0_ACC`、`T1_ACC`、`T1_given_T0_ACC`、
+  `T0_RT`、`T1_RT`。
+
+7. FZSS（`FZSS`）
+
+- 正确性由 `answer == key` 定义。
+- `Miss_Rate`：在 `answer == right` 的试次中，`key != right` 的比例。
+- `FA_Rate`：在 `answer == left` 的试次中，`key == right` 的比例。
+- 输出：`ACC`、`RT_Mean`、`RT_SD`、`Miss_Rate`、`FA_Rate`、
+  `Correct_RT_Mean`、`Correct_RT_SD`。
+
+8. KT（`KT`）
+
+- 正确性由 `answer == key` 定义。
+- 输出：`ACC`、`RT_Mean`、`RT_SD`、`Overall_ACC`、`Mean_RT`。
+- `Overall_ACC` 与 `Mean_RT` 分别与 `ACC`、`RT_Mean` 等价，用于下游兼容。
+
+目标输出表：
+
+- 清洗长表：`dataset`、`subject_code`、`task`、`trial_index`、`item`、`answer`、
+  `key`、`rt`、`correct_trial`、`valid_for_acc`、`valid_for_rt`、`exclusion_reason`。
+- 任务 QC 表：`subject_code`、`task`、`n_trials_raw`、`n_valid_acc`、`n_valid_rt`、
+  `valid_prop`、`ok`、`qc_reason`。
+- 指标长表：`subject_code`、`task`、`metric`、`value`。
+- 指标宽表：以 `subject_code` 为行，将 `task_metric` 展开为列，用于下游脑-行为关联分析。
+
+建议输出目录为 `data/processed/THU/behavioral_metrics/`。该目录属于运行产物区域，
+不纳入版本控制。
+
+验证口径：
+
+- 使用 1-3 个 THU workbook 做非持久化冒烟验证，确认 18 类任务 sheet 可被识别。
+- 检查关键中文列存在，SST/CPT/GNG 的无反应试次不会因 RT 缺失被错误排除出准确率分母。
+- 对 N-back target、Flanker/Stroop congruent、switch/repeat、SST stop/go、
+  GNG/CPT go/nogo 各抽样核对至少 1 个试次。
+- 文档或实现修改后执行 `git diff --check`；若只修改方法文档，不运行完整预处理。
+- 若临时验证写入 `temp/` 或 `tmp/`，验证完成后立即清理。
 
 ## 嵌套交叉验证（真实数据）
 
