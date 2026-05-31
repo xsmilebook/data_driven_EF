@@ -41,11 +41,13 @@ def calculate(
     nontarget = classified.loc[~classified["target"].astype(bool)]
     hit_rate = safe_rate(target["correct_trial"])
     false_alarm_rate = safe_rate(~nontarget["correct_trial"].astype(bool))
+    hits = int(target["correct_trial"].fillna(False).astype(bool).sum())
+    false_alarms = int((~nontarget["correct_trial"].fillna(False).astype(bool)).sum())
     metrics.update(
         {
             "Hit_Rate": hit_rate,
             "FA_Rate": false_alarm_rate,
-            "dprime": dprime(hit_rate, false_alarm_rate),
+            "dprime": dprime(hits, len(target), false_alarms, len(nontarget)),
         }
     )
     warnings = ["nback_item_missing"] if working["stimulus"].isna().any() else []

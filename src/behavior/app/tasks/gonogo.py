@@ -16,6 +16,8 @@ def calculate(frame: pd.DataFrame) -> tuple[dict[str, float], list[str]]:
     go_acc = safe_rate(go["correct_trial"])
     nogo_acc = safe_rate(nogo["correct_trial"])
     go_rt_mean, go_rt_sd = correct_rt_stats(go)
+    hits = int(go["correct_trial"].fillna(False).astype(bool).sum())
+    false_alarms = int((~nogo["correct_trial"].fillna(False).astype(bool)).sum())
     warnings = [] if len(classified) == len(valid) else ["gonogo_unclassified_trials"]
     return (
         {
@@ -24,7 +26,7 @@ def calculate(frame: pd.DataFrame) -> tuple[dict[str, float], list[str]]:
             "NoGo_ACC": nogo_acc,
             "Go_RT_Mean": go_rt_mean,
             "Go_RT_SD": go_rt_sd,
-            "dprime": dprime(go_acc, 1 - nogo_acc),
+            "dprime": dprime(hits, len(go), false_alarms, len(nogo)),
         },
         warnings,
     )

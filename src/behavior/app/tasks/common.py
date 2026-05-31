@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from statistics import NormalDist
 
-import numpy as np
 import pandas as pd
 
 
@@ -48,15 +47,15 @@ def base_metrics(
     }
 
 
-def dprime(hit_rate: float, false_alarm_rate: float) -> float:
-    if (
-        not np.isfinite(hit_rate)
-        or not np.isfinite(false_alarm_rate)
-        or hit_rate <= 0
-        or hit_rate >= 1
-        or false_alarm_rate <= 0
-        or false_alarm_rate >= 1
-    ):
+def dprime(
+    hit_count: int,
+    signal_count: int,
+    false_alarm_count: int,
+    noise_count: int,
+) -> float:
+    if signal_count <= 0 or noise_count <= 0:
         return float("nan")
+    hit_rate = (hit_count + 0.5) / (signal_count + 1)
+    false_alarm_rate = (false_alarm_count + 0.5) / (noise_count + 1)
     normal = NormalDist()
     return float(normal.inv_cdf(hit_rate) - normal.inv_cdf(false_alarm_rate))

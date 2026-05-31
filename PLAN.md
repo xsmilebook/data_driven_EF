@@ -17,6 +17,8 @@
 - Emotion2Back 中 item 全空的 sheet 保留整体 ACC/RT，但条件化指标为空并记录
   `nback_item_missing`。
 - KT 仅输出 `ACC`。
+- `dprime` 使用 Hautus log-linear 校正：命中数与虚报数均加 `0.5`，对应分母加
+  `1`；仅在 signal 或 noise trial 数为 0 时输出空值。
 - 使用 3 个 workbook 做非持久化冒烟测试；随后重跑全量 `clean` 与 `metrics`，
   并复查全空列、常数列和高缺失列。
 
