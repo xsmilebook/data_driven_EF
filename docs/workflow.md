@@ -58,3 +58,55 @@
 - 当每个 sheet 内 `相对时间(秒) > mean + 3 s.d.` 时，平均每个 sheet 有多少个高阈值无效试次。
 
 该 notebook 的定位是参数探索，不替代正式预处理脚本。
+
+## THU app_data 正式预处理
+
+THU `app_data` 的正式流水线已实现为三个顺序执行入口：
+
+```powershell
+uv run python -m scripts.behavior.app_check_format --dataset THU
+uv run python -m scripts.behavior.app_clean --dataset THU
+uv run python -m scripts.behavior.app_metrics --dataset THU
+```
+
+默认输入为 `data/raw/THU/app_data/*.xlsx`，默认输出目录为
+`data/processed/THU/behavioral_metrics/`。路径在 `configs/paths.yaml` 中配置，
+字段映射、RT 阈值、任务注册和随机正确率阈值在
+`configs/behavioral_metrics.yaml` 中配置。
+
+三个入口分别生成：
+
+- `app_format_qc.csv`：workbook/sheet 格式检查记录。
+- `app_trials_clean.csv`：标准化试次长表及 RT 排除原因。
+- `app_task_qc.csv`：任务级准确率阈值检查记录。
+- `app_metrics_long.csv`：长格式任务指标。
+- `app_metrics_wide.csv`：用于下游分析的被试级宽表。
+
+小样本验证可使用：
+
+```powershell
+uv run python -m scripts.behavior.app_check_format --dataset THU --limit 3 --output-dir temp/smoke_app_behavior
+uv run python -m scripts.behavior.app_clean --dataset THU --limit 3 --output-dir temp/smoke_app_behavior
+uv run python -m scripts.behavior.app_metrics --dataset THU --output-dir temp/smoke_app_behavior
+```
+
+全量运行预计适合单节点顺序执行。SLURM 示例：
+
+```bash
+#!/bin/bash
+#SBATCH --job-name=ef_app_behavior
+#SBATCH --output=outputs/logs/ef_app_behavior_%j.out
+#SBATCH --error=outputs/logs/ef_app_behavior_%j.err
+#SBATCH --time=02:00:00
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=8G
+
+cd /path/to/data_driven_EF
+uv run python -m scripts.behavior.app_check_format --dataset THU
+uv run python -m scripts.behavior.app_clean --dataset THU
+uv run python -m scripts.behavior.app_metrics --dataset THU
+```
+
+EmotionStroop 的一致/不一致条件映射必须在实验编码确认后填写到
+`configs/behavioral_metrics.yaml`。映射为空时，整体 ACC/RT 正常输出，条件指标与
+contrast 指标记为空值。

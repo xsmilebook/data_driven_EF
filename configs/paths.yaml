@@ -1,0 +1,4 @@
+datasets:
+  THU:
+    app_data_dir: data/raw/THU/app_data
+    behavioral_metrics_dir: data/processed/THU/behavioral_metrics

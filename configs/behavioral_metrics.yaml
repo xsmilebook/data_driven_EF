@@ -1,0 +1,86 @@
+columns:
+  task: "任务"
+  trial_index: "游戏序号"
+  subject_id: "被试编号（用户账号）"
+  name: "被试姓名（真实姓名)"
+  item: "正式阶段刺激图片/Item名"
+  answer: "正式阶段正确答案"
+  key: "正式阶段被试按键"
+  rt: "相对时间(秒)"
+  ssrt_or_ssd: "SSRT"
+  blank_screen_duration: "空屏时长"
+  total_duration: "全部时间(秒)"
+  cross_pic_duration: "crossPicDur"
+
+cleaning:
+  rt_min: 0.2
+  rt_max: 10.0
+
+tasks:
+  FLANKER:
+    family: conflict
+    acc_threshold: 0.5
+  SST:
+    family: sst
+    acc_threshold: 0.5
+  FZSS:
+    family: fzss
+    acc_threshold: 0.5
+  DT:
+    family: switch
+    acc_threshold: 0.25
+    mixed_from: 65
+  ColorStroop:
+    family: conflict
+    acc_threshold: 0.25
+  EmotionStroop:
+    family: conflict
+    acc_threshold: 0.25
+  CPT:
+    family: gonogo
+    acc_threshold: 0.5
+  EmotionSwitch:
+    family: switch
+    acc_threshold: 0.25
+    mixed_from: 65
+  Number1Back:
+    family: nback
+    acc_threshold: 0.5
+    n_back: 1
+  Number2Back:
+    family: nback
+    acc_threshold: 0.5
+    n_back: 2
+  Spatial1Back:
+    family: nback
+    acc_threshold: 0.5
+    n_back: 1
+  Spatial2Back:
+    family: nback
+    acc_threshold: 0.5
+    n_back: 2
+  Emotion1Back:
+    family: nback
+    acc_threshold: 0.5
+    n_back: 1
+  Emotion2Back:
+    family: nback
+    acc_threshold: 0.5
+    n_back: 2
+  KT:
+    family: kt
+    acc_threshold:
+  ZYST:
+    family: zyst
+    acc_threshold:
+  DCCS:
+    family: switch
+    acc_threshold: 0.5
+    mixed_from: 21
+  GNG:
+    family: gonogo
+    acc_threshold: 0.5
+
+# Fill with explicit e1-e32 values of "congruent" or "incongruent" after
+# the experimental coding scheme has been confirmed.
+emotion_stroop_conditions: {}

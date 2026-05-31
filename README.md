@@ -24,6 +24,19 @@ Behavior preprocessing follows a fixed three-stage pattern where possible:
 - `clean`: apply trial-level and subject-level cleaning
 - `metrics` / `score`: compute task metrics or scale scores
 
+## THU app behavioral preprocessing
+
+The implemented THU app pipeline runs in three ordered stages:
+
+```powershell
+uv run python -m scripts.behavior.app_check_format --dataset THU
+uv run python -m scripts.behavior.app_clean --dataset THU
+uv run python -m scripts.behavior.app_metrics --dataset THU
+```
+
+Default outputs are written to `data/processed/THU/behavioral_metrics/`.
+See `docs/workflow.md` and `docs/methods.md` for execution details and metric definitions.
+
 ## Output locations (convention)
 
 Common outputs:

@@ -1,27 +1,22 @@
 # Plan
 
-## 行为数据预处理方法文档完善
+## THU app 行为数据预处理流水线
 
-目标：完善 `docs/methods.md` 中 `behavioral data preprocess` 部分，将 THU
-`app_data` 行为任务预处理写成可执行的 v1 方法规格；本次仅修改文档，不实现代码、
-不生成 `data/` 或 `outputs/` 下运行产物。
+目标：实现 `data/raw/THU/app_data/*.xlsx` 的正式三阶段预处理入口，输出格式 QC、
+清洗试次长表、任务 QC、指标长表和指标宽表。
 
 执行项：
 
-- 修正行为预处理标题拼写。
-- 明确 v1 输入范围为 `data/raw/THU/app_data/*.xlsx`，每个 workbook 为 1 名被试，
-  每个 sheet 为 1 个任务表。
-- 记录 18 类 app 任务 sheet 的支持范围。
-- 规范中文原始列到英文标准字段的映射。
-- 区分 `valid_for_acc` 与 `valid_for_rt`，避免将允许无反应的试次误排除出准确率分母。
-- 写明 RT 清洗默认参数：`rt_min=0.2`、`rt_max=10`、`rt_outlier_sd=3`、
-  `min_valid_prop=0.5`。
-- 分任务写明 N-back、冲突任务、任务切换、SST、GNG/CPT、ZYST、FZSS、KT 的条件定义与指标输出。
-- 补充清洗长表、QC 表、指标长表、指标宽表的字段约定。
-- 补充非持久化冒烟验证与 `git diff --check` 检查要求。
+- 新增 `configs/paths.yaml` 与 `configs/behavioral_metrics.yaml`。
+- 新增 `src/common.py` 和 `src/behavior/app/` 下的格式检查、清洗、指标计算与任务规则模块。
+- 新增 `scripts/behavior/app_check_format.py`、`app_clean.py`、`app_metrics.py` 三个入口。
+- 仅按 `[0.2, 10]` 秒闭区间筛选 RT，不执行被试任务内 `mean + 3 SD` 修剪。
+- 仅使用 RT 合格试次计算准确率与 RT 指标。
+- 按任务随机正确率阈值标记任务 QC；KT 与 ZYST 不设置阈值。
+- 对未确认的 EmotionStroop 条件映射保留显式配置接口，不猜测条件方向。
+- 使用 3 个 workbook 做非持久化冒烟测试，清理临时结果后提交代码与文档。
 
 约束：
 
-- 不创建 `src/behavior`、`scripts/behavior` 或 `configs/behavioral_metrics.yaml`。
-- 不修改 `data/` 或 `outputs/`。
-- 会话日志按当前日期写入 `docs/sessions/2026-05-30.md`。
+- v1 仅实现 THU `app_data`，不扩展 XY、BNU、inventory、demography 或 task-fMRI。
+- 不运行 753 个 workbook 的全量任务，仅提供本地和单节点 sbatch 提交命令。
