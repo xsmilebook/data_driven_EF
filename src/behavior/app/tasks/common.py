@@ -10,6 +10,10 @@ def valid_trials(frame: pd.DataFrame) -> pd.DataFrame:
     return frame.loc[frame["valid_for_acc"].fillna(False).astype(bool)].copy()
 
 
+def valid_rt_trials(frame: pd.DataFrame) -> pd.DataFrame:
+    return frame.loc[frame["valid_for_rt"].fillna(False).astype(bool)].copy()
+
+
 def safe_mean(values: pd.Series) -> float:
     numeric = pd.to_numeric(values, errors="coerce").dropna()
     return float(numeric.mean()) if not numeric.empty else float("nan")
@@ -27,7 +31,8 @@ def safe_rate(values: pd.Series) -> float:
 def correct_rt_stats(
     frame: pd.DataFrame, correct_column: str = "correct_trial"
 ) -> tuple[float, float]:
-    correct = frame.loc[frame[correct_column].fillna(False).astype(bool), "rt"]
+    rt_valid = valid_rt_trials(frame)
+    correct = rt_valid.loc[rt_valid[correct_column].fillna(False).astype(bool), "rt"]
     return safe_mean(correct), safe_sd(correct)
 
 
@@ -35,7 +40,7 @@ def base_metrics(
     frame: pd.DataFrame, correct_column: str = "correct_trial"
 ) -> dict[str, float]:
     valid = valid_trials(frame)
-    rt_mean, rt_sd = correct_rt_stats(valid, correct_column)
+    rt_mean, rt_sd = correct_rt_stats(frame, correct_column)
     return {
         "ACC": safe_rate(valid[correct_column]),
         "RT_Mean": rt_mean,

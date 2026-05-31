@@ -19,7 +19,7 @@ def calculate(frame: pd.DataFrame) -> tuple[dict[str, float], list[str]]:
     valid = valid_trials(working)
     stop = valid.loc[valid["is_stop"]]
     go = valid.loc[~valid["is_stop"]]
-    correct_go = go.loc[go["sst_correct"]]
+    correct_go = go.loc[go["sst_correct"] & go["valid_for_rt"]]
     go_rt_mean, go_rt_sd = correct_rt_stats(go, "sst_correct")
     stop_acc = safe_rate(stop["sst_correct"])
     mean_ssd = safe_mean(stop["ssd_numeric"])

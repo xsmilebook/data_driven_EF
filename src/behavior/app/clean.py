@@ -37,12 +37,16 @@ OUTPUT_COLUMNS = (
 )
 
 
-def _rt_exclusion_reason(value: object, rt_min: float, rt_max: float) -> str:
-    if pd.isna(value):
-        return "rt_missing_or_non_numeric"
-    if value < rt_min:
+def _rt_exclusion_reason(
+    raw_value: object, numeric_value: object, rt_min: float, rt_max: float
+) -> str:
+    if pd.isna(raw_value) or not str(raw_value).strip():
+        return "rt_missing"
+    if pd.isna(numeric_value):
+        return "rt_non_numeric"
+    if numeric_value < rt_min:
         return "rt_below_min"
-    if value > rt_max:
+    if numeric_value > rt_max:
         return "rt_above_max"
     return ""
 
@@ -69,15 +73,16 @@ def _standardize_sheet(
     for column in ("subject_id", "name", "item", "answer", "key", "ssrt_or_ssd"):
         frame[column] = frame[column].map(normalize_text)
 
-    frame["rt"] = pd.to_numeric(frame["rt"], errors="coerce")
+    raw_rt = frame["rt"].copy()
+    frame["rt"] = pd.to_numeric(raw_rt, errors="coerce")
     rt_min = float(config["cleaning"]["rt_min"])
     rt_max = float(config["cleaning"]["rt_max"])
-    frame["exclusion_reason"] = frame["rt"].map(
-        lambda value: _rt_exclusion_reason(value, rt_min, rt_max)
-    )
-    valid = frame["exclusion_reason"].eq("")
-    frame["valid_for_acc"] = valid
-    frame["valid_for_rt"] = valid
+    frame["exclusion_reason"] = [
+        _rt_exclusion_reason(raw_value, numeric_value, rt_min, rt_max)
+        for raw_value, numeric_value in zip(raw_rt, frame["rt"])
+    ]
+    frame["valid_for_acc"] = frame["exclusion_reason"].isin(("", "rt_missing"))
+    frame["valid_for_rt"] = frame["exclusion_reason"].eq("")
     frame["correct_trial"] = [
         normalized_equal(answer, key) for answer, key in zip(frame["answer"], frame["key"])
     ]
@@ -109,6 +114,7 @@ def clean_app_trials(
                         "subject_code": subject_code,
                         "task": task,
                         "n_trials_raw": len(raw),
+                        "n_trials_acc_valid": 0,
                         "n_trials_rt_valid": 0,
                         "acc_threshold": registry[task].acc_threshold,
                         "ACC": pd.NA,
@@ -126,7 +132,8 @@ def clean_app_trials(
                     "subject_code": subject_code,
                     "task": task,
                     "n_trials_raw": len(cleaned),
-                    "n_trials_rt_valid": int(cleaned["valid_for_acc"].sum()),
+                    "n_trials_acc_valid": int(cleaned["valid_for_acc"].sum()),
+                    "n_trials_rt_valid": int(cleaned["valid_for_rt"].sum()),
                     "acc_threshold": registry[task].acc_threshold,
                     "ACC": pd.NA,
                     "ok": pd.NA,

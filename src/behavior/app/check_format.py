@@ -20,7 +20,9 @@ COMMON_REQUIRED_FIELDS = (
 
 
 def iter_workbooks(app_data_dir: Path, limit: int | None = None) -> list[Path]:
-    workbooks = sorted(app_data_dir.glob("*.xlsx"))
+    workbooks = sorted(
+        workbook for workbook in app_data_dir.glob("*.xlsx") if not workbook.name.startswith("~$")
+    )
     return workbooks[:limit] if limit is not None else workbooks
 
 

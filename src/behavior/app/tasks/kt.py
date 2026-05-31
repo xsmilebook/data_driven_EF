@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import pandas as pd
 
-from src.behavior.app.tasks.common import base_metrics
+from src.behavior.app.tasks.common import safe_rate, valid_trials
 
 
 def calculate(frame: pd.DataFrame) -> tuple[dict[str, float], list[str]]:
-    metrics = base_metrics(frame)
-    metrics["Overall_ACC"] = metrics["ACC"]
-    metrics["Mean_RT"] = metrics["RT_Mean"]
-    return metrics, []
+    valid = valid_trials(frame)
+    return {"ACC": safe_rate(valid["correct_trial"])}, []

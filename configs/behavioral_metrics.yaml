@@ -81,6 +81,36 @@ tasks:
     family: gonogo
     acc_threshold: 0.5
 
-# Fill with explicit e1-e32 values of "congruent" or "incongruent" after
-# the experimental coding scheme has been confirmed.
-emotion_stroop_conditions: {}
+emotion_stroop_conditions:
+  e1: incongruent
+  e2: incongruent
+  e3: incongruent
+  e4: congruent
+  e5: incongruent
+  e6: incongruent
+  e7: incongruent
+  e8: congruent
+  e9: incongruent
+  e10: incongruent
+  e11: incongruent
+  e12: congruent
+  e13: incongruent
+  e14: incongruent
+  e15: incongruent
+  e16: congruent
+  e17: incongruent
+  e18: incongruent
+  e19: incongruent
+  e20: congruent
+  e21: incongruent
+  e22: incongruent
+  e23: incongruent
+  e24: congruent
+  e25: incongruent
+  e26: incongruent
+  e27: incongruent
+  e28: congruent
+  e29: incongruent
+  e30: incongruent
+  e31: incongruent
+  e32: congruent

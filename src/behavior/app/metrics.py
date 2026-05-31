@@ -13,7 +13,7 @@ def _calculate_task_metrics(
     frame: pd.DataFrame, spec: TaskSpec, config: dict[str, Any]
 ) -> tuple[dict[str, float], list[str]]:
     if spec.family == "nback":
-        return nback.calculate(frame, spec.n_back)
+        return nback.calculate(frame, spec.name, spec.n_back)
     if spec.family == "conflict":
         return conflict.calculate(frame, spec.name, config["emotion_stroop_conditions"])
     if spec.family == "switch":
@@ -65,7 +65,12 @@ def calculate_app_metrics(
                 "subject_code": subject_code,
                 "task": task,
                 "n_trials_raw": len(frame),
-                "n_trials_rt_valid": int(frame["valid_for_acc"].fillna(False).astype(bool).sum()),
+                "n_trials_acc_valid": int(
+                    frame["valid_for_acc"].fillna(False).astype(bool).sum()
+                ),
+                "n_trials_rt_valid": int(
+                    frame["valid_for_rt"].fillna(False).astype(bool).sum()
+                ),
                 "acc_threshold": spec.acc_threshold,
                 "ACC": acc,
                 "ok": ok,

@@ -72,7 +72,8 @@ uv run python -m scripts.behavior.app_metrics --dataset THU
 默认输入为 `data/raw/THU/app_data/*.xlsx`，默认输出目录为
 `data/processed/THU/behavioral_metrics/`。路径在 `configs/paths.yaml` 中配置，
 字段映射、RT 阈值、任务注册和随机正确率阈值在
-`configs/behavioral_metrics.yaml` 中配置。
+`configs/behavioral_metrics.yaml` 中配置。枚举 workbook 时自动忽略 Excel 打开文件
+产生的 `~$*.xlsx` 临时锁文件。
 
 三个入口分别生成：
 
@@ -107,6 +108,10 @@ uv run python -m scripts.behavior.app_clean --dataset THU
 uv run python -m scripts.behavior.app_metrics --dataset THU
 ```
 
-EmotionStroop 的一致/不一致条件映射必须在实验编码确认后填写到
-`configs/behavioral_metrics.yaml`。映射为空时，整体 ACC/RT 正常输出，条件指标与
-contrast 指标记为空值。
+正式清洗将准确率有效试次与 RT 有效试次分开记录。RT 为空的 trial 仍进入准确率
+分母，仅排除 RT 指标；RT 非空但超出 `[0.2, 10]` 秒闭区间时同时排除准确率和 RT
+指标。任务 QC 表同时写入 `n_trials_acc_valid` 与 `n_trials_rt_valid`。
+
+EmotionStroop 的一致/不一致条件映射已写入 `configs/behavioral_metrics.yaml`：
+`e4`、`e8`、`e12`、`e16`、`e20`、`e24`、`e28`、`e32` 为一致条件，其余
+`e1-e32` 编码为不一致条件。
