@@ -1,32 +1,42 @@
-﻿# data_driven_EF
+# data_driven_EF
 
-本仓库包含 EF（执行功能）研究的端到端流程：
-- 数据 QC / 被试列表
-- 功能连接（FC）计算与向量化
-- 行为指标计算
-- 脑-行为关联分析（仅保留自适应模型：`adaptive_pls` / `adaptive_scca` / `adaptive_rcca`）
+This repository contains end-to-end pipeline for EF analysis:
+- neuroimaging and behavioral data preprocessing
+- functional connectivity (FC) calculation and vectorization
+- behavioral metrics calculation
+- brain-behavior association analysis (only adaptive models: `adaptive_pls` / `adaptive_scca` / `adaptive_rcca`)
 
-当前新增了“v1 存档 + v2 最小骨架”入口，支持在保留历史可追溯性的前提下，基于已清洗数据重新开发：
-- 存档入口：`python -m scripts.archive_legacy_snapshot`
-- v2 骨架入口：`python -m scripts.v2_run_pipeline`
+## Directory structure (core)
 
-下面仅列出常用脚本的执行方式与关键参数。
-
-## 目录结构（核心）
-
-```
+```text
 src/
-  imaging_preprocess/    # 影像预处理与功能连接
-  behavioral_preprocess/ # 行为数据预处理与指标计算
-  models/                # 脑-行为关联（建模评估/嵌套 CV）
-  scripts/               # 入口脚本 + HPC 提交脚本
-  result_summary/        # 结果汇总脚本
+  common.py              # 薄通用工具
+  imaging/               # 影像预处理与影像指标提取
+  behavior/              # app/task-fMRI/量表/demography 预处理
+
+scripts/
+  imaging/               # fmriprep/xcpd/connectivity 入口脚本
+  behavior/              # check_format/clean/metrics/score 入口脚本
 ```
 
-## 输出位置（约定）
+Behavior preprocessing follows a fixed three-stage pattern where possible:
+- `check_format`: check raw file format, column names, and required identifiers
+- `clean`: apply trial-level and subject-level cleaning
+- `metrics` / `score`: compute task metrics or scale scores
 
-常用输出：
-- QC / 中间结果：`data/interim/...`
-- 表格与处理后产物：`data/processed/...`
-- 脑-行为关联结果：`outputs/results/...`（可通过 `--output_dir` 指定）
-- 大型数组（如每折 `X_scores/Y_scores`）会保存到同目录下 `artifacts/`，JSON/NPZ 仅保留索引与路径
+## THU app behavioral preprocessing
+
+The implemented THU app pipeline runs in three ordered stages:
+
+```powershell
+uv run python -m scripts.behavior.app_check_format --dataset THU
+uv run python -m scripts.behavior.app_clean --dataset THU
+uv run python -m scripts.behavior.app_metrics --dataset THU
+```
+
+Default outputs are written to `data/processed/THU/behavioral_metrics/`.
+See `docs/workflow.md` and `docs/methods.md` for execution details and metric definitions.
+
+## Output locations (convention)
+
+Common outputs:

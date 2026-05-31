@@ -1,1 +1,1 @@
-# Scripts package for EFNY brain-behavior analysis
+"""Executable project entrypoints."""

@@ -3,19 +3,16 @@
 `data_driven_EF` 仓库的 AI 协作执行规则。
 本仓库将 `ARCHITECTURE.md` 视为稳定目录结构的唯一事实来源；除非用户明确要求，否则不要提出结构性改动。
 
-## 基础工作流
+## Basic workflow
 
-1) 在规划或编辑前，先阅读 `ARCHITECTURE.md`。
+1) 在规划或编辑前，先阅读项目根目录下的 `AGENTS.md` 和 `ARCHITECTURE.md`。
 2) 仅按 `PLAN.md` 或用户的明确指令执行变更。
-3) 若变更影响用法或结构，需同步更新 `README.md` 和/或 `docs/workflow.md`。
+3) 若变更影响代码的用法或结构，需同步更新 `README.md` 和/或 `docs/workflow.md`。
 3.1) 只要代码被修改或生成了新结果，必须新增或更新补充文档进行说明。
 3.2) 运行时间短且不需并行的脚本可直接执行；否则在同环境做少量验证，并提供提交命令或 sbatch 脚本。
-3.2.1) sbatch 只能由用户提交：会话中助手不得直接提交 sbatch 任务；应输出可复用脚本和清晰提交命令供用户执行。
-3.3) 所有 sbatch 任务默认使用多分区：`#SBATCH -p q_fat_c,q_fat,q_fat_l`（便于调度到 q_fat/q_fat_l）。
-4) 每完成一组变更后更新 `PROGRESS.md`。
-5) 每次会话在 `docs/sessions/` 下记录日志（按日期命名）。
-6) 只要修改了代码或文档，必须通过 git 提交（提交信息由助手撰写）。
-7) 若使用 `create-plan` 技能，需将计划写入仓库根目录 `PLAN.md`。
+4) 每次会话在 `docs/sessions/` 下记录日志（按日期命名）。
+5) 只要修改了代码或文档，给出 git Commit Message。
+6) 若使用 `create-plan` 技能，需将计划写入仓库根目录 `PLAN.md`。
 
 ## 范围与约束
 
@@ -25,12 +22,12 @@
 - 保持最小差异；避免与当前请求无关的重构。
 - 验证后立即清理 `temp/` 下临时冒烟测试产物（如 `temp/smoke_*`），不要在仓库中残留测试垃圾。
 
-## 工程规范（用户要求工程改动时）
+## Engineering standards
 
-- 使用 `python -m scripts.<entry>` 作为执行入口。
+- 脚本尽量简洁、易懂。
+- 不要自行添加兜底和回退代码。
 - 避免临时 `sys.path` hack；若不可避免，只允许在入口脚本中使用并写明原因。
-- 所有文件系统路径必须来自 `configs/`。
-- 若在 Windows 环境运行，统一使用 `uv` 进行依赖管理：
+- 统一使用 `uv` 进行依赖管理。
 - 新增依赖使用 `uv add <package>`。
 - 项目虚拟环境固定为仓库根目录 `.venv`。
 
@@ -39,4 +36,3 @@
 - 使用精确、科学的表述。
 - `docs/` 下文档全部使用中文，文件名保持英文。
 - 仓库根目录文件夹名称保持英文。
-- EFNY 专属说明放在 `docs/workflow.md` 与 `configs/paths.yaml`（dataset section）。
