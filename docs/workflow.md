@@ -115,3 +115,33 @@ uv run python -m scripts.behavior.app_metrics --dataset THU
 EmotionStroop 的一致/不一致条件映射已写入 `configs/behavioral_metrics.yaml`：
 `e4`、`e8`、`e12`、`e16`、`e20`、`e24`、`e28`、`e32` 为一致条件，其余
 `e1-e32` 编码为不一致条件。
+
+## THU app_data 指标探索报告
+
+处理后指标的描述性 EDA 在
+[notebooks/app_data_eda/app_metrics_eda_report.ipynb](/D:/projects/data_driven_EF/notebooks/app_data_eda/app_metrics_eda_report.ipynb)
+中维护。该 notebook 不重新读取原始 Excel，而是使用
+`data/processed/THU/behavioral_metrics/` 下的正式产物：
+
+- `app_trials_clean.csv`：分块读取，仅汇总 trial 排除原因。
+- `app_format_qc.csv` 与 `app_task_qc.csv`：汇总格式检查、任务覆盖率和任务 QC。
+- `app_metrics_long.csv` 与 `app_metrics_wide.csv`：分析指标缺失、分布、异常值候选和
+  相关矩阵。
+
+运行与导出命令：
+
+```powershell
+uv run jupyter nbconvert --to notebook --execute --inplace notebooks/app_data_eda/app_metrics_eda_report.ipynb --ExecutePreprocessor.timeout=900
+uv run jupyter nbconvert --to html --no-input notebooks/app_data_eda/app_metrics_eda_report.ipynb --output-dir outputs/results/app_data_eda --output app_metrics_eda_report.html
+```
+
+产物写入以下 ignored 目录：
+
+- `outputs/results/app_data_eda/app_metrics_eda_report.html`：隐藏代码输入的聚合 HTML 报告。
+- `outputs/figures/app_data_eda/`：任务 QC、缺失、分布和 Spearman 相关热图。
+- `outputs/tables/app_data_eda/`：描述统计、Pearson/Spearman 相关矩阵、pairwise N
+  以及内部 QC 表。
+
+HTML 仅展示聚合信息。文件名包含 `_internal` 的 CSV 可包含 `subject_code`，只用于
+内部定位复核对象，不包含姓名或原始账号。IQR 异常值候选仅用于人工复核，不会自动
+进入排除规则。
