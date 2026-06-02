@@ -55,12 +55,33 @@ EDA 中的 `rt_excluded_rate` 是通用字段检查指标，仅表示 `相对时
 
 - 340 名被试在 124 个宽表指标上全部非缺失；574 名被试至少具有 90% 的指标。
 - 缺失率最高的指标为 `Emotion2Back_Hit_Rate`、`Emotion2Back_FA_Rate` 和
-  `Emotion2Back_dprime`，均为 32.40%。`Emotion2Back_ACC`、`RT_Mean` 与
-  `RT_SD` 的缺失率均为 27.76%。两者差值来自部分 sheet 的 item 缺失：
-  整体 ACC/RT 可保留，但 target 分类指标为空。
+  `Emotion2Back_dprime`，均为 32.40%。`Emotion2Back_RT_Mean` 与 `RT_SD` 的
+  缺失率均为 27.76%，`Emotion2Back_ACC` 的缺失率为 26.69%。差值来自部分 sheet
+  的 item 缺失：ACC 可直接由 `answer == key` 计算，但 target 分类指标为空。
 - 未发现无穷值、常数指标列或超出 `[0, 1]` 的比例指标。
 - Tukey IQR 规则标记出 2,459 行内部异常值候选。该结果用于定位人工复核对象，
   不应直接解释为无效数据。
+
+### 低于随机阈值的高频任务
+
+`acc_below_random_threshold` 超过 100 行的任务为 `Emotion2Back`（163/708，
+23.02%）、`Spatial2Back`（118/714，16.53%）、GNG（111/737，15.06%）和
+`Emotion1Back`（103/725，14.21%）。这些低分 sheet 通常仍保留接近完整的有效
+trial，因此不是 RT 范围清洗造成。
+
+- 三类 N-back 低分组均表现出更多漏答和更多错误反应。Emotion1Back 低分组的缺按键率
+  为 27.9%，非低分组为 9.0%；仅在已按键 trial 中计算的正确率分别为 55.7% 和
+  82.6%。Emotion2Back 对应为 26.0% 对 10.9%，以及 53.8% 对 73.4%。
+  Spatial2Back 对应为 31.8% 对 11.9%，以及 57.0% 对 79.3%。这说明低分同时包含
+  漏答和错误反应，不能归因于单一字段缺失。
+- GNG 的答案构成在低分组和非低分组中均约为 80% Go、20% NoGo，不支持答案映射
+  发生系统性变化。低分组的按 Go 键比例中位数仅为 24.0%；Go 正确率为 25.5%，
+  而 NoGo 正确率仍为 82.0%。该模式更接近 Go 反应不足，需要结合任务理解或参与度
+  进一步复核。
+- Emotion2Back 中共有 43 个 item 全空 sheet，其中 34 个来自 2025-07，8 个来自
+  2025-12，1 个来自 2026-01，呈批次聚集。该现象更接近导出缺失。43 个 sheet 的
+  ACC 均保留；其中 8 个 ACC 低于随机阈值，仍保留失败 QC 标记。依赖 item 的
+  `Hit_Rate`、`FA_Rate` 和 `dprime` 继续为空。
 
 ## 指标相关性
 

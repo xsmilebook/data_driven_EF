@@ -35,6 +35,16 @@ def _metric_qc_reason(warnings: list[str]) -> str:
     return "|".join(sorted(set(warnings)))
 
 
+def _output_metric_value(
+    task: str, metric: str, value: float, ok: bool, warnings: list[str]
+) -> float:
+    if ok:
+        return value
+    if task == "Emotion2Back" and metric == "ACC" and "nback_item_missing" in warnings:
+        return value
+    return float("nan")
+
+
 def calculate_app_metrics(
     trials: pd.DataFrame,
     clean_qc: pd.DataFrame,
@@ -85,7 +95,7 @@ def calculate_app_metrics(
                     "subject_code": subject_code,
                     "task": task,
                     "metric": metric,
-                    "value": value if ok else float("nan"),
+                    "value": _output_metric_value(task, metric, value, ok, warnings),
                 }
             )
 

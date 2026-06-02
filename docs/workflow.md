@@ -116,6 +116,11 @@ EmotionStroop 的一致/不一致条件映射已写入 `configs/behavioral_metri
 `e4`、`e8`、`e12`、`e16`、`e20`、`e24`、`e28`、`e32` 为一致条件，其余
 `e1-e32` 编码为不一致条件。
 
+Emotion2Back 中 item 全空的 sheet 记录 `nback_item_missing`。由于 ACC 可直接由
+`answer == key` 计算，这类 sheet 在长表和宽表中继续保留 ACC；依赖 item 的
+`Hit_Rate`、`FA_Rate` 和 `dprime` 保持为空。若 ACC 同时低于随机阈值，任务 QC
+仍标记失败。
+
 ## THU app_data 指标探索报告
 
 处理后指标的描述性 EDA 在

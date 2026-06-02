@@ -14,8 +14,9 @@
   正确 nogo 试次。
 - 写入已确认的 EmotionStroop `e1-e32` 条件映射。
 - Emotion N-back 先将编号归一化为情绪类别，再比较前 1 或 2 个 trial。
-- Emotion2Back 中 item 全空的 sheet 保留整体 ACC/RT，但条件化指标为空并记录
-  `nback_item_missing`。
+- Emotion2Back 中 item 全空的 sheet 保留整体 ACC；若任务通过准确率阈值则同时
+  保留 RT。条件化指标为空并记录 `nback_item_missing`。若 ACC 低于随机阈值，
+  QC 仍标记失败，但长表和宽表继续保留可直接计算的 ACC。
 - KT 仅输出 `ACC`。
 - `dprime` 使用 Hautus log-linear 校正：命中数与虚报数均加 `0.5`，对应分母加
   `1`；仅在 signal 或 noise trial 数为 0 时输出空值。
