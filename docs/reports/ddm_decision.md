@@ -17,8 +17,8 @@
 | DCCS | 2 | 是 | `left/right` | 2AFC 但试次数较少（尤其 mixed 内） |
 | SST | 2 | 部分 | `left/right` | stop 常见无按键；标准 DDM 不适用，需做 go-only DDM（补充） |
 | GNG | 2 | 理论上否 | `false/true` | 数据层面有 RT，但任务本质为 go/no-go（建议 SDT；DDM 仅作补充需谨慎解释） |
-| CPT | 2 | 否 | `false/true` | NoGo 基本无 RT（不满足 2AFC-RT DDM） |
-| oneback_* / twoback_* | 2 | 不建议 | `left/right` | 虽 2-choice，但 match 试次偏少；DDM 解释力弱 |
+| CPT | 2 | 部分（受限） | `false/true` | 需纳入 DDM；NoGo 无 RT 不能进入标准 RT-DDM，采用 RT-bearing response DDM，并与 SDT/commission/omission 并列解释 |
+| oneback_* / twoback_* | 2 | 是（探索） | `left/right` | 需纳入 2AFC 层级 DDM；match 试次偏少，优先跨 N-back 任务池化建模并谨慎解释条件效应 |
 | ColorStroop | 4 | 否 | `red/green/blue/yellow` | **非 2AFC**，应使用多选模型（LBA/race） |
 | EmotionStroop | 4 | 否 | `an/ha/ne/sa` | **非 2AFC**，应使用多选模型（LBA/race） |
 | DT | 4 | 否（原始） | `left/right/up/down` | **原始为 4-choice**；可按轴向重编码为 2-choice（见下） |
@@ -36,8 +36,9 @@
 | EmotionSwitch | pure 64 + mixed 64 = 128；switch 仅 mixed | 是（重编码后） | **2-choice 层级 DDM（按维度重编码）**：建立两个对照模型（A/B），均纳入 `rule=dimension`，并允许 `v/a/t0` 随条件变化（含交互） | Model A：Mixing（pure vs mixed）；Model B：Switch（repeat vs switch，仅 mixed）。跨维度错误按 lapse/outlier 处理并报告比例。 |
 | DCCS | pure 20 + mixed 20 = 40；mixed 内 10R/10S | 是（探索） | 整体 DDM 或 v ~ block_type | mixed 内每格 10 太少；switch-DDM 基本不可识别。 |
 | SST | 主模型用 go+stop（race/SSRT）；DDM 仅用 go RT | ①否（标准 DDM）②是（Go-only DDM） | 主推：Stop-signal race/SSRT；补充：**Go-only 2AFC DDM（仅 go trials）** | stop 无反应不满足 DDM；go-only DDM 用于刻画 go 决策（需与 SSRT/race 分析并列呈现） |
-| GNG / CPT | Go/NoGo（NoGo 无 RT） | CPT做 | GNG不做标准 DDM（因为任务设计存在一定问题）；用 SDT(d'+c) + commission/omission（可加 time-on-task） | 单键 Go/NoGo 不符合标准 2AFC-RT DDM；NoGo 无 RT。 |
-| N-back 系列 | 60（match 很少） | 是（探索） | SDT(d'+c) + RT/ACC + 负荷/域比较 | match 太少；分层 DDM 不可行，整体 DDM 解释弱。 |
+| CPT | Go/NoGo；DDM 仅纳入有 RT 的 response trials | 是（受限） | **CPT response-DDM（RT-bearing trials）**：`v ~ stimulus_type + time_bin`（若 commission 过少则退化为 `v ~ time_bin` 或整体模型） | DDM 解释有按键反应的证据积累/谨慎性/非决策时间；无按键 NoGo、omission 不能进入 RT-DDM，仍需并列报告 SDT、commission、omission。 |
+| GNG | Go/NoGo（NoGo 无 RT） | 否（主模型） | SDT(d'+c) + commission/omission（可加 time-on-task）；DDM 仅在用户要求时作为与 CPT 同口径的补充 | 单键 Go/NoGo 不符合标准 2AFC-RT DDM；NoGo 无 RT。 |
+| N-back 系列 | 60（match 较少） | 是（探索） | **2AFC 层级 DDM**：优先跨 N-back 任务池化，`v ~ load + domain + target_type`；单任务敏感性模型可用 `v ~ target_type` 或整体模型 | 使用 `left/right` 物理 2-choice 与 accuracy coding；match 稀少，条件效应只作为探索结果，并与 SDT(d'+c)、RT/ACC、负荷/域比较并列呈现。 |
 
 ## 关键重编码与报表归并规则（保证 2AFC / 多选一致性）
 
@@ -75,7 +76,8 @@ choice 规则：
 
 被试纳入规则：
 
-- 每个 task×model×subject 至少需要同时存在两个 choice 结局，且关键条件至少各有可用试次；否则该被试不用于该模型的个体层信息估计。
+- 标准 2AFC task 中，每个 task×model×subject 至少需要同时存在两个 choice 结局，且关键条件至少各有可用试次；否则该被试不用于该模型的个体层信息估计。
+- 对 CPT/N-back 这类错误或 match 试次稀少的任务，可在层级模型中保留仅有单一 choice 结局的被试以贡献 RT 分布信息，但不解释该被试的个体层 choice/条件效应；报告中必须列出每个被试和每个条件的正确/错误或 match/nonmatch 计数。
 - 若单个条件有效试次数过低（建议阈值：每格 `< 5`），该条件的个体层效应不单独解释；仍可在层级模型中贡献组水平信息，但需在报告中列出每格试次数分布。
 - 每个模型输出一张 trial QC 汇总：`n_total`、`n_model_include`、`n_excluded`、各 `exclude_reason` 计数、各条件有效试次数、跨轴/跨维度错误比例、RT 中位数与四分位数。
 
@@ -103,6 +105,21 @@ choice 规则：
 - 仅纳入 go 试次（需能稳定判定 go/stop；并排除 stop 无按键/无 RT 试次），在 go 试次内按 `left/right` 做 2AFC DDM。
 - go-only DDM 的作用定位为“go 决策过程刻画”，必须与 SSRT/race 模型的 stop 抑制结论并列解释。
 
+### CPT：RT-bearing response DDM（受限模型）
+- 任务类型为 Go/NoGo；若 `key=true` 记为 `stimulus_type=target/go`，若 `key=false` 记为 `stimulus_type=nontarget/nogo`。
+- 标准 RT-DDM 只能使用有实际按键和有效 RT 的试次：Go 正确按键与 NoGo commission error 可入模；正确 NoGo 无 RT 与 Go omission 无 RT 不能入模。
+- `choice_model` 采用 accuracy coding：Go 正确按键为 `1`，NoGo commission 为 `0`。若存在其他有 RT 的异常响应，需先按上游清洗规则决定是否为有效 response trial。
+- `time_bin` 建议按正式试次顺序分为 3 或 4 个等频区间，用于刻画 CPT 的 time-on-task/vigilance 变化；若每格 commission 数不足，则仅保留 `time_bin` 或整体截距模型，不估计 `stimulus_type` 条件效应。
+- 报告定位：CPT DDM 是 response-conditioned 模型，不能解释“成功不按键”的潜伏过程；主报告必须同时给出 SDT(d'+c)、commission rate、omission rate 和 RT 描述指标。
+
+### N-back 系列：2AFC 层级 DDM（探索模型）
+- 原始 `left/right` 为标准 2-choice 响应；统一采用 accuracy coding，`choice_model=1` 表示响应等于 `key`，`choice_model=0` 表示响应不等于 `key`。
+- `target_type`：若当前试次与前 `n` 个试次匹配，记为 `match`；否则为 `nonmatch`。若上游无法稳定判定 match/nonmatch（例如 item 全空），可进入整体 DDM，但该试次不参与 `target_type` 效应估计。
+- `load`：oneback 记为 `1`，twoback 记为 `2`。
+- `domain`：从任务名提取，例如 color、emotion、shape、spatial；命名需与行为指标表保持一致。
+- 主模型建议跨 N-back 系列池化，以 `load`、`domain`、`target_type` 作为协变量；单任务模型仅作为敏感性分析或任务级描述。
+- 由于 match 试次数较少，`target_type` 相关 DDM 参数只作为探索性指标；正式报告中仍需并列给出 hit rate、false alarm rate、d'、criterion、ACC 与 RT。
+
 ### ColorStroop / EmotionStroop：4-choice 多选 SSM（race4/LBA 替代）+ 报表三类归并
 - 拟合层面：保留**原始 4-choice** 作为四个 accumulators（ColorStroop: `red/green/blue/yellow`；EmotionStroop: `an/ha/ne/sa`），以 congruency 为主要条件变量（当前实现使用 HSSM: `race_no_z_4`）。
 - 报表层面：将每个试次的响应按以下三类归并，用于更直观的错误结构总结：
@@ -125,6 +142,9 @@ choice 规则：
 | --- | --- | --- | --- | --- | --- | --- |
 | FLANKER | 基线/主模型 | 全部 | `congruency` | `1`（可选敏感性：`congruency`） | `1` | `1` |
 | SST | go-only DDM | go trials | `1`（如需可扩展：`hand`/`congruency` 等） | `1` | `1` | `1` |
+| CPT | response-DDM（受限） | RT-bearing response trials | `stimulus_type + time_bin`（commission 过少时：`time_bin` 或 `1`） | `1` | `1` | `1` |
+| N-back 系列 | pooled DDM（主探索） | 全部 RT-valid trials | `load + domain + target_type` | `1` | `1` | `1` |
+| N-back 系列 | per-task sensitivity | 单个 N-back task | `target_type`（match 过少时：`1`） | `1` | `1` | `1` |
 | DT | Model A：Mixing | pure+mixed | `block + rule + block:rule` | `block + rule + block:rule` | `block + rule + block:rule` | `1` |
 | DT | Model B：Switch | mixed only | `trial_type + rule + trial_type:rule` | `trial_type + rule + trial_type:rule` | `trial_type + rule + trial_type:rule` | `1` |
 | EmotionSwitch | Model A：Mixing | pure+mixed | `block + rule + block:rule` | `block + rule + block:rule` | `block + rule + block:rule` | `1` |
@@ -197,6 +217,21 @@ SST：
 - go-only DDM 只解释 go 试次的证据积累、谨慎性和非决策时间。
 - stop 抑制能力不从 go-only DDM 推断；SSRT 或 stop-signal race 指标需独立计算并并列报告。
 
+CPT：
+
+- response-DDM 的主效应为 `time_bin`：`Δv_time = v_late - v_early`，用于描述持续注意或警觉性下降是否体现在证据积累效率上。
+- 若 commission 数量足够，可计算 `Δv_nontarget = v_nontarget - v_target`；该指标只解释有按键反应中的错误倾向，不解释正确 NoGo 的抑制过程。
+- `Δa_time` 或 `Δt0_time` 默认不作为主模型；若 posterior predictive 显示 RT 分位数无法复现，再作为敏感性模型扩展。
+- DDM 指标必须与 `commission_rate`、`omission_rate`、`dprime`、`criterion` 并列报告；若 commission 太少导致 choice 模型不可识别，仍输出 RT-only/整体参数摘要并标记 `choice_effect_unstable`。
+
+N-back：
+
+- 负荷效应：`Δv_load = v_2back - v_1back`。若为负，解释为 2-back 相比 1-back 降低证据积累效率。
+- 目标类型效应：`Δv_match = v_match - v_nonmatch`。由于 match 稀少，仅作为探索指标；需同时报告 posterior HDI 与 match/nonmatch 有效试次数。
+- 领域效应：以一个 domain 为参考水平，输出其他 domain 的 `Δv_domain`；若样本量允许，也可报告 `load:domain` 交互。
+- 单任务敏感性模型只用于检查 pooled DDM 的方向是否稳定，不作为优先结论来源。
+- N-back DDM 与 SDT 指标互补：DDM 描述有 RT 的选择过程，d' 与 criterion 描述 match/nonmatch 检测敏感性和反应偏向。
+
 ColorStroop / EmotionStroop：
 
 - 参数层面报告 `v0..v3`、`a`、`t` 的 congruency 效应，但文字解释限定为固定物理响应选项。
@@ -220,6 +255,8 @@ ColorStroop / EmotionStroop：
 - FLANKER RT cost：`RT_incongruent - RT_congruent`。
 - Mixing RT cost：`RT_mixed - RT_pure`。
 - Switch RT cost：`RT_switch - RT_repeat`。
+- CPT time-on-task RT change：`RT_late - RT_early`。
+- N-back load RT cost：`RT_2back - RT_1back`；N-back target RT contrast：`RT_match - RT_nonmatch`。
 
 这些 RT cost 是模型预测层面的描述指标，不等同于 `t0` 或 `a` 的单一参数效应；解释时需与 `v/a/t0` 的后验效应一起报告。
 
@@ -240,6 +277,9 @@ ColorStroop / EmotionStroop：
 - `colorstroop_race4_congruency`
 - `emotionstroop_race4_congruency`
 - `sst_go_only_ddm`
+- `cpt_response_ddm`
+- `nback_pooled_ddm`
+- `nback_task_ddm`
 
 ## 本次模型计算设置
 - 后端：HSSM（PyMC-based hierarchical SSM） + `nuts_numpyro` 采样
@@ -264,5 +304,7 @@ ColorStroop / EmotionStroop：
 - 层级 SSM 对计算资源敏感：建议先用 `--max-files` 进行 pilot，确认模型可运行后再扩展到全样本。
 - 对多选任务：`ColorStroop/EmotionStroop` 应使用 4-choice 多选 SSM（当前实现：`race_no_z_4`；LBA4 替代）；避免将其降维为“正确/错误”的 2AFC DDM 解释。
 - 对切换任务：`DT/EmotionSwitch` 需先做 2-choice 重编码（并剔除跨轴/跨维度错误），否则 2AFC DDM 解释不成立。
+- 对 CPT：DDM 仅覆盖有按键且有 RT 的 response trials，不能替代 NoGo 成功抑制或 omission 指标；若 commission 极少，`stimulus_type` 效应不可解释。
+- 对 N-back：match 试次偏少，优先使用跨任务层级池化；单任务 DDM 只作为敏感性分析，且必须报告每格有效试次数。
 - 对条件极不均衡任务：应避免单被试分层拟合，优先层级回归形式，并在 posterior predictive 中检查 choice 概率是否合理。
 - 对切换任务（DT/EmotionSwitch）：建议采用两个并行对照模型（Model A：Mixing；Model B：Switch），避免在同一模型中同时放入 `block` 与 `trial_type` 导致解释混淆；并在报告中明确 Model B 仅基于 mixed block。 
