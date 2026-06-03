@@ -9,18 +9,19 @@
 - 多选任务不降维成正确/错误 DDM；保留原始选项，使用 4-choice race 模型。
 - Go/NoGo 任务中无 RT 的 NoGo 正确试次不能进入 RT-DDM；若需要 DDM，只解释有按键反应的过程，并与 SDT、commission、omission 并列报告。
 - RT 入模口径沿用行为清洗阈值：有效 RT 为 `[0.2, 10]` 秒。
+- 不用 lapse 剔除异常响应；所有 DDM/race 模型使用 `p_outlier` 估计异常反应比例，默认值为 `0.05`。
 
 ## 任务决策
 
 | Task | 模型决策 | 入模试次 | 主要条件 | 备注 |
 | --- | --- | --- | --- | --- |
 | FLANKER | 主模型：2AFC 层级 DDM | 全部有效 RT 试次 | `congruency` | 条件均衡，优先解释 `v`；可做 `a ~ congruency` 敏感性分析。 |
-| DCCS | 探索：2AFC DDM | 全部有效 RT 试次 | `block` 或整体模型 | 试次数少，mixed 内 switch/repeat 不作为主结论。 |
+| DCCS | 探索：2AFC DDM | 全部有效 RT 试次 | 整体模型；block 模型 | 两个模型都做。游戏序号前 20 为相同 pure block，后 20 为 mixed block；mixed 内 switch/repeat 不作为主结论。 |
 | SST | 补充：go-only 2AFC DDM | go 且有 RT 试次 | 整体模型 | stop 抑制结论仍来自 SSRT/race，不从 go-only DDM 推断。 |
 | CPT | 受限：response-DDM | 有按键且有 RT 的 response trials | `time_bin`；可选 `stimulus_type` | 正确 NoGo 与 omission 无 RT，不能入模；必须并列报告 SDT、commission、omission。 |
-| N-back 系列 | 探索：2AFC 层级 DDM | 全部有效 RT 试次 | `load + domain + target_type` | 优先跨 N-back 任务池化；单任务 DDM 仅作敏感性分析。 |
-| DT | 主模型：重编码后 2AFC DDM | 按轴向可表示的有效 RT 试次 | Model A: `block + rule`; Model B: `trial_type + rule` | 原始 4-choice，需按 horizontal/vertical 重编码；跨轴错误作为 lapse 剔除并报告。 |
-| EmotionSwitch | 主模型：重编码后 2AFC DDM | 按维度可表示的有效 RT 试次 | Model A: `block + rule`; Model B: `trial_type + rule` | 原始 4-choice，需按 gender/emotion 重编码；跨维度错误作为 lapse 剔除并报告。 |
+| N-back 系列 | 探索：2AFC 层级 DDM | 全部有效 RT 试次 | 按 domain 拆为 number、spatial、emotion 三组；组内可估计 `load` | 不估计 `target_type`；match/nonmatch 仍作为 SDT 指标报告。 |
+| DT | 主模型：重编码后 2AFC DDM | 全部有效 RT 试次 | Model A: `block + rule`; Model B: `trial_type + rule` | 原始 4-choice，需按 horizontal/vertical 重编码；跨轴异常由 `p_outlier` 吸收。 |
+| EmotionSwitch | 主模型：重编码后 2AFC DDM | 全部有效 RT 试次 | Model A: `block + rule`; Model B: `trial_type + rule` | 原始 4-choice，需按 gender/emotion 重编码；跨维度异常由 `p_outlier` 吸收。 |
 | ColorStroop | 主模型：4-choice race | 全部有效 RT 试次 | `congruency` | 报表可归并为 Target / Word / Other。 |
 | EmotionStroop | 主模型：4-choice race | 全部有效 RT 试次 | `congruency` | Target / Word / Other 需要补齐 `e{n}` 映射后再严格报告。 |
 | GNG | 不做主 DDM | Go/NoGo 指标 | 无 | 以 SDT、commission、omission、RT 为主；若后续需要，可按 CPT 口径做补充 response-DDM。 |
@@ -33,6 +34,13 @@
 - `answer` 和 `key` 先标准化再判断正确性。
 - `choice=1`：`answer == key`；`choice=0`：`answer != key`。
 - 条件极不均衡时优先使用层级回归，不做单被试模型主结论。
+- 模型默认设置 `p_outlier=0.05`；若估计该参数，应报告后验摘要并说明是否偏离默认值。
+
+### DCCS
+
+- 两个模型都做：整体模型（`v ~ 1`）和 block 模型（`v ~ block`）。
+- block 按游戏序号定义：前 20 个正式试次为 `pure`，后 20 个正式试次为 `mixed`。
+- 不估计 mixed 内 switch/repeat 效应。
 
 ### DT 与 EmotionSwitch
 
@@ -40,7 +48,7 @@
 - EmotionSwitch：根据正确键定义 `rule=dimension`，`female/male=gender`，`happy/sad=emotion`。
 - Model A（Mixing）：`pure + mixed`，条件为 `block`，可含 `block:rule`。
 - Model B（Switch）：仅 mixed block，条件为 `trial_type`，可含 `trial_type:rule`。
-- 被试响应落到另一轴或另一维度时，不编码为普通错误；从 DDM 中剔除，并报告比例。
+- 被试响应落到另一轴或另一维度时不再剔除；保留为错误/异常响应，并由 `p_outlier` 吸收。
 
 ### CPT
 
@@ -52,9 +60,9 @@
 ### N-back
 
 - `load`：oneback=`1`，twoback=`2`。
-- `domain`：从任务名提取，如 color、emotion、shape、spatial。
-- `target_type`：match vs nonmatch；若 item 信息不足，只进入整体 DDM，不估计 `target_type` 效应。
-- match 试次少，`target_type` 效应只作为探索指标；同时报告 hit rate、false alarm rate、d'、criterion、ACC、RT。
+- `domain` 拆为三组：number、spatial、emotion。
+- 每个 domain 单独建模；组内若同时包含 oneback 与 twoback，则估计 `load`，否则使用整体模型。
+- DDM 不估计 `target_type`。match/nonmatch 仅用于 SDT 指标：hit rate、false alarm rate、d'、criterion。
 
 ### 4-choice race
 
@@ -68,11 +76,13 @@
 | Task | Model | `v` predictors | `a` predictors | `t0/t` predictors | `z` |
 | --- | --- | --- | --- | --- | --- |
 | FLANKER | 2AFC DDM | `congruency` | `1`；敏感性：`congruency` | `1` | `1` |
-| DCCS | 2AFC DDM（探索） | `block` 或 `1` | `1` | `1` | `1` |
+| DCCS overall | 2AFC DDM（探索） | `1` | `1` | `1` | `1` |
+| DCCS block | 2AFC DDM（探索） | `block` | `1` | `1` | `1` |
 | SST | go-only DDM | `1` | `1` | `1` | `1` |
 | CPT | response-DDM | `time_bin`；可选 `stimulus_type` | `1` | `1` | `1` |
-| N-back pooled | 2AFC DDM | `load + domain + target_type` | `1` | `1` | `1` |
-| N-back task | 敏感性 DDM | `target_type` 或 `1` | `1` | `1` | `1` |
+| N-back number | 2AFC DDM | `load` 或 `1` | `1` | `1` | `1` |
+| N-back spatial | 2AFC DDM | `load` 或 `1` | `1` | `1` | `1` |
+| N-back emotion | 2AFC DDM | `load` 或 `1` | `1` | `1` | `1` |
 | DT Mixing | 2AFC DDM | `block + rule + block:rule` | 同 `v` | 同 `v` | `1` |
 | DT Switch | 2AFC DDM | `trial_type + rule + trial_type:rule` | 同 `v` | 同 `v` | `1` |
 | EmotionSwitch Mixing | 2AFC DDM | `block + rule + block:rule` | 同 `v` | 同 `v` | `1` |
@@ -85,14 +95,15 @@
 每个模型至少输出：
 
 - 参数摘要：`mean`、`median`、`sd`、95% HDI、`P(parameter > 0)`。
-- 诊断：`r_hat`、ESS、divergence、posterior predictive check。
+- 诊断：`r_hat`、ESS、divergence、`p_outlier` 设置或后验摘要、posterior predictive check。
 - 入模 QC：总试次数、入模试次数、排除原因、各条件有效试次数。
 
 主要效应：
 
 - FLANKER：`v_incongruent - v_congruent`。
+- DCCS：整体模型参数摘要；block 模型报告 `v_mixed - v_pure`。
 - CPT：`v_late - v_early`；若可估计，再报告 `v_nontarget - v_target`。
-- N-back：`v_2back - v_1back`、`v_match - v_nonmatch`、domain 对比。
+- N-back：分别报告 number、spatial、emotion 三组的参数摘要；若组内可估计 load，则报告 `v_2back - v_1back`。
 - DT/EmotionSwitch：Mixing 为 `mixed - pure`；Switch 为 `switch - repeat`，且 Switch 仅在 mixed block 内解释。
 - ColorStroop/EmotionStroop：报告 physical choice drift 的 congruency 效应；Target/Word/Other 从 posterior predictive 汇总。
 
