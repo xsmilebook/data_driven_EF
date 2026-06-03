@@ -43,6 +43,42 @@
 
 本节将“原始 choices（任务真实按键集合）”与“用于建模的数据结构”显式对齐，避免在 2AFC-RT DDM 上违反基本假设。
 
+### 统一试次级入模规则
+
+所有 SSM/DDM 拟合均以清洗后的正式试次为输入，不直接使用练习试次或无法确认任务条件的试次。入模前需生成一张 trial-level 表，至少包含：
+
+- `subject_id`：被试 ID。
+- `task`：任务名。
+- `trial_index`：被试内正式试次顺序。
+- `rt`：反应时，单位为秒。
+- `answer`：被试实际响应。
+- `key`：该试次正确响应。
+- `accuracy`：`answer == key`。
+- `condition`：任务主条件，例如 `congruency`、`block`、`trial_type`。
+- `rule`：仅用于 DT/EmotionSwitch，分别为 `axis` 或 `dimension`。
+- `choice_model`：模型实际使用的 choice 编码。
+- `model_include`：该试次是否进入对应模型。
+- `exclude_reason`：未入模原因；常见值包括 `practice_trial`、`missing_rt`、`rt_out_of_range`、`missing_choice`、`invalid_choice_for_model`、`cross_rule_lapse`、`condition_missing`。
+
+反应时规则：
+
+- SSM/DDM 拟合要求 `rt` 非空、有限且大于 0；没有 RT 的试次不能进入 RT-based SSM。
+- 若上游行为清洗已定义统一 RT 合理范围，则沿用同一范围；当前行为指标口径为 `[0.2, 10]` 秒。低于下限或高于上限的试次从 SSM 拟合中剔除，并在质量表中报告数量与比例。
+- RT 单位必须在入模前统一为秒；若原始表为毫秒，转换后再应用范围阈值。
+
+choice 规则：
+
+- `answer` 与 `key` 均先做标准化（去空格、大小写统一、布尔值统一为小写字符串或布尔型），再比较正确性。
+- 2AFC DDM 主模型采用 accuracy coding：`choice_model=1` 表示正确边界，`choice_model=0` 表示错误边界；此时 `v > 0` 表示证据更快累积到正确反应。若研究问题涉及左右手/物理按键偏置，再另做 stimulus coding 敏感性分析。
+- 多选 race4 模型保留物理响应选项作为 `choice_model`，不得先归并为正确/错误后拟合 2AFC DDM。
+- 对 DT/EmotionSwitch，跨轴或跨维度错误不是对应 2-choice 子任务中的可选错误边界，不能编码为普通错误；这类试次只作为 `cross_rule_lapse` 质量指标统计，并从 2AFC DDM 中剔除。
+
+被试纳入规则：
+
+- 每个 task×model×subject 至少需要同时存在两个 choice 结局，且关键条件至少各有可用试次；否则该被试不用于该模型的个体层信息估计。
+- 若单个条件有效试次数过低（建议阈值：每格 `< 5`），该条件的个体层效应不单独解释；仍可在层级模型中贡献组水平信息，但需在报告中列出每格试次数分布。
+- 每个模型输出一张 trial QC 汇总：`n_total`、`n_model_include`、`n_excluded`、各 `exclude_reason` 计数、各条件有效试次数、跨轴/跨维度错误比例、RT 中位数与四分位数。
+
 ### DT：`left/right/up/down` → 两个 2-choice 子任务（轴向重编码）
 - 轴向判定（以正确按键为准）：若 `key ∈ {left,right}` 记为 `axis=horizontal`；若 `key ∈ {up,down}` 记为 `axis=vertical`。
 - `rule` 定义：本任务中 `rule := axis`（horizontal vs vertical），用于控制不同规则/轴向的基线差异，并允许与实验条件交互。
@@ -110,6 +146,100 @@
 
 说明：
 - 这里的 `v0..v3 ~ congruency` 表示：四个 accumulator 的 drift 允许随 congruency 变化；`a` 与 `t` 默认不随条件变化以控制复杂度（如后验预测提示系统性偏差，可再扩展）。
+- `v0..v3` 对应固定物理选项，而不是自动对应 Target/Word/Other 角色。因此 race4 参数解释应写为“某物理响应选项的 drift 随 congruency 改变”；Target/Word/Other 的主要报告指标应来自 posterior predictive choice probability，而不是直接把某个 `v{k}` 解释为 Target 或 Word drift。
+
+## 高级模型指标计算口径
+
+本节定义从 posterior、posterior predictive 和 trial QC 中提取的统一指标。除非特别说明，所有汇总均在 task×model 层面输出组水平结果，并保留 subject-level posterior 或 posterior predictive 汇总用于后续个体差异分析。
+
+### 1. 参数后验摘要
+
+每个可解释参数或回归系数均输出：
+
+- `mean`、`median`、`sd`。
+- `hdi_2.5%`、`hdi_97.5%`（95% HDI）。
+- `p_gt_0 = P(parameter > 0 | data)` 与 `p_lt_0 = P(parameter < 0 | data)`。
+- `effect_direction`：若 `p_gt_0 >= 0.975` 记为 `positive`；若 `p_lt_0 >= 0.975` 记为 `negative`；否则记为 `uncertain`。
+
+参数解释规则：
+
+- 2AFC accuracy-coded DDM 中，`v` 越大表示越快趋向正确边界；负向条件效应表示该条件降低证据积累效率。
+- `a` 越大表示反应更谨慎，通常对应更慢但可能更准确的反应。
+- `t0` 越大表示非决策过程更长，例如知觉编码或运动执行时间更长。
+- `z` 若固定为 `1` 或不作为主效应解释，则仅作为模型结构项记录；若估计 `z`，必须说明其编码边界含义。
+- race4 中 `a` 与 `t` 的解释与 DDM 类似；`v0..v3` 只解释固定物理选项的 accumulator drift。
+
+### 2. 条件效应与对照指标
+
+条件效应均使用 posterior draw 逐抽样计算，再汇总均值、95% HDI 和方向概率，避免只用点估计相减。
+
+FLANKER：
+
+- 冲突效应：`Δv_incongruent = v_incongruent - v_congruent`。若为负，解释为 incongruent 条件降低证据积累效率。
+- 敏感性模型若包含 `a ~ congruency`，同步计算 `Δa_incongruent`；若 `Δa` 为正，解释为冲突条件下更保守的边界设置。
+
+DT / EmotionSwitch：
+
+- Mixing effect（Model A）：`Δparam_mixing(rule) = param_mixed,rule - param_pure,rule`。
+- Rule-averaged mixing effect：对两个 rule 的 `Δparam_mixing(rule)` 取 posterior draw 层面的平均。
+- Rule interaction：`Δparam_mixing(rule_1) - Δparam_mixing(rule_2)`，用于判断 mixing cost 是否依赖轴向/维度。
+- Switch effect（Model B）：`Δparam_switch(rule) = param_switch,rule - param_repeat,rule`，仅在 mixed block 内计算。
+- Rule-averaged switch effect 与 rule interaction 的计算同上。
+- 主报告优先解释 `v`、`a`、`t0` 的 mixing/switch effect；若某个参数后验方向不确定，不做强结论。
+
+DCCS：
+
+- 仅输出探索性 `Δv_block = v_mixed - v_pure` 或整体参数摘要。
+- 不报告 mixed 内 switch/repeat 参数效应作为主结果，因为每格试次数不足以支持稳定识别。
+
+SST：
+
+- go-only DDM 只解释 go 试次的证据积累、谨慎性和非决策时间。
+- stop 抑制能力不从 go-only DDM 推断；SSRT 或 stop-signal race 指标需独立计算并并列报告。
+
+ColorStroop / EmotionStroop：
+
+- 参数层面报告 `v0..v3`、`a`、`t` 的 congruency 效应，但文字解释限定为固定物理响应选项。
+- 行为角色层面从 posterior predictive 计算 `P(Target)`、`P(Word)`、`P(Other)`，并输出 `ΔP(Target) = P(Target|incongruent) - P(Target|congruent)`。
+- Word 诱导效应仅在 incongruent 试次定义：`Word intrusion = P(Word|incongruent) - P(Other_each|incongruent)`；其中 `Other_each` 为两个 Other 选项的平均预测概率。
+- 若 EmotionStroop 未补齐 target/word 映射，只能报告 `P(correct)` 与四选项物理 choice 概率，不报告 Word intrusion。
+
+### 3. Posterior predictive 指标
+
+每个 task×model 至少生成 posterior predictive summary，用于确认模型是否同时复现 RT 与 choice：
+
+- `pred_acc`：预测正确率或 Target 选择概率。
+- `pred_choice_prob`：各 choice 的预测概率。
+- `pred_rt_mean`、`pred_rt_median`。
+- `pred_rt_q10`、`pred_rt_q50`、`pred_rt_q90`。
+- `pred_error_rt_median`：错误试次预测 RT 中位数；若错误试次过少则记为空。
+- `observed_minus_predicted`：观测值减预测均值，用于定位系统性偏差。
+
+条件差异的 RT 指标应基于 posterior predictive 分布计算，例如：
+
+- FLANKER RT cost：`RT_incongruent - RT_congruent`。
+- Mixing RT cost：`RT_mixed - RT_pure`。
+- Switch RT cost：`RT_switch - RT_repeat`。
+
+这些 RT cost 是模型预测层面的描述指标，不等同于 `t0` 或 `a` 的单一参数效应；解释时需与 `v/a/t0` 的后验效应一起报告。
+
+### 4. 模型质量与比较
+
+正式报告前需记录以下诊断：
+
+- MCMC 收敛：`r_hat <= 1.01`、bulk/tail ESS 足够；若未达到，标记为 `diagnostic_fail`，不解释参数方向。
+- 采样异常：divergence 数、最大 tree depth、E-BFMI；存在明显异常时先调整采样或先验，不直接比较模型。
+- Posterior predictive check：按条件比较 choice probability 与 RT 分位数，确认模型未系统性低估错误率或 RT 尾部。
+- 模型比较：仅在诊断合格后使用 LOO/WAIC 或 out-of-sample predictive score 比较 null/effect 模型；报告 `elpd_diff` 与标准误，不仅报告“某模型更优”。
+
+模型命名建议：
+
+- `flanker_congruency_ddm`
+- `dt_mixing_ddm`、`dt_switch_ddm`
+- `emotionswitch_mixing_ddm`、`emotionswitch_switch_ddm`
+- `colorstroop_race4_congruency`
+- `emotionstroop_race4_congruency`
+- `sst_go_only_ddm`
 
 ## 本次模型计算设置
 - 后端：HSSM（PyMC-based hierarchical SSM） + `nuts_numpyro` 采样
