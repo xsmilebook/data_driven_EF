@@ -114,3 +114,133 @@ emotion_stroop_conditions:
   e30: incongruent
   e31: incongruent
   e32: congruent
+
+ssm_models:
+  output_subdir: ssm
+  p_outlier:
+    estimate: true
+    default: 0.05
+    prior:
+      name: Beta
+      alpha: 5
+      beta: 95
+  sampling:
+    pilot:
+      sampler: nuts_numpyro
+      draws: 40
+      tune: 40
+      chains: 1
+      seed: 1
+    full:
+      sampler: nuts_numpyro
+      draws: 1000
+      tune: 1000
+      chains: 4
+      seed: 1
+  models:
+    flanker_ddm:
+      family: flanker
+      task: FLANKER
+      hssm_model: ddm
+      formulas:
+        v: congruency
+    dccs_overall_ddm:
+      family: dccs_overall
+      task: DCCS
+      hssm_model: ddm
+      formulas: {}
+    dccs_block_ddm:
+      family: dccs_block
+      task: DCCS
+      hssm_model: ddm
+      formulas:
+        v: block
+    sst_go_only_ddm:
+      family: sst_go_only
+      task: SST
+      hssm_model: ddm
+      formulas: {}
+    cpt_response_ddm:
+      family: cpt_response
+      task: CPT
+      hssm_model: ddm
+      formulas:
+        v: time_bin
+    nback_number_ddm:
+      family: nback_domain
+      domain: number
+      hssm_model: ddm
+      formulas:
+        v: load
+    nback_spatial_ddm:
+      family: nback_domain
+      domain: spatial
+      hssm_model: ddm
+      formulas:
+        v: load
+    nback_emotion_ddm:
+      family: nback_domain
+      domain: emotion
+      hssm_model: ddm
+      formulas:
+        v: load
+    dt_mixing_ddm:
+      family: switch_mixing
+      task: DT
+      hssm_model: ddm
+      formulas:
+        v: block + rule + block:rule
+        a: block + rule + block:rule
+        t: block + rule + block:rule
+    dt_switch_ddm:
+      family: switch_trial_type
+      task: DT
+      hssm_model: ddm
+      formulas:
+        v: trial_type + rule + trial_type:rule
+        a: trial_type + rule + trial_type:rule
+        t: trial_type + rule + trial_type:rule
+    emotionswitch_mixing_ddm:
+      family: switch_mixing
+      task: EmotionSwitch
+      hssm_model: ddm
+      formulas:
+        v: block + rule + block:rule
+        a: block + rule + block:rule
+        t: block + rule + block:rule
+    emotionswitch_switch_ddm:
+      family: switch_trial_type
+      task: EmotionSwitch
+      hssm_model: ddm
+      formulas:
+        v: trial_type + rule + trial_type:rule
+        a: trial_type + rule + trial_type:rule
+        t: trial_type + rule + trial_type:rule
+    colorstroop_race4:
+      family: stroop_race4
+      task: ColorStroop
+      hssm_model: race_no_bias_angle_4
+      choices:
+        red: 0
+        green: 1
+        blue: 2
+        yellow: 3
+      formulas:
+        v0: congruency
+        v1: congruency
+        v2: congruency
+        v3: congruency
+    emotionstroop_race4:
+      family: stroop_race4
+      task: EmotionStroop
+      hssm_model: race_no_bias_angle_4
+      choices:
+        an: 0
+        ha: 1
+        ne: 2
+        sa: 3
+      formulas:
+        v0: congruency
+        v1: congruency
+        v2: congruency
+        v3: congruency

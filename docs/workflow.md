@@ -150,3 +150,32 @@ uv run jupyter nbconvert --to html --no-input notebooks/app_data_eda/app_metrics
 HTML 仅展示聚合信息。文件名包含 `_internal` 的 CSV 可包含 `subject_code`，只用于
 内部定位复核对象，不包含姓名或原始账号。IQR 异常值候选仅用于人工复核，不会自动
 进入排除规则。
+
+## THU app_data SSM/DDM 建模
+
+SSM/DDM 阶段是行为预处理后的可选独立步骤，读取
+`data/processed/THU/behavioral_metrics/app_trials_clean.csv`，不改变现有
+`app_metrics_long.csv` 或 `app_metrics_wide.csv`。
+
+小样本 pilot 示例：
+
+```powershell
+uv run python -m scripts.behavior.app_ssm --dataset THU --model dccs_overall_ddm --mode pilot --max-subjects 3
+```
+
+运行全部已配置模型：
+
+```powershell
+uv run python -m scripts.behavior.app_ssm --dataset THU --model all --mode pilot --max-subjects 3
+```
+
+输出写入 `data/processed/THU/behavioral_metrics/ssm/`：
+
+- `*_trials.csv`：对应模型的入模 trial 表。
+- `*_qc.csv`：入模 trial 数、被试数、响应水平和条件计数。
+- `*_summary.csv`：posterior 参数摘要与诊断字段。
+- `*_trace.nc`：`InferenceData` posterior trace。
+
+当前 HSSM 依赖栈在 Python 3.12 下导入失败，因此项目环境已降级为 Python 3.11。
+`.python-version`、`pyproject.toml` 与 `uv.lock` 均以 Python 3.11 为准，虚拟环境仍固定
+为仓库根目录 `.venv`。

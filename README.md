@@ -37,6 +37,16 @@ uv run python -m scripts.behavior.app_metrics --dataset THU
 Default outputs are written to `data/processed/THU/behavioral_metrics/`.
 See `docs/workflow.md` and `docs/methods.md` for execution details and metric definitions.
 
+The optional SSM/DDM stage runs after `app_clean` and uses the cleaned trial table:
+
+```powershell
+uv run python -m scripts.behavior.app_ssm --dataset THU --model dccs_overall_ddm --mode pilot --max-subjects 3
+```
+
+SSM outputs are written under `data/processed/THU/behavioral_metrics/ssm/`.
+The HSSM environment uses Python 3.11 because the current HSSM stack did not import
+cleanly under Python 3.12 in this repository.
+
 ## THU app metrics EDA
 
 The processed THU app metrics can be summarized with:

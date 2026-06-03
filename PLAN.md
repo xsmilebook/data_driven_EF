@@ -1,30 +1,32 @@
 # Plan
 
-## 修复 THU app 行为指标口径
+## 实现 THU app SSM/DDM 阶段
 
-目标：修复 CPT、EmotionStroop 和 Emotion N-back 指标异常，并将准确率有效试次
-与 RT 有效试次分离。原始 `answer` 已人工确认正确，继续作为唯一正确答案来源。
+目标：在现有 `check_format -> clean -> metrics` 行为预处理之后，新增独立
+SSM/DDM 建模阶段。该阶段读取 `app_trials_clean.csv`，按
+`docs/reports/ddm_decision.md` 构造各模型入模 trial 表，调用 HSSM 拟合并导出
+posterior trace、summary 和 QC。
 
 执行项：
 
-- RT 为空的试次仍可进入准确率分母，仅排除 RT 指标；RT 非空但超出 `[0.2, 10]`
-  秒范围的试次同时排除准确率和 RT 指标。
-- 任务 QC 同时记录 `n_trials_acc_valid` 与 `n_trials_rt_valid`。
-- CPT/GNG 的 go/nogo 分类继续使用原始 `answer` 布尔值，保留 CPT 中无 RT 的
-  正确 nogo 试次。
-- 写入已确认的 EmotionStroop `e1-e32` 条件映射。
-- Emotion N-back 先将编号归一化为情绪类别，再比较前 1 或 2 个 trial。
-- Emotion2Back 中 item 全空的 sheet 保留整体 ACC；若任务通过准确率阈值则同时
-  保留 RT。条件化指标为空并记录 `nback_item_missing`。若 ACC 低于随机阈值，
-  QC 仍标记失败，但长表和宽表继续保留可直接计算的 ACC。
-- KT 仅输出 `ACC`。
-- `dprime` 使用 Hautus log-linear 校正：命中数与虚报数均加 `0.5`，对应分母加
-  `1`；仅在 signal 或 noise trial 数为 0 时输出空值。
-- 使用 3 个 workbook 做非持久化冒烟测试；随后重跑全量 `clean` 与 `metrics`，
-  并复查全空列、常数列和高缺失列。
+- 使用 `uv` 新增 HSSM 相关依赖；若 Python 3.12 下失败，则将项目 `.venv`、
+  `.python-version`、`pyproject.toml` 和 `uv.lock` 切换到 Python 3.11。
+- 在 `configs/behavioral_metrics.yaml` 中新增 `ssm_models`，集中记录模型清单、
+  HSSM 模型名、公式、`p_outlier` 和 pilot/full 采样参数。
+- 新增 `src/behavior/app/ssm.py`，实现 trial 构造、模型规格读取、HSSM 拟合、
+  posterior summary、trial QC 和 trace 写出。
+- 新增 `scripts/behavior/app_ssm.py`，提供 `--model`、`--mode`、`--max-subjects`、
+  `--draws`、`--tune`、`--chains`、`--seed` 参数。
+- DCCS 同时实现整体模型和 block 模型；N-back 按 number/spatial/emotion
+  三组建模且不估计 `target_type`；DT/EmotionSwitch 跨规则响应保留，并用
+  先验均值为 `0.05` 的 `p_outlier ~ Beta(5, 95)` 估计异常响应比例。
+- 更新 README、`docs/workflow.md`、`docs/reports/ddm_decision.md` 和会话日志。
+- 增加单元测试覆盖 DCCS block、N-back domain、CPT response trials 与
+  DT 跨轴响应保留。
+- 使用 `temp/smoke_app_behavior` 做非持久化冒烟验证，并清理临时产物。
 
 约束：
 
 - v1 仅实现 THU `app_data`，不扩展 XY、BNU、inventory、demography 或 task-fMRI。
-- 不生成或核对 expected answer，不新增 SST/KT 序列审计。
-- 不修改用户已有的 `AGENTS.md` 改动。
+- 不自动运行全样本长采样；全量模型需通过 `--mode full` 显式触发。
+- 不修改 `data/` 或 `outputs/` 下运行产物。

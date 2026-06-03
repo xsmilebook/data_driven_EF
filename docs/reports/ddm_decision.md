@@ -9,7 +9,7 @@
 - 多选任务不降维成正确/错误 DDM；保留原始选项，使用 4-choice race 模型。
 - Go/NoGo 任务中无 RT 的 NoGo 正确试次不能进入 RT-DDM；若需要 DDM，只解释有按键反应的过程，并与 SDT、commission、omission 并列报告。
 - RT 入模口径沿用行为清洗阈值：有效 RT 为 `[0.2, 10]` 秒。
-- 不用 lapse 剔除异常响应；所有 DDM/race 模型使用 `p_outlier` 估计异常反应比例，默认值为 `0.05`。
+- 不用 lapse 剔除异常响应；所有 DDM/race 模型使用 `p_outlier` 估计异常反应比例，默认先验均值为 `0.05`。
 
 ## 任务决策
 
@@ -34,7 +34,7 @@
 - `answer` 和 `key` 先标准化再判断正确性。
 - `choice=1`：`answer == key`；`choice=0`：`answer != key`。
 - 条件极不均衡时优先使用层级回归，不做单被试模型主结论。
-- 模型默认设置 `p_outlier=0.05`；若估计该参数，应报告后验摘要并说明是否偏离默认值。
+- 模型默认使用 `p_outlier ~ Beta(5, 95)` 估计异常反应比例；该先验均值为 `0.05`。
 
 ### DCCS
 
@@ -68,7 +68,7 @@
 
 - ColorStroop choices：`red/green/blue/yellow`。
 - EmotionStroop choices：`an/ha/ne/sa`。
-- 使用 HSSM/SSMs `race_no_z_4` 作为 4-choice race；这是 LBA4 的替代模型，不把参数直接解释为经典 LBA 的 `A/b`。
+- 文档口径称为 race4；代码实现使用当前 HSSM 可用的 `race_no_bias_angle_4`。这是 LBA4 的替代模型，不把参数直接解释为经典 LBA 的 `A/b`。
 - `v0..v3` 对应固定物理选项，不直接等同于 Target/Word/Other；Target/Word/Other 指标从 posterior predictive choice probability 汇总。
 
 ## 模型公式
